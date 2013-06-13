@@ -4,9 +4,8 @@ function [HDR, signal] = loadEDF(filename,channels)
 %only the header information (HDR) is loaded.
 %channels is a vector of the numeric signals to be loaded.  If left blank,
 %then all of the channels in the EDF will be loaded.  
-
-%Hyatt Moore IV (< June, 2013)
-
+%Written by Hyatt Moore
+%last modified: October, 8, 2012
 if(nargin==0)
     disp 'No input filename given; aborting';
     return;
@@ -27,7 +26,7 @@ HDR.startdate = char(fread(fid,8,precision)');% 8 ascii : startdate of recording
 HDR.starttime = char(fread(fid,8,precision)');% 8 ascii : starttime of recording (hh.mm.ss)') 
 HDR.HDR_size_in_bytes = str2double(char(fread(fid,8,precision)'));% 8 ascii : number of bytes in header record 
 HDR.reserved = char(fread(fid,44,precision)');% 44 ascii : reserved 
-HDR.number_of_data_records = str2double(char(fread(fid,8,precision)'));% 8 ascii : number of data records (-1 if unknown, obey item 10 of the additional EDF+ specs)') 
+HDR.number_of_data_records = str2double(char(fread(fid,8,precision)'));% 8 ascii : number of data records (-1 if unknown, obey item 10 of the additional EDF+ specs)')  %236
 HDR.duration_of_data_record_in_seconds = str2double(char(fread(fid,8,precision)'));% 8 ascii : duration of a data record, in seconds 
 HDR.num_signals = str2double(char(fread(fid,4,precision)'));% 4 ascii : number of signals (ns)') in data record 
 ns = HDR.num_signals;
@@ -67,7 +66,7 @@ HDR.number_samples_in_each_data_record = str2double(cellstr(char(fread(fid,[8,ns
 HDR.reserved = cellstr(char(fread(fid,[32,ns],precision)'));% ns * 32 ascii : ns * reserved
 
 HDR.fs = HDR.number_samples_in_each_data_record/HDR.duration_of_data_record_in_seconds; %sample rate
-HDR.sample_rate = HDR.fs;
+HDR.samplerate = HDR.fs;
 HDR.duration_sec = HDR.duration_of_data_record_in_seconds*HDR.number_of_data_records;
 HDR.duration_samples = HDR.duration_sec*HDR.fs;
 
