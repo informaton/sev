@@ -1,0 +1,983 @@
+/////////////////////////////////////////
+//  Release 38 - July 21, 2011  //
+/////////////////////////////////////////
+1.  Updated Batch Mode
+    a.  Can generate events based on settings a range of values for detection specific parameters (plist_batch_editor_dlg)
+    b.  Can generate ROC data from comparison of events to selected TRUTH events - batch mode events are stored in a single
+        flat file which can be parsed and contains the sensitivity, specificity, etc, and detection parameter configurations that 
+        were used for each detection algorithm modification (As changed by the parameter range settings)
+2.  Overhauled detection algorithm.m files to output a single detectStruct structure
+    The fields include
+        new_data  = any synthesized data that can be used as a display of the modified raw_Data that was used in
+                    detecting the events
+        new_events = detected events as start_stop matrix
+        paramStruct = parameters of interest, specific to the detected events (e.g. density, frequency, amplitude)
+3.  Updated save2txt - event output now includes columns with paramStruct data where relevant.
+
+small fixes:
+bolder stage numbering on each epoch (harder to see before).
+batch run userdata settings had small bug that would pop up with incorrect ordering/selection of events
+
+
+/////////////////////////////////////////
+//  Version 37 Released July 13, 2011  //
+/////////////////////////////////////////
+
+1. added ROC comparison viewer/gui - in batch and analyzer menus
+    - add multiselection viewing
+ 
+2. added ROC viewer into the SEV
+    a. batch mode ROC viewer to see previously created/stored events
+    b. axes3 updated to include PSD and ROC views - use radio buttons to switch between
+    c. settings button accesses gui menu based on radio button selection (ROC or PSD settings)
+    d. created an updateAxes3() function to handle these calls and updates
+3. transitioned to xml/.plist (mac property list) data storage of detection method parameters
+    - this allows GUI manipulation of the detection methods, and can assist in monitoring changes to the
+      current ROC view
+
+Small updates:
+1. lined up event label with the associated event patches by increasing the label's y_offset
+by half of the patch's height.
+2. fixed the popout contextmenu function - used copyobj instead of get(gca) method
+
+To Do : 
+
+Replace instances of merge_events function (in bp_detection for example) with CLASS.merge_events
+locate fill_bin_with_events functionality and place elsewhere... currently used by ocular version 3.
+To Do:
+Highlight the text label when its associated line is also selected.
+
+
+
+Dave Woodward papers - read
+Tom Nylan papers - read
+
+////////////////////////////////
+
+Version 36 Released June 28, 2011
+
+
+1.  added Save 2 Mat menu option - and updated the batch mode to incorporate saving the parent channel label in the saved events filename
+default format is: [Study Name].[channel label].[event Label]
+
+updated thresholdcrossings.m to handle one input argument - logical vector - and to default to finding true instances instead of
+requiring a threshold to be crossed.  The intention was to speed up the function.
+
+2.  added Kupfer eye detection method.
+
+3. can change color of reference line - 
+
+4. updated event interface
+    - changed patch color (darker)
+    - changed patchhandle to hold matrix of x and y data to produce square patches
+        and not using single vectors with nan's interspersed
+       - improved mouse rollover functionality
+    - added contextmenu
+        - can change color
+        - can remove events that do not like
+    - can now edit events that are shown without having to click on the toolbar's edit icon
+    - STATE.marking is set to true at the start of the event/patch callback and is set
+      to false when dragging is finished.
+    - removed WORKSPACE.MARKING.channel_index, since fieldname class_channel_index also existed
+      and is less ambiguous.
+    - updated remove() in events_container and added isempty() and delete() functions to 
+    events_class so that the graphic handles are removed/deleted too.
+    - contexet menu added to the event label
+        - can delete/remove the event in its entirety
+        - can rename the event
+
+5.  added generic event_cleanup function to remove events that are shorter than the 
+passed parameter (10 samples is the default minimum length).
+
+6.  added Carrier's SWA detector.
+7.  start LM detector.
+8.  added hypopnea detector
+9.  added arousal after hypopnea detector
+10.  added Brunner Artifact detector
+
+
+Bug fixes:
+1a&b. addressed left over CLASS_Channel_container in startMarking.m and CLASS_events.m (replaced with CHANNELS_CONTAINER)
+2a. fixed reference line offset callback
+2b. changed default color from yellow (hard to see) to a dark green
+3. removed 'mark' context menu option - no real purpose now.
+4. fixed load .mat from file - updated updateEvent callback to update event indices to plot - now automatically
+displays updated events in axes2.
+5. updated synthesizeChannel function and moved it into the CLASS_channels_container class.
+6. updated the CLASS_events_toolbox to handle this change (5) as well
+7. fixed renaming channel label callback - was using outdated WORKSPACE.line_handle to get the index instead of just get(hObject,'userdata');
+8. reset_state() now called after line set color function in order to reset the line handles selection.
+
+
+
+////////////////////////////////
+
+Version 35 Released June 7, 2011
+
+1. added mediocre channel class container like event container - it has not been fleshed out much yet.
+2. Eye movement detection updates
+    - version_3 - group eye movement detections from version 2 into fixed time bins (e.g. 0.5, 1, or 2 seconds)
+                - if a detection is made, then it is extended to fill the entire bin
+                - adjacent, or overlapping detections are merged into a single, combined event
+    - version_4 - similar to v3, but instead of using a fixed width, a lower threshold is reapplied applied to the regions surrounding areas 
+        marked as detections using the more stringent requirements of v2.  The lower threshold relaxes the stringent requirements and produces
+        more accurately refined eye movement detections.  The stringent requirement ensures that a detection is called, and the relaxed threshold 
+        pass produces a more accurate detection of time.
+3. Comparative Analysis update
+    - the compare events dialog was updated along wiht the event container class to provide a quad comparison
+    - it is a 2x2 matrix with the results of and'ing and or'ing two events together.
+    - selections and results are made in real-time
+4. Events can be saved to text file now.  A simple header is given with '#' as the comment character
+    the first column is the events start index, the second column is the event's stop index, and the third column
+    is the duration as seconds
+5. Darker color used for the channels.
+
+6. updated context menu 'hide' function so that events are also hidden, and not just the parent channel
+7. added context menu option to copy the current epochs data to the clipboard (more precise than using a mouse to select all of the data)
+8. fixed sev_eye_movement_detector version 4 to operate correctly = was not working correctly and detections were actually
+    shorter than expected.
+
+9. Added event descriptions to the event toolbox.  When a user selects a method to use, the
+help information for that file is inserted into the tooltipstring parameter for the 
+popup menu uicontrol
+
+
+10. removed the highlights that were shown on loading channels - also removed the channels.primary label and such.
+STATE.detect_artifact and .detect_spindles and .detect_eye_movements were also removed as they were not being used
+under the new 
+
+
+
+TODO still:
+
+add a class that builds gui's.  
+1. meta data output somewhere....
+Still to do - provide a method of selecting only certain regions for detection...Still to do - provide a method of selecting only certain regions for detection...
+2.  tweaked axes 2 plot alignment - still need to change the width depedning on size/number of epochs being shown...
+
+3. Change scoring per epoch - update in realtime based on changes to events...
+
+4. Add global preferences to artifact detection methods, such as how we want to 
+process or merge events that are near each other...
+
+5.  adjust switch axes to go back to any axes you want...
+7. update sev pop_view_Callback
+
+Incorporate scoring of different events - region of convergence methods
+
+add an option to see log file after running the batch mode (in dialog that pops up)
+
+ lms algorithm 
+
+
+
+incorporate .xml as events
+marking lines - interaction.../selecting things for scoring
+
+
+changing the pointers in Matlab...
+
+http://www.mathworks.com/help/toolbox/images/ref/iptsetpointerbehavior.html
+
+
+xmlContent=xmlread(xmlFileName);
+xmlObject=xmlwrite(xmlContent) ;
+conn = database(strDatabaseName,strUserName,strPassword,strDriverName,strcat(strURL,strDatabaseName));
+sqlOutput=fetch(conn, strcat(?{call sp_test(??, xmlObject, ??)}?));
+
+
+
+
+XXXXXXXXXXXXX------------XXXXXXXXXXXXXXXXXXX----------------XXXXXXXXXXXXXXX
+XXXXXXXXXXXXX------------XXXXXXXXXXXXXXXXXXX----------------XXXXXXXXXXXXXXX
+
+
+version 34 - May 18, 2011
+
+1. Event labeling update:
+    store initial cell of possible event names in global WORKSPACE.MARKING.event_label_cell
+    if a new label is created using CLASS_marking_dialog, then it is added to this global for future reference
+
+2.  Added Tan's EM power spectral detection method (it's not great or even good).  
+
+3.  Revamped the batch process mode to incorporate SEV updates
+    new GUI gives options to load different events and artifact detection methods
+    multiple channels can be listed for calculating the psd
+    old batch process dialog was streamlined to contain just output file settings 
+        and can be accessed via a push button on the new batch gui
+
+    X   change the label "Batch Statistics" on the menu bar to "Run Batch Mode"
+    X    made a new menu header called "Batch" for the batch mode and hht2disk
+        one dialog/screen that lets you select the folder you want it added to push of a button
+        events made from detection method, with number of channels available for each as necessary
+    X  Artifact column (A) format was changed in the psa file output.  It now contains a string of letters that represent the various detections
+        or artifacts that were found at a particular periodogram.  These letters are listed in the detection.inf file in the +detection folder.
+        The labeling and associated methods used are listed in the _log file.
+    X  The _log.txt file was updated to include the batch job start time stamp in the filename.  
+        This required a change from using Matlab's 'save' function to an fprintf lowlevel function call, which was initially 5 times as slow
+        and would have added 4 hours of additional processing to a 1000 EDF batch job.  Removing the for loop with smart output formating and combining data 
+        helped overcome this initial set back
+        
+    X - output PSA files also include the associated batch job time stamp on the first line (in the comments)
+
+4.  many small updates made to internal naming structures
+    tightened up the sev's menu bar
+5.  load and save parameters to file were moved out of sev to stand alone functions
+
+6. - implemented arbitrary selection of algorithms available...
+
+
+%useful script to rename file to upper case extensions...
+ls *.edf | sed 's/\ /\\ /g' | sed 's/(/\\(/g' |sed 's/)/\\)/g' | awk '{print "mv "$1" "$2" "$3" "$4" "$1" "$2" "$3" "$4}' | sed 's/\.edf/\.EDF/2' | /bin/sh
+
+
+
+XXXXXXXXXXXXX------------XXXXXXXXXXXXXXXXXXX----------------XXXXXXXXXXXXXXX
+XXXXXXXXXXXXX------------XXXXXXXXXXXXXXXXXXX----------------XXXXXXXXXXXXXXX
+
+
+
+Version 33 - released: 5/3/2011
+
+1. Moved detection methods into a separate folder whose contents can then be used to
+populate the event toolbox
+
+2. Added context menu to selectable patches
+	Cut&paste
+	PSD view as separate pop-out window?
+	Data viewed in separate pop-out window
+
+
+3. Updated toolbox to make it more user friendly by automatically checking assignment
+   channel when there is a newly synthesized channel selected
+
+4. Implemented Takahashi eye movement detector
+
+5.  Updated load events from .mat file functionality.  Can now load events 
+    at any point in time without overwriting other, previously existing events
+    as well as create new graphic handles for newly loaded events.
+
+6. 	graphic tweaks
+    Color changes -
+        channels assigned increasing colormap index (colormap set to hsv(16))
+        new lines/events track color of parent channel
+
+	Newly added channels are evenly distributed across their parent axis.
+
+7.  added detection methods
+        electrode pop
+        flatline - 3 second duration
+
+8.  All night event update occurs after newly added/created events from toolbox
+
+9.  Added busy waiting feedback - mouse cursor becomes a watch 
+
+10. Added context menu filtering accessibility for detection methods that only require a single channel
+
+
+XXXXXXXXXXXXX------------XXXXXXXXXXXXXXXXXXX----------------XXXXXXXXXXXXXXX
+XXXXXXXXXXXXX------------XXXXXXXXXXXXXXXXXXX----------------XXXXXXXXXXXXXXX
+
+    
+Version 0.32 - Released April 19, 2011
+
+bugs: event comparison fails if event is listed with an empty start_stop_matrix...
+    Adding a gui to select events for comparison
+
+
+The following key activated controls are possible during the Marking State with a Marked event
+    Ctrl-c - copies the selected data to the clipboard.  Press Apple-V or Ctrl-V to get this data
+        x = clipboard('paste'); will also retrieve the character data
+        x = str2double(x(2:end-1)) will also work if doing it programmatically
+    Ctrl-p - plots the data to a new figure
+
+
+    developed interactive event labeling tool
+    and fixed these bugs:
+        -marking start/stop gui only works first time
+        -cannot edit previously created event
+        -source does not disappear if I click on the axes elsewhere...
+
+
+    Add toolbex entry point to analyzer menu bar...
+    Added icons for the event toolbox and for manual scoring
+    disabled buttons if nothing is loaded...
+
+    created stand alone events container cell for better organization
+    
+    scoring algorithm developed - compareEvents.m - shows how well things look compared to one another... outputs to the command line
+
+    flat line detection algorithm developed - detection_flat_line.m
+        to do: add to SEV once data to compare it to is complete
+
+
+
+bugs fixed:
+    textdown_button callback did not have handles = guidata(hObject)
+    PSD_preferences fixed of error that updated the calculated PSD for the whole study at that point..
+    128Hz/resampling incorporated correctly after changes to batch loading process...
+
+
+
+Done in v.31 - new PSD view option that selects which channel to view/use...
+   
+
+XXXXXXXXXXXXX------------XXXXXXXXXXXXXXXXXXX----------------XXXXXXXXXXXXXXX
+XXXXXXXXXXXXX------------XXXXXXXXXXXXXXXXXXX----------------XXXXXXXXXXXXXXX
+
+
+
+Version 0.31 - Released April 6, 2011
+
+
+- New GUI for event loading and manipulation
+    - accessible as a context menu from the main plot or any channel
+    - accessible from a pushbutton on the toolbar
+        bug: need to disable the pushbutton when no channels loaded.
+    - incorporates predefined events (ocular detection)
+    - allows new channel synthesis and event creations using Matlab built 
+    functions that can are created and entered manually
+
+X - split batch loading of files method off from normal method
+
+X - reworked initial file loading to use the same function that was created to load additional channels
+    this latter function was adjusted to handle special case of initial loading and the load EDF function was changed too. 
+    
+-added a context menu to swap the main axes to the power spectrum or timeline
+ - bugs exist now:  1. line marker for the epoch does not adjust when the timeline is swapped
+                    2. the x-scales are to compact now when the main axes changes...
+                    3. aspect ratio constrains the size of the main axess, especially when swapped with the main axess.
+    -to do, add a swap for each of these... and make a more abstract context menu that changes with what is being selected for swapping and 
+        what remains available to swap with.
+
+calculate PSD for different channels
+  - added a context menu to the axesPSD axes to allow selection of all available channels
+  - only calculates and shows 30 seconds of data at a time (or whatever the range is for the current view selection)
+  - add a context menu to the channel classes as an alternative to selecting for psd viewing
+  TO DO: perhaps...- add to the psd preferences for which channel to use for viewing the PSD...
+
+Misc.
+- cleaned up annotationH marker
+- cleaned up CLASS_channel constructor: incorporated global default values to reduce the number of passed arguments
+- changed error outputs from normal mode to match the batch method of outputting error
+- removed loading bar from main loader and put status in a textbox on the SEV   
+
+- added psd view option to context menu for each channel
+
+bug fixes:
+ - centered event loader GUI so that it does not go off Oscar's screen.
+ - PSD calculations are now done in load channel function (previously only handled in the init_file function and so you could not get PSD data if load a primary channel later).
+ - can now examine trailing data that does not fit in the normal 30-second epoch window
+
+
+
+
+---------------------------------------------------------------------------
+Version 0.30 - released March 21, 2011
+
+-Removed .STA file requirement to run the SEV.  Now a default of stage 7 is used if the .STA file is not found.
+ show staging even when no primary channel is selected...
+-fixed small bug that did not allow montage dialog to exit when the user tried to cancel.
+-updated use of 'Use Default Scale' context menu...
+- added ability to add more channels after one loading has already occurred (under File menu option)
+-added a 'Hide' option to the context menu selection for the channel of interest
+-added 'unhide' option to the context menu of the main axess.
+-updated the montage dialog to handle previously selected channels - which are shown as checked ('on') and disabled
+from further selection since they are already in memory.
+
+
+Version 0.29 - released 16Mar11
+
+1. Incorporated new class "events_class" which will be used to store the events loaded from both prana output and from 
+    SEV generated evets.  parseArtifactsFromFile function is now replaced with parseEventsFromFile which will return a cell
+    of events_class objects.  Each cell element will then be pushed to the corresponding channel_class object.  That is, each
+    channel that is loaded, will have an events_class object parameter to hold these events.
+    The goal here is to provide greater flexibility in adding new objects...
+
+each class event will contain a unique event (e.g. SEV.bp_Hz20.a and SEV.bp_Hz20.b, and Default.spindle.a would all be separate event instances in a channel object.
+
+removed the following in making this transition:
+handles.user.ARTIFACT.file_art = zeros(1,DEFAULTS.study_duration_in_samples);
+handles.user.PRIMARY.file_events = [];
+handles.user.ARTIFACT.file_events = [];
+handles.user.PRIMARY.file_uniqueSources = {};
+handles.user.PRIMARY.file_uniqueSourcesCount = 0;
+handles.user.PRIMARY.file_comments = {};
+handles.user.ARTIFACT.file_comments = {};
+
+2. incorporated text_buttondownFcn method into class CLASS_channel so that it can
+now use the callback from the SEV when a user clicks on the textbox that contains the 
+object's channel name/label and wants to change it, etc...
+
+
+Axes2 - all night display
+Incorporated the all night event display into the event class - now it is a function call
+adjusted the sleep stage plot so it looks clearer now, no longer uses markerstyle, but uses linestyle,'-'
+added a Events menu item under preferences menu label.  This creates a selection gui of the various
+events that are available for display on axes2 (entire evening)
+
+
+use a single cell container to hold all of the channels and extra data sets that are created for visual analysis
+The channels and data sets are differentiated through the use of a structure called CHANNEL_INDICES that contains 
+numerous fields to specify all channels, specific ones (e.g. primary, ocular, etc.), event channels (diff of abs(oc1-oc2), etc),
+and some others.
+-this helped a lot with loading various events and working with mouse callbacks.
+-the index into the container cell for each object is held in the 'userdata' field of that objects line/patch handle
+
+
+Batch changes
+- combine channels in other cohorts that do not have a C3-M2 channel only 
+e.g. C3-M2 derived from C3-Cz minus M2-Cz
+
+PSD changes
+- normalize by number of samples now
+- frequency band power is calculated by summing over range/band of interest (not the mean anymore)
+- if the mean is removed before processing, it's is later stored in the first frequency bin... (0Hz)
+so that it's value can be observed over time
+    AxesPSD
+    -removed the initial tick marks and such that would show up at the outset.
+
+
+bug fixes:
+updated montage_dlg to handle case when no primary channels are passed in initially.
+line_buttonDownFcn did not incorporate CLASS_channel objects - it now does
+
+increased the decimal precision of the output bin labels to .001
+
+
+
+
+Version 0.28 09 February, 2011 - 13:40
+
+
+bug fixes:
+updated montage_dlg to handle case when no primary channels are passed in initially.
+line_buttonDownFcn did not incorporate CLASS_channel objects - it now does
+
+updates:
+batch process GUI updated to allow selection of primary channel based on HDR information (i.e. HDR.labels)
+    of the first EDF.  
+batch process GUI updated to allow selection of ocular movement detection
+    SEV updated as well to incorporate STATE global to not require spindle or eyemovement detection
+    during batch mode.  This was causing errors when running the next cohort
+    PSD data is calculated as necessary still.
+removed EDF_indices field from handles.user
+changed PSA header file to not include the EDF channel index (was in parenthesis)
+    and removed Hz from the sample rate and resample rate comlumn (moved to the front, text portion).
+
+new files:
+debugEDF.m - used to debug EDF files by loading data from the signal and 
+        storing into parameters that can be adjusted.
+
+
+
+
+Version 0.27 07January, 2011 - 11:43 AM
+
+1. no longer required to load EMG (artifact), C-3 (primary) or occular channels
+when running SEV (can be used just as a viewer) - required rewriting portions of the PRIMARY indices and such...
+
+
+2. Adjusted PSD output as following:
+Delta        Mean power in the >0Hz to <4Hz range
+Theta        Mean power in the 4Hz to <8Hz range
+Alpha        Mean power in the 8 to <12Hz range
+Sigma        Mean power in the 12Hz to <16Hz range
+Beta        Mean power in the 16Hz to <30Hz range
+Gamma       Mean power in the 30Hz to <100Hz range (or nyquist)
+Total        Total power, sum of all frequencies >0Hz to nyquist
+removed sigmaalpha column from PSD output
+
+3. applied resampling to any signal that is not 100Hz...
+
+4. can change the color of lines now using the context menu...
+
+5. adjusted sleep stage indexing to no longer precalculate indices for each stage.  It takes less time at loading and 
+frees up memory consumption during processing.  The calculation is pushed to the end, if/when stats are saved to disk.
+
+6. removed remaining SEV line and text struct handles (using OO programming methods now).
+    UPDATES Needed
+        Fabio line no longer valid
+        spindle detections no longer available
+        Can's lines no longer visible....
+
+7. made artifact detection using filtering at 20Hz a method of CHANNEL class.  
+No longer does the scoring with EMG as these values were seen to not be significant; we only
+used the EEG threshold crossings as the criteria for artifact...
+
+8. processArtifacts and processArtifactsNx2 put into their own .m file (removed from sev.m)
+to assist with adjustment to put artifact detection into the CHANNEL class as a method.
+(can't call these methods from channel class if they remained in sev.m)
+-finalArtifact method no longer used
+
+9.  rewrote save stats, stats tally, and artifact methods with the removal
+ of the emg threshold detection.  Last two fields in art.txt file were dropped/removed.
+
+10. removed initialize_PSD_sleep_stage method - moved pertinent parts out to main methods as necessary.
+This function was eating up a lot of memory by creating whole vectors of sleep stage indices that ran
+the duration of the raw data!
+
+12. changed to global variables instead of using only handles.user. fields
+-new global variables include
+-modified/rewrote load and save parameter functions to incorporate these changes.
+
+global DEFAULTS;
+global STATE;
+global ARTIFACT_DLG;
+global SPINDLE_DLG;
+global FABIO_DLG;
+global BATCH_PROCESS;
+global CAN_SPINDLE;
+global PSD;
+
+13. changed sums to means in the power spectrum ranges...
+14. update batch_process_dlg - disabled analysis and detection methods for
+the moment as these are no longer a priority and will take more time to update
+the methods with the new code architecture that is being used.
+
+15. artifacts are drawn in a limited fashion over each epoch - does not look accurate since 
+they are actually taken over several epochs worth of data - but this saves in processing time
+and memory requirements of the viewer when being used in real time.
+
+16.  spindle methods are not displayed.
+
+
+11.  removed unused functions 
+
+--------
+function update_SEVline(data,InOutStruct,parentAxes,lineColor)
+function sevStruct = create_default_SEVstruct(title,lineoffset)
+function [linehandle texthandle] = create_SEVline(linestruct,parentAxes,uicontextmenu_handle)
+-no longer using these structures
+-----
+
+--------
+findArtifacts(soi, threshold)
+%finds where the signal of interest (soi) crosses the threshold
+%x_art is a vector containing 1 wherever
+-now just use logic where necessary to get the same result
+---------
+
+function line_handle = plotDensityArtifacts(parentH,art,color,style,x_offset,y_offset,textOffset)
+%similar to plotEvents, but art contains a density value that will have a text output 
+%associated with it instead.
+-no longer show the density of the artifact
+
+function b = makeFilter(start, stop, fs)
+%gives fir filter impulse response (i.e. b) from start to stop with
+%sampling frequency fs;
+n = 100;
+% b = fir1(n,[start/fs*2 stop/fs*2]); %this is a hamming window fir filter
+b = fir1(n,start/fs*2,'high');
+-was not being used...
+
+function update_SEVlabels(SEVlinehandles,handles)
+%updates the labels for the given linehandles on the axes whose handle is
+%axeshandle
+-no longer using the SEV struct structure -> switched to objects...
+
+function [eeg_bp_density_line, count] = finalArtifact(emg_art, eeg_bp_art)
+%compares both artifacts to come up with final 
+
+eeg_bp_art_ind = find(eeg_bp_art);
+% emg_ind = find(emg_art);
+% emg_out = emg_art(emg_art_ind)+eeg_art(emg_art_ind);
+
+%just add the parts that interesect/overlap with each other from the eeg_bp
+%view point - the commented out code above could be used to add
+%interects/overlaps from the other viewpoint of course too
+
+eeg_bp_art(eeg_bp_art_ind) = eeg_bp_art(eeg_bp_art_ind)+emg_art(eeg_bp_art_ind);
+
+eeg_bp_crossings = thresholdcrossings(eeg_bp_art,zeros(1,length(eeg_bp_art)));
+count = size(eeg_bp_crossings,1);
+unitMax = 1+1; %change this if you want to weight the channels differently; right now it is set to 2
+%because each channel has a value of 1 if it is on, and we only use two
+%channels at the moment
+eeg_bp_density_line = zeros(1,length(eeg_bp_art));
+for k=1:count
+    xmin = eeg_bp_crossings(k,1);
+    xmax = eeg_bp_crossings(k,2);
+    eeg_bp_density_line(xmin:xmax) = sum(eeg_bp_art(xmin:xmax))/(unitMax*(xmax-xmin+1)); %possible divide by zero if threshold crossings is screwed up, but it is not :)
+end;
+
+
+bug fixes:
+from 10/9/10:
+a.    can't go from loading one EDF to loading another EDF without first closing the SEV
+
+b.  invalid delete(h) (deleting waitbar handle) in save fft to disk (was not a problem in batch mode).
+
+c. fixed possible bug in fabio spindle parameter selecter - parameters were being changed to the SPINDLE_DLG 
+struct and not the FABIO_DLG struct
+
+
+Version 0.26 09December, 2010 - 3:13 AM
+added ocular channel artifact detection method
+    - subtract one channel from the other
+    - take the absolute value of this difference
+    - find the mean
+    - apply a threshold of twice the mean to detect eye movement
+    - combine eye movements that are within .5 seconds of each other
+
+adjusted the fabio method
+    -instead of using a smoother (i.e. running averager) over the data, I just combined the adjacent points
+in the same way we have been doing for our artifact detection
+
+
+bug fixes: removed extra newline feed in output files found in v.25 (\n\n replaced with \n)
+
+new files:
+eyeMovementDetector.m
+
+updated:
+sev.m
+fabiospindledetector.m
+montage_dlg.m
+
+what's different between show and draw?
+        CLASS_channel_containerCell{k}.show();
+        CLASS_channel_containerCell{k}.range = range;
+        CLASS_channel_containerCell{k}.draw();    
+
+
+find this: and replace the updates into each individual update method to check, and take out of updatePlot function...
+view_options = get(handles.pop_view,'string');
+current_view = view_options{get(handles.pop_view,'value')};
+
+Version .25: 27 November 2010
+
+[version 25] - Uploaded 11/27/10
+-currently rewriting to a more object-oriented foundation.
+    - loaded channels are stored as objects
+    - can have a primary and artifact parameter
+    - still need to transfer over current spindle and artifact detector modules to use the class method
+-no longer get multiple popups when running batch mode
+-now parameters.txt (should) looks correct on windows platforms.
+-fixed artifact statistics problem (stages were not being initialized early enough...)
+
+-have a montage loader for different channels
+    -need to use control+left click to change the primary channel/artifact channel (or turn off)
+
+-popup menu for different views/modules replaces radiobutton options 
+    -better suited for expansion than the radiobuttons which would need more 
+    screen real estate for additional modules
+
+(these may have been completed in v.24)
+DONE - 1. .sta files vice hpn
+DONE - 2. load by channel name
+DONE 3. invert axes so that up is down and down is up...
+
+New files:
+CLASS_channel.m
+montage_dlg.m
+montage_dlg.fig
+
+Updated files:
+sev.m
+sev.fig (incorporates new spindle_fabio_dlg gui)
+parse_artifacts_from_file.m (?)
+loadEDF.m (I think this was put in with version 24, removes the need for ).
+and likely others
+
+[Version 24]
+
+bug fixes-
+artifact detector gui - had copy of spindle detector gui code in the 'Try' pushbutton function
+short emg rms artifact line being offset by eeg_hp_20 line ... fixed
+updated files:
+artifact_dlg.m - the try button stopped working; error with high_freq field (non-existent now)
+
+
+
+Version .23: 29 August 2010
+
+-spindle characterization added
+    -in batch process mode now
+    -can also save characterizations of individual files from the file menu
+
+-Can's newest HHT detection method added... (still not in the batch mode yet).
+-sample rates loaded separately for EEG and EMG channels.  The EMG channel is resampled (more or less) to match that
+of the EEG when the two are different
+-fabio detector method enhanced/improved..
+-fabio detector method now has a separate gui to change the detection parameters... (press Save to ensure changes are kept)
+
+
+bug fixes:
+-switched sigma and alpha band labels for can's output to make it correct
+-try/catch problem in batch processing mode (using lasterror.message incorrectly)
+-new issue with saving the PSA file due to using the .STA files to load the stages (had to transpose the S vectors)
+-update the bug for new C3-M2 channel labels...
+
+New files:
+characterize_spindle2disk.m
+spindle_fabio_dlg.m
+spindle_fabio_dlg.fig
+
+Updated files:
+sev.m
+sev.fig (incorporates new spindle_fabio_dlg gui)
+batch_process_dlg.fig (new options for spindle characterization added to the front panel)
+batch_process_dlg.m
+parse_artifacts_from_file.m (updated the comments for better understanding and code use)
+spindleDetection.m (bug where alpha and sigma labels were switched)
+fabios_spindle_detector.m (smoothed out their data, resulting in an envelope detector of the filtered data)
+
+still to do:
+[call resetSEV after batch process is complete?] - yes, but not the most user friendly solution
+future problems - need to come up with a method of breaking frequency bins always into 0.5 hz spacings from 0 to 50Hz
+---------------------------
+Version .22: 13August2010
+-Can's newer HHH spindle detection method is implemented visually (does not save to file yet)
+    -uses upsampled data now to help detect spindles (4x's upsampling)
+    -data is downsampled to original rate when displayed
+    -there are now 6 passes in his spindle detector, which are showed visually
+-Nima's code is incorporated into the SEV (i.e. problems with passing parameters and producing statistics from detected spindles has been resolved, but currently does not output anything (visually or to file))
+    -AMFM takes more time (future version should include method to pick one method or the other)
+-HHT2disk method has been added as a batch menu option (see menu bar)
+-redesigned individual line interface functions
+    -right click on a line access incorported features which include
+    -resize (modified now to use a signle scalar multiple)
+    -move
+    -add reference line (adds two horizontal lines at +/- the numeric value given)
+        -assists in seeing the value/amplitude of the signal
+        -set this to 0 to remove the lines
+    -labels and reference lines update after resize or move is complete
+    -line configurations are saved to disk upon closing
+-redesigned y-axis labels to match up with corresponding lines
+
+bug fixes:
+-inverted the plotting axis - negative values of signal are now up
+bugs:
+fixed = uicontextmenu does not work on the first plot for some reason, have to enter update plot first somehow
+may need to update the Periodogram header output... (? don't know why this is in here anymore)
+    function context_menu_label_lines_Callback(hObject, eventdata, handles) is never called - can't remember what this one was for; may be discarded in future version
+crashes if after starting the hht2disk method, you then continue on to try and load a file with the SEV
+ - this is due to the resetSEV function which implicitly deletes the waitbar that was generated by hht2disk, I think (would take too much time to investigate right now - so just use HHT2disk and wait till it is done before using the SEV further).
+currently, the SEV does not use the generated .HHT files
+i_e variable in characterize.m is assumed to be amplitude of the HHT, but this may not be right
+annotation bar gets glitchy when some of the dialog methods are used (i.e. loading a 
+
+NEW FILES:
+private/detectSpindle.m (replacement to detectSpindleHHT.m)
+hht2disk.m
+private/amfm_params1.m (Nima's characterizatin code)
+private/characterize.m (interface function with the sev)
+private/find_endpoints1.m
+private/stat_params1.m
+
+UPDATED FILES:
+sev.fig (organized Analyzer menu and added spindle characterization option)
+sev.m
+private/spindleDetection.m
+emd_slow.m (? can't remember if this one was modified or not)
+hhspectrum.m (now runs faster - unless it was emd_slow.m that was modified)
+-----------------------------------------------------------------------------------------
+
+
+-------------------------
+Version .21: 30July2010
+
+Sleep stage file update
+-now load sleep stages from [patient study].STA files instead of the STA.[patient study].HPN files.
+
+L Cent and Chin EMG channels are now loaded based on their label names in the EDF instead of defaulting to channels 3 and 5
+-(updated EDFs are required ('C3-M2' and 'Chin EMG' are the new labels)
+
+Overhauled the main window in the GUI layout, moving the remaining controls to the top of the figure (instead of on the left side)
+-added a spindle count/duration/percent output to the top of the figure as well for SEV and Fabio spindles
+in the same way that artifacts are labeled.
+
+Plotted Lines update:
+    User context menu (right click on a line) provides the following options
+    -RESIZE
+        1. Hot Key - press 'r' to change to resize state
+        2. click on a line to select it
+        3. use the mouse wheel to increase/decrease the scale
+        4. the value of the scaling used shows up in the right hand corner of the display
+    -MOVE
+        1. Hot key - press 'm' to change to move state
+        2. click on a line to select it
+        3. Move mouse up or down to reposition the line
+        Note: 'Control' key is no longer used in conjunction with moving a line.
+    -DEFAULT
+        1. changes the resize scale back to normal/no scaling
+    Left clicking on a line will reveal its scale (if it exists) in the upper right corner of the SEV
+
+Spindle Detection update
+-Option for Fabio detection method included now
+    -click on the 'Fabio' radiobuton in the detection method manel at the top of the SEV main window
+    -shows abs value of the bandpassed EEG signal
+    -shows lower and upper thresholds
+    -changed color map option to hopefully allow it to show up easier since the detections are so small
+
+small changes:
+added '#' sign in front of each line of metadata in the PSA and FFT output files.
+
+updated files:
+sev.m
+sev.fig
+fabios_spindle_detector.m
+
+
+
+Version .20: 21July10
+
+fixed source method display implementation
+-assign a {default} label for messages that do not match the code specified...
+-produce a {SEV} default label method... (outside of the actual loaded channels)
+-produce a {Fabio} method ... (outside of the actual loaded channels)
+-make labels adjust with the new methods...
+
+bug fixes:
+-changed code to deal with PRANA 'window' function.  The issue was in CalcPSD.m and has been taken care of (rewrote the eval method).
+-issues with PRANA methods being at the top of a Matlab's path settings.  
+    - move prana to the bottom
+    - move Biosig paths to the bottom with the exception of the t200 biosig 
+    subfolder which needs to be at the top for sload to work (to open the EDFs)
+-sev_parameters.txt file now use carriage returns instead of line feeds which provides better viewing on window platforms.
+
+
+new files:
+artifact_dlg.m - moved artifact controls off of main sev figure/GUI to separate figure/GUI ... 
+artifact_dlg.fig - in a similar fashion to the spindle_dlg controls produced in version .18
+saveStruct.m - used to save structures to a file.  Helpful in general, but used here to save SEV parameters to file
+loadStruct.m - loads structures that have been saved to a file using the saveStruct function (above)
+
+updated files:
+calcPSD.m - see bug fixes
+parseArtifactsFromFile.m  - had to adjust this to handle default labels (i.e. labels without the '[source].[event].[label]' structure.
+sev.m
+sev.fig - added Artifact Detector GUI tool under Analyzer menu (next to spindle detector)
+
+version 19: 16July2010
+
+batch process
+    - save the last batch processed folder as a parameters variable for later retrieval
+    - save a copy of the parameters.txt file to the same folder as the batch folder
+Interface
+    -Now possible to move channels up and down with mouse drags
+        -press Control and then click on a line to begin dragging the line to its new default location
+        -changes are saved in the preference .txt file
+        -text labels move up and down as well on the next plot update/refresh
+Labels
+    - changed the names of the labels put on the Can radiobutton ('Stage #' renamed to 'Pass #' and bands were given explicit frequency ranges)
+    - editable titles/labels 
+        - just click on a label to change its name (need to update the plot still (i.e. click over an epoch)
+        - changes are saved to the sev_parameters.txt file for future use upon closing out SEV
+Fabio Ferrarelli spindle detection method added
+    - detected spindles are saved to the events text file when you click save events or run a batch job
+    - detected spindles display with other spindles on its own line...
+Misc
+    - Warning dialog box appears now when errors are encountered
+    - Minor grid lines are now drawn at 0.5 second intervals (regardless of scale), 
+        -this can be turned on or off by right clicking on the main axes and selecting/deselecting the Show Grid option. (draw_y_grid(...))
+
+bug fixes
+fixed ismac command - remove this option since it is buggy/does not work in pc's
+files_skipped - does not exist as a variable - problem was the first variable was called files_skiped (oops)
+fixed sev_parameters.txt loading bug - before it would not correctly not load all of the set parameters
+can now click on the sleep stage markings in the lower axes and have the epoch change (before it would change only if you clicked on the white space)
+
+updated files
+sev.m
+spindleDetection.m
+
+new files
+fabios_spindle_detector.m - contains Fabio Ferrarelli's method for finding spindles
+
+
+version 18: 8July2010
+
+-updated the batch_process bug which continued the process even if a user cancelled the batch_process dialog
+(in batch file process GUI/don't go to the pathname selection if the user cancels on the first part...)
+-updated the psd and spindle dialogs so that they return [] or modified=false if no changes from the original were made (sort of, it still registers a change if you modify from the original value and then modify it back to the original value)
+-error warning for not being able to find all of the necessary files (.m and evt, .hpn) 
+-added further error checking to batch processing mode and for the usual loading of EDF's
+    -batch processing mode now catches any errors (in addition to missing files) and logs the result
+    -output is also sent to the command line
+-summary message box at the end of batch processing mode now available (tells how many files were attempted, processed, and skipped
+-spindle detection method labels are now always in place (used to only be available in the hope method)
+-changed Hope to Can
+ - integrated Can's spindle detector into the Can radiobutton option
+ - plots 3 stages from his spindle detector
+ - plots alpha, sigma, beta, and high pass 4khz filter results in addition to the first IMF (With freq and amplitude as well)
+-New Spindle detection dialog box
+ - accessible under the menu bar Analyzer option
+ - can change different spindle detection parameters
+    - band pass frequencies (high and low values)
+    - window type (hanning, not editable in the GUI at the moment)
+    - filter order N (100 default)
+    - RMS window to apply to it
+ - clicking Test will update the plot showing what the results will look like using the current sample method
+ - clicking Save will save those parameters to SEV for continued use - results are also stored to file
+ - clicking cancel nullifies any changes (though you may need to update the plot if you had already tried the 'Test' option with new parameters (just click over an epoch and come back to update the plot)
+
+
+
+files updated:
+batch_process_dlg.m (? - maybe updated)
+psd_dlg.m
+psd_dlg.fig
+sev.m
+sev.fig
+
+NEW:
+spindle_dlg.m
+spindle_dlg.fig
+
+
+*EMD folder (Can's EMD code)
+private folder (Can's spindle code) - altered spindleDetection.m and detectSpindleHHT to integrate plot results and names into SEV
+
+*note: you need to be in this working directory since there are difference versions of the code being used right now...
+that is, the userpath should be set to wherever the SEV file is...
+
+
+SEV .17
+
+updated calcPSD to use the periodogram method of calculating the PSD
+(welch averaging can be done later on own by user after exporting...)
+created psd_dlg.fig and psd_dlg.m to update the PSD parameters that can be used
+    -includes a window type (with display of different window options
+    -window length
+    -window interval
+
+added option to load/save SEV parameters from a text file...
+ - includes a time stamp
+ - updated each time SEV is closed
+ - names on the left are added directly as structures to the handles.user structure (i.e. don't modify the names, values on the right are okay to change)
+ - default filename where this is saved is sev_parameters.txt
+
+CTRL-C now terminates execution (helpful if there is a bug in normal shutdown procedure which causes the program to hang)
+
+added new dialog to assist in running the batch process job
+- can select which files you want saved, and the filenames to be used
+- enabled PSD parameter tweaking before a file is loaded in case user wants to adjust things before running a batch job
+- small fix to check for mac computers, and use a better suited get directory path for the batch job on PCs.
+- now checks for .hpn and evt files and skips processing the edf if these files are not found (results are saved to a log file)
+- batch processing parameters added to the sev_parameters.txt file that is saved each time
+- stats tally was added to the parameters .txt file as an option to manipulate, but not in the helper dialog yet
+
+
+Required Files:
+
+batch_process_dlg.fig
+batch_process_dlg.m
+calcPSD.m
+emd_slow.m
+findpeaks.m (required by emd_slow.m)
+findSpindles.m
+hhspectrum.m
+instfreq.m (required by hhspectrum.m)
+movingRMS.m
+parseArtifactsFromFile.m
+psd_dlg.fig
+psd_dlg.m
+saveParametersToFile.m
+sev v.15.txt
+sev_parameters.fig
+sev_parameters.m
+sev.fig
+sev.m
+thresholdcrossings.m

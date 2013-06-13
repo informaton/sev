@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>string</key>
+	<string>aString</string>
+	<key>int</key>
+	<integer>123</integer>
+	<key>double</key>
+	<real>123.456</real>
+	<key>true</key>
+	<true/>
+	<key>false</key>
+	<false/>
+	<key>stringarray</key>
+	<array>
+		<string>string 1</string>
+		<string>string 2</string>
+	</array>
+	<key>subDict</key>
+	<dict>
+		<key>nodes</key>
+		<integer>6</integer>
+		<key>channels</key>
+		<integer>2</integer>
+	</dict>
+	<key>arrayofdict</key>
+	<array>
+		<dict>
+			<key>nodes</key>
+			<integer>6</integer>
+			<key>channels</key>
+			<integer>2</integer>
+		</dict>
+		<dict>
+			<key>nodes</key>
+			<integer>6</integer>
+			<key>channels</key>
+			<integer>2</integer>
+		</dict>
+	</array>
+	<key>emptyArray</key>
+	<array/>
+  <key>aDate</key>
+  <date>2005-03-15T07:08:06Z</date>
+  <key>someData</key>
+  <data>ZDI5eWF5Qm1iM0lnY0dWaFkyVT0=</data>
+</dict>
+</plist>
