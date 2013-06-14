@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>average_power_window_sec</key>
+	<real>20.000000</real>
+	<key>threshold_low_uV</key>
+	<real>2.000000</real>
+	<key>threshold_high_uV</key>
+	<real>8.000000</real>
+	<key>noisefloor_uV_to_turnoff_detection</key>
+	<real>50.000000</real>
+	<key>use_summer</key>
+	<real>1.000000</real>
+	<key>summer_order</key>
+	<real>2.000000</real>
+	<key>samplerate</key>
+	<real>100.000000</real>
+</dict>
+</plist>

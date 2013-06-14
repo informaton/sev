@@ -1,0 +1,4 @@
+#Matlab_filename   Label Number_of_channels_required Dialog_name Batch_mode_score
+detection_plm_calculator plm_calculator 2 plist_editor_dlg plm_calc
+detection_rr_simple rr_simple 1 plist_editor_dlg RR_interval_simple
+detection_rr_interval rr_interval 1 plist_editor_dlg RR_interval

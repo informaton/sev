@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>filter_with_anc</key>
+	<real>1.000000</real>
+	<key>min_duration_sec</key>
+	<real>0.750000</real>
+	<key>average_power_window_sec</key>
+	<real>20.000000</real>
+	<key>merge_within_sec</key>
+	<real>2.000000</real>
+	<key>use_summer</key>
+	<real>1.000000</real>
+	<key>median_removal</key>
+	<real>1.000000</real>
+</dict>
+</plist>
