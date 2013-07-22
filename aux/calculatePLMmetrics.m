@@ -95,7 +95,7 @@ if(nargin>0)
     for f=1:numel(fnames)
         PLMmetrics.(fnames{f}) = NaN;        
     end
-    if(stage_dur_hour>2)
+    if(stage_dur_hour>0)
         if(~isempty(mat_events_epoch_cycle))
             mat_predictor = mat_events_epoch_cycle(:,1:2);
             predictor_epochs = mat_events_epoch_cycle(:,3);
@@ -184,12 +184,14 @@ if(nargin>0)
                 end
                 %plm attrition
                 %                 hrs_slept = round(qParams.epoch(end)/120);%30/60/60 (30 second epochs divided by 3600 seconds to get hours
-                stage_dur_hr = round(stage_dur_hour);
+                
+                q = mym('select sum(duration)/3600 as tst from stagestats_t where patstudykey={Si} and latency>=0',key);
+                TST = q.tst;
                 hrs2epochs = 1*3600/30;  %3600 seconds/hour * 1 epoch/30 seconds
                 
                 %                             PLM_epochs = qPredict.epoch(PLM_ind);
                 
-                halfway_epoch = (stage_dur_hr*hrs2epochs)/2;
+                halfway_epoch = (TST*hrs2epochs)/2;
                 
                 PLM_epochs = predictor_epochs(PLM_ind);
                 plm_first_half = sum(PLM_epochs<halfway_epoch);
@@ -206,22 +208,23 @@ if(nargin>0)
                 else
                     ratio_lm = lm_first_half/lm_second_half;
                 end
-                y = hist(PLM_epochs/120,1:stage_dur_hr);
                 try
-                    p = polyfit(1:stage_dur_hr,y,1);
+                    y = hist(PLM_epochs/120,0:round(TST));
+                    p = polyfit(0:round(TST),y,1);
                 catch me
-                    disp(me);
+                    showME(me);
                     p = NaN;
                 end
                 plm_attrition_by_hour_results = p(1);
                 
                 LM_epochs = predictor_epochs;
                 
-                y = hist(LM_epochs/120,1:stage_dur_hr);
                 try
-                    p = polyfit(1:stage_dur_hr,y,1);
+                    y = hist(LM_epochs/120,0:round(TST));
+
+                    p = polyfit(0:round(TST),y,1);
                 catch me
-                    disp(me);
+                    showME(me);
                     p = NaN;
                 end
                 lm_attrition_by_hour_results = p(1);
@@ -229,11 +232,11 @@ if(nargin>0)
                 PLM_cycles = predictor_cycles(PLM_ind);
                 num_cycles = max(PLM_cycles)-1;
                 if(num_cycles>1)
-                    y = hist(PLM_cycles(1:end-1),1:num_cycles);
                     try
-                        p = polyfit(1:num_cycles,y,1);
+                        y = hist(PLM_cycles(1:end-1),0:num_cycles);
+                        p = polyfit(0:num_cycles,y,1);
                     catch me
-                        disp(me);
+                        showME(me);
                         p = NaN;
                     end
                     plm_attrition_by_cycle_results = p(1);
@@ -245,11 +248,11 @@ if(nargin>0)
                 LM_cycles = predictor_cycles;
                 num_cycles = max(LM_cycles)-1;
                 if(num_cycles>1)
-                    y = hist(LM_cycles(1:end-1),1:num_cycles);
                     try
-                        p = polyfit(1:num_cycles,y,1);
+                        y = hist(LM_cycles(1:end-1),0:num_cycles);
+                        p = polyfit(0:num_cycles,y,1);
                     catch me
-                        disp(me);
+                        showME(me);
                         p = NaN;
                     end
                     lm_attrition_by_cycle_results = p(1);

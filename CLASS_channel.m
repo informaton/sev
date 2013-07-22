@@ -369,7 +369,7 @@ classdef CLASS_channel < handle
                 obj.text_handle = text('parent',obj.parent_axes,'visible','on',...
                     'handlevisibility','on','ButtonDownFcn',@obj.text_buttonDownFcn,...
                     'color',obj.color,'string',obj.title,'interpreter','none',...
-                    'userdata',obj.channel_index);
+                    'userdata',obj.channel_index,'position',[nan nan 0]);
             end
         end
 
@@ -399,7 +399,8 @@ classdef CLASS_channel < handle
         function obj = setupMainLine(obj,contextmenu_mainline_h)
             set(contextmenu_mainline_h,'userdata',obj.channel_index);  
             obj.line_handle = line('parent',obj.parent_axes,'color',obj.color,'linestyle','-','visible','on',...
-                'handlevisibility','on','userdata',obj.channel_index,'ButtonDownFcn',@obj.line_buttonDownFcn,'uicontextmenu',contextmenu_mainline_h);
+                'handlevisibility','on','userdata',obj.channel_index,'ButtonDownFcn',@obj.line_buttonDownFcn,'uicontextmenu',contextmenu_mainline_h,...
+                'xdata',[],'ydata',[]);
             set(obj.text_handle,'uicontextmenu',contextmenu_mainline_h);
         end
             

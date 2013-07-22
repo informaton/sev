@@ -34,9 +34,13 @@ function [variable_threshold_low_uv, variable_threshold_high_uv, clean_data] = g
 %     variable_threshold_high_uv = 0.5*noisefloor.*log(noisefloor) + params.threshold_high_uV;
     
 %     variable_threshold_high_uv = 0.5*noisefloor.*(1+1*log(noisefloor+1)) + params.threshold_high_uV; %version 5 and 6
-    variable_threshold_high_uv = noisefloor.*(1+1*log(noisefloor+1)) + params.threshold_high_uV;  %version 3 and 4
 
-     %     variable_threshold_high_uv = noisefloor.*(1+1*log(noisefloor+1)) + params.threshold_high_uV;
+% variable_threshold_high_uv = noisefloor.*(1+1*log(noisefloor+1)) + params.threshold_high_uV;  %version 3 and 4
+
+        variable_threshold_high_uv = noisefloor.*(log(noisefloor+1)) + params.threshold_high_uV;  %version 3 and 4
+
+     %     variable_threshold_high_uv = noisefloor.*(1+1*log(noisefloor+1))
+     %     + params.threshold_high_uV; 
     
     
     variable_threshold_high_uv(disengage_indices) = inf;    

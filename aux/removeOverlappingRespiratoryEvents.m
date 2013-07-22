@@ -19,9 +19,11 @@ function [cleanedEvents, clean_indices] = removeOverlappingRespiratoryEvents(mat
 %
 
 % Hyatt Moore, IV (< June, 2013)
+% 7/21/2013: clean_indices now returns a vector of the number of rows in
+%            matEvents when no respiratory events are found;
 if(isempty(matArtifact)||isempty(matEvents))
     cleanedEvents = matEvents;
-    clean_indices = 1:numel(matEvents);
+    clean_indices = 1:size(matEvents,1);
 else
     if(~issorted(matArtifact(:,1)))
         [~,ind]=sort(matArtifact(:,1));

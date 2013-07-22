@@ -172,7 +172,7 @@ classdef CLASS_UI_marking < handle
             
             obj.sev_loading_file_flag = [];
             obj.sev_mainaxes_ylim = [-300,300];
-            obj.sev_mainaxes_xlim = [1 100];
+            obj.sev_mainaxes_xlim = [1 3000];
             obj.current_epoch = 0;
             
             obj.configureMainAxesContextmenu();
@@ -181,7 +181,6 @@ classdef CLASS_UI_marking < handle
             obj.setEpochResolutionHandle(handles.popupmenu_epoch);
             obj.configureUtilitySettings();
             
-
             obj.addToolbar();
             obj.restore_state();
         end
@@ -1527,7 +1526,8 @@ cropFigure2Axes(f,axes1_copy);
                 'ytickmode','manual',...
                 'ytick',[],...
                 'nextplot','replacechildren','box','on',...
-                'dataaspectratiomode','auto',...
+                'xlim',obj.sev_mainaxes_xlim,...
+                'ylim',obj.sev_mainaxes_ylim,...  %avoid annoying resolution changes on first load
                 'ydir',obj.sev.yDir);
             
             set(obj.axeshandle.timeline,'Units','normalized',... %normalized allows it to resize automatically
@@ -1540,7 +1540,14 @@ cropFigure2Axes(f,axes1_copy);
                 'ytickmode','manual',...
                 'ytick',[],...
                 'nextplot','replacechildren','box','on');
-            
+
+            seconds_per_epoch = obj.getSecondsPerEpoch();
+            if(seconds_per_epoch == obj.sev.standard_epoch_sec)
+                set(obj.axeshandle.main,'dataaspectratiomode','manual','dataaspectratio',[30 12 1]);
+            else
+                set(obj.axeshandle.main,'dataaspectratiomode','auto');
+            end;
+
             
             set(obj.axeshandle.utility,'Units','normalized',... %normalized allows it to resize automatically
                 'xgrid','off','ygrid','off',...
@@ -1710,6 +1717,7 @@ cropFigure2Axes(f,axes1_copy);
                 end
                 obj.epoch_resolution.selection_choices = epoch_selection;
                 obj.epoch_resolution.current_selection_index = find(obj.epoch_resolution.sec==obj.sev.standard_epoch_sec);
+                
                 
                 obj.epoch_resolution.menu_h = time_scale_menu_h_in;
                 set(obj.epoch_resolution.menu_h,'string',epoch_resolution_string,'value',obj.epoch_resolution.current_selection_index,'callback',@obj.epoch_resolution_callback);
@@ -2490,7 +2498,7 @@ cropFigure2Axes(f,axes1_copy);
             %parent_axes is the handle to the axes that the grids will be drawn to
             %grid_handle is a graphics handle to the line
             parent_axes = obj.axeshandle.main;
-            spacing_sec = 0.5;
+            spacing_sec = 1.0;
             y_lines = obj.sev_mainaxes_xlim(1):spacing_sec*obj.sev.samplerate:obj.sev_mainaxes_xlim(2);
 
             
