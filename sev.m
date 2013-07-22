@@ -79,7 +79,7 @@ import detection.*; %detection algorithms and such
 import filter.*;
 
 sev_path = fileparts(mfilename('fullpath'));
-addpath(fullfile(sev_path,'aux'));
+addpath(fullfile(sev_path,'auxiliary'));
 % filter_inf = fullfile(DEFAULTS.filter_path,'filter.inf');
 % if(exist(filter_inf,'file'))
 %     [mfile, evt_label, num_reqd_indices, unused_param_gui, unused_batch_mode_label] = textread(filter_inf,'%s%s%n%s%c','commentstyle','shell');
