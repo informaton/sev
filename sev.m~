@@ -116,6 +116,12 @@ initializeGUI(hObject);
 
 handles.user.annotationH = -1;
 
+%set the value found in the uicontext menu as established/set with GUIDE
+%(in the sev.fig) - determine the default value and assign it here - may
+%want to improve this by saving this parameter to the text file
+% handles.user.analysis.spacing = str2double(get(findobj(allchild(handles.context_menu_label_spacing),'checked','on'),'label'));
+% commented out on 5/16/2011
+
 
 %to enable swapping and such...
 handles.user.axes1_H = handles.axes1;
@@ -173,6 +179,11 @@ function varargout = sev_OutputFcn(hObject, eventdata, handles)
 
 % Get default command line output from handles structure
 varargout{1} = handles.output;
+
+
+
+
+
 
 
    

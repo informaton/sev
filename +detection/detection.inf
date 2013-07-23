@@ -2,3 +2,4 @@
 detection_plm_calculator plm_calculator 2 plist_editor_dlg plm_calc
 detection_rr_simple rr_simple 1 plist_editor_dlg RR_interval_simple
 detection_rr_interval rr_interval 1 plist_editor_dlg RR_interval
+detection_mscohere MagSqrCoherency 2 plist_editor_dlg mscoherency
