@@ -92,6 +92,7 @@ set(handles.table_detectconfig,'columnwidth',columnwidth); %MATLAB still needs t
 drawnow();
 
 if(~isempty(handles.DBase))
+    
     if(exist(handles.save_settings_filename,'file'))
         menu_selections = load(handles.save_settings_filename);
         preloaded = true;
@@ -109,6 +110,8 @@ if(~isempty(handles.DBase))
         else
             preloaded = false;
         end
+    else
+        preloaded = false;
     end
     if(~preloaded)
         handles.DBase.choice = 1;
@@ -199,25 +202,29 @@ dq = mym('select detectorid, configchannelLabels as channels from detectorinfo_t
 
 channelCell = cell(numel(dq.detectorid),1);
 for k = 1:numel(dq.detectorid)
-    if(~iscell(dq.channels{k}))
-        channelCell{k} = dq.channels{k};
-    else
-        channelconfig = dq.channels{k}{1};
-        if(iscell(channelconfig))
-            channelconfig = channelconfig{1};
-        end
-        if(isstruct(channelconfig))
-            if(isfield(channelconfig,'channel_label'))
-                channelconfig = channelconfig.channel_label;
-            elseif(isfield(channelconfig,'src_channel_label'))
-                channelconfig = strcat('synthetic ',channelconfig.src_channel_label);
-            else
-                channelconfig = 'unknown';
+    for j=1:numel(dq.channels{k})
+        cur_channel = dq.channels{k}(j);
+        if(~iscell(cur_channel))
+            channelCell{k} = cur_channel;
+        else
+            channelconfig = cur_channel{1};
+            if(iscell(channelconfig))
+                channelconfig = channelconfig{1};
             end
-        end
-        channelCell{k} = sprintf('{%u} %s',dq.detectorid(k),channelconfig);
-        for j=2:numel(dq.channels{k})
-            channelCell{k} =  [channelCell{k}, ', ',dq.channels{k}{j}];
+            if(isstruct(channelconfig))
+                if(isfield(channelconfig,'channel_label'))
+                    channelconfig = channelconfig.channel_label;
+                elseif(isfield(channelconfig,'src_channel_label'))
+                    channelconfig = strcat('synthetic ',channelconfig.src_channel_label);
+                else
+                    channelconfig = 'unknown';
+                end
+            end
+            if(j==1)
+                channelCell{k} = sprintf('{%u} %s',dq.detectorid(k),channelconfig);
+            else
+                channelCell{k} =  sprintf('%s, %s',channelCell{k},channelconfig);
+            end
         end
     end
 end
