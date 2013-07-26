@@ -6,6 +6,10 @@ function [HDR, signal] = loadEDF(filename,channels)
 %then all of the channels in the EDF will be loaded.  
 %Written by Hyatt Moore
 %last modified: October, 8, 2012
+%July 13, 2013: fixed a bug which could cause incorrect visual scaling in
+%cases where the channel units of measurement did not match up with the
+%index k.  
+
 if(nargin==0)
     disp 'No input filename given; aborting';
     return;
@@ -81,7 +85,7 @@ if(nargout>1)
     for k = 1:numel(channels)
         cur_channel = channels(k);
         if(cur_channel>0 && cur_channel<=HDR.num_signals)
-            physical_dimension = HDR.physical_dimension{k};% ns * 8 ascii : ns * physical dimension (e.g. uV or degreeC)')
+            physical_dimension = HDR.physical_dimension{cur_channel};% ns * 8 ascii : ns * physical dimension (e.g. uV or degreeC)')
             if(strcmpi(physical_dimension,'mv'))
                 scale = 1e3;
             elseif(strcmpi(physical_dimension,'v'))

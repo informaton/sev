@@ -1361,7 +1361,7 @@ cropFigure2Axes(f,axes1_copy);
                     suggestion = suggested_pathname;
                 end
                 
-                [filename,pathname]=uigetfile({'*.EDF;*.edf','European Data Format'},'File Finder',...
+                [filename,pathname]=uigetfile({'*.EDF;*.edf','European Data Format';'*.REC;*.rec','European Data Format (.rec)'},'File Finder',...
                     suggestion);
                 if(filename~=0)
                     obj.loadEDFintoSEV(filename,pathname);
