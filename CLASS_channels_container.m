@@ -691,13 +691,14 @@ classdef CLASS_channels_container < handle
                 pathname = optional_pathname;
             end
             
+            studyname = strrep(studyname,'.EDF','');
+
             for c=1:numel(channels)
                 ch = channels(c);
                 chan_name = obj.getChannelName(ch);
-                studyname = strrep(studyname,'.EDF','');
-                studyname = [studyname,'.',chan_name,'.txt'];
-                filename = fullfile(pathname,studyname);
-                obj.cell_of_channels{ch}.savePSD2txt(filename);
+                save_studyname = [studyname,'.',chan_name,'.txt'];
+                save_filename = fullfile(pathname,save_studyname);
+                obj.cell_of_channels{ch}.savePSD2txt(save_filename);
             end
                 
         end

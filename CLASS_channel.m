@@ -263,9 +263,9 @@ classdef CLASS_channel < handle
                 end
             end;
             if(nargin>=3)
-                PSD_settings = PSD;
-            else
                 PSD_settings = optional_PSD_settings;
+            else
+                PSD_settings = PSD;
             end
             obj.PSD = PSD_settings;
             [obj.PSD.magnitude obj.PSD.x obj.PSD.nfft] = calcPSD(obj.getData(psd_range),obj.samplerate,obj.PSD);
@@ -634,7 +634,12 @@ classdef CLASS_channel < handle
             global STATE;
             global ARTIFACT_CONTAINER;
             global MARKING;
-            if(STATE.batch_process_running)
+            if(~isempty(STATE) && isfield(STATE,'batch_process_running' && STATE.batch_process_running))
+                BATCH_JOB = true;
+            else
+                BATCH_JOB = false;
+            end
+            if(BATCH_JOB)
                 standard_epoch_sec = BATCH_PROCESS.standard_epoch_sec;
                 batch_id = BATCH_PROCESS.start_time;
                 num_events = ARTIFACT_CONTAINER.num_events;
@@ -664,7 +669,7 @@ classdef CLASS_channel < handle
                 evt_ind = false(numel(E),num_events);
                 evtLabels=repmat('_',size(evt_ind)); %initialize to blanks
                 for k = 1:num_events
-                    if(STATE.batch_process_running)
+                    if(BATCH_JOB)
                         eventMat = ARTIFACT_CONTAINER.cell_of_events{k}.start_stop_matrix;
                     else
                         eventMat = EVENT_CONTAINER.cell_of_events{obj.event_indices_vector(k)}.start_stop_matrix;
@@ -694,7 +699,7 @@ classdef CLASS_channel < handle
                 
                 evtBool = sum(evt_ind,2)>0;
                 
-                if(STATE.batch_process_running)
+                if(BATCH_JOB)
                     samples_per_artifact = obj.PSD.interval*obj.samplerate;
                     artifact_mat = find(evtBool);
                     artifact_mat = [(artifact_mat-1)*samples_per_artifact+1,artifact_mat*samples_per_artifact];
