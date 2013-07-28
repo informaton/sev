@@ -110,6 +110,8 @@ DEFAULTS.rootpathname = fileparts(mfilename('fullpath'));
 %initialize GLOBAL variables...
 settingsStruct = initializeGLOBALs();
 
+DEFAULTS.rootpathname = fileparts(mfilename('fullpath'));
+
 initializeGUI(hObject);
 
 %set default values
