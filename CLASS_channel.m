@@ -1,55 +1,100 @@
+%> @file CLASS_channel.m
+%> @brief CLASS_channel used by SEV for handling polysomnogram channels.
+% ======================================================================
+%> @brief CLASS_channel used by SEV for handling polysomnogram channels.
+%> The CLASS_channel class is designed for storage and manipulation of
+%> PSG channel data for use with the SEV.
+%
+%> channel_class will be used by the SEV.  It will hold the different
+%> EEG/channels that have been loaded by an EDF.
+%> Written by Hyatt Moore IV
+%> modified 10.6.2012
+%> modified 11.20.2012 - filter() updated to pass getData() directly to
+%> feval(filterFcn,... to avoid global CLASS_Channels_container usage in
+%> the filterFcn which references the index, but does not yet exist
+%> globally when using batch mode since the batch mode processing is
+%> creating the synthetic file first.
+% ======================================================================
 classdef CLASS_channel < handle
-    %channel_class will be used by the SEV.  It will hold the different
-    %EEG/channels that have been loaded by an EDF.
-    %Written by Hyatt Moore IV
-    %modified 10.6.2012
-    %modified 11.20.2012 - filter() updated to pass getData() directly to
-    %feval(filterFcn,... to avoid global CLASS_Channels_container usage in
-    %the filterFcn which references the index, but does not yet exist
-    %globally when using batch mode since the batch mode processing is
-    %creating the synthetic file first.
     properties
-        line_offset; %sets 0 position of the data along the y-axes.
-        title; %user defined title
-        EDF_label; %label from the edf for this channel when applicable (i.e. non-synthetic channel)
-        EDF_index;%numeric index (start at 1) for this channel in the EDF  when applicable (i.e. non-synthetic channel)
-        channel_index; %index of this object in a cell of objects of this class
-        synth_src_container_indices;  %when a channel is synthesized, I want to know from where
-        raw_data; %the EDF channel data that was loaded
-        filter_data; %used to store raw_data that has been filtered
-        filterStruct; %array struct of filter rules that are applied to the raw data
-                     % the filterStruct is obtained from prefilter_dlg and
-                     % has the following fields
-                     % outputStruct.src_channel_index = [];
-                     %            .src_channel_label = [];
-                     %            .m_file = [];
-                     %            .ref_channel_index = [];
-                     %            .ref_channel_label = {};
-        show_filtered; %boolean value, set to true when the user wants to see fitered version of signal
-        samplerate; %sampling rate that it was loaded at in Hz
-        src_samplerate; %initial sampling rate
-        hidden; %boolean for whether it is displayed or not...
-        MUSIC; %stores the pmusic spectrum when applicable
-        PSD; %stores the power spectral density values and parameters used...
-        event_indices_vector; %vector into a global instance of events_container_class of the events associated with this channel
-        line_handle; %for the actual line that will be drawn.
-        current_samples; %current_samples selected for display   (used to be range)
-%         range; %range of values currently used for drawing (range(1) is the leftmost sample, range(end) is the right most sample)
-        scale;  %scales the raw_data by this value when plotted
-        color; %color of the lines/text when plotted
-        text_handle; %for the label
-        label_offset; %used for how far away the label/title will be        
-        label_position; %3 element vector (x,y,z) for the label's position relative to the axes...
+        %> sets 0 position of the data along the y-axes.
+        line_offset; 
+        %> user defined title
+        title; 
+        %> label from the edf for this channel when applicable (i.e.
+        %> non-synthetic channel)
+        EDF_label; 
+        %> numeric index (start at 1) for this channel in the EDF  when
+        %> applicable (i.e. non-synthetic channel)
+        EDF_index;
+         %> index of this object in a cell of objects of this class
+        channel_index;
+        %> when a channel is synthesized, I want to know from where
+        synth_src_container_indices;  
+        %> the EDF channel data that was loaded
+        raw_data; 
+        %> used to store raw_data that has been filtered
+        filter_data;
+        %> @briefarray struct of filter rules that are applied to the raw data
+        %> the filterStruct is obtained from prefilter_dlg and
+        %> has the following fields
+        %> outputStruct.src_channel_index = [];
+        %>            .src_channel_label = [];
+        %>            .m_file = [];
+        %>            .ref_channel_index = [];
+        %>            .ref_channel_label = {};
+        filterStruct;
+        %> boolean value, set to true when the user wants to see fitered version of signal             
+        show_filtered; 
+        %> sampling rate that it was loaded at in Hz
+        samplerate; 
+        %> initial sampling rate obtained from the PSG source file (e.g. EDF)
+        src_samplerate; 
+        %> boolean for whether it is displayed or not...
+        hidden; 
+        %> stores the pmusic spectrum when applicable
+        MUSIC; 
+        %> stores the power spectral density values and parameters used...
+        PSD;
+        %> vector into a global instance of events_container_class of the
+        %> events associated with this channel
+        event_indices_vector; 
+        %> for the actual line that will be drawn.
+        line_handle; 
+        %> current_samples selected for display   (used to be range)
+        %> range of values currently used for drawing (range(1) is the leftmost sample, range(end) is the right most sample)
+        current_samples; 
+        %> scales the raw_data by this value when plotted
+        scale;  
+        %> color of the lines/text when plotted
+        color; 
+        %> for the label
+        text_handle; 
+        %> used for how far away the label/title will be        
+        label_offset; 
+        %> 3 element vector (x,y,z) for the label's position relative to the
+        %> axes...
+        label_position; 
         reference_line_offsets;
         reference_line_color;
         reference_line_handles;
-        reference_text_handles; %two element vector of text handles that describe the position of the reference lines
-        repositioning; %flag that indicates whether this channel is being repositioned by the user (useful to know if the events needed to be updated because of a new offset -  or settings applied
-        draw_events; %flag to draw_events;
-        parent_axes; %axes to render to 
-        parent_fig; %handle of parent figure where mouse events are assigned
-        summary_stats_figure_h; %handle to the figure used to display summary_stats for this channel, if necessary
-        summary_stats_uitable_h; %handle to the table which holds the summary_stats structure
+        %> two element vector of text handles that describe the position of
+        %> the reference lines
+        reference_text_handles; 
+        %> flag that indicates whether this channel is being repositioned
+        %by the user (useful to know if the events needed to be updated because of a new offset -  or settings applied
+        repositioning; 
+         %> flag to draw_events;
+        draw_events;
+        %> axes to render to 
+        parent_axes; 
+        %> handle of parent figure where mouse events are assigned
+        parent_fig; 
+        %> handle to the figure used to display summary_stats for this
+        %> channel, if necessary
+        summary_stats_figure_h; 
+        %> handle to the table which holds the summary_stats structure
+        summary_stats_uitable_h; 
     end;
     methods(Static)
         function stats = data2stats(data)

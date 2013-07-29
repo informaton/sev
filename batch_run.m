@@ -1189,8 +1189,15 @@ if(pathname)
 %         fclose(log_fid);
 %     end
 assignin('base','files_completed',files_completed);
-    matlabpool open
-    parfor i = 1:file_count
+
+try
+%     matlabpool open
+catch me
+     
+end
+%     parfor i = 1:file_count
+
+    for i = 1:file_count
       tStart = tic;
       configID = [];
       detectorID = [];
@@ -1254,7 +1261,8 @@ assignin('base','files_completed',files_completed);
                     %batch processing - that is, it must exist for batch
                     %processing to continue/work
                     batch_STAGES = loadSTAGES(stages_filename,studyInfo.num_epochs);
-                    
+                    studyInfo.STAGES = batch_STAGES;
+                    studyInfo.standard_epoch_sec = parBATCH_PROCESS.standard_epoch_sec;
                     
                     %PROCESS ARTIFACTS
                     batch_ARTIFACT_CONTAINER = CLASS_events_container([],[],parBATCH_PROCESS.base_samplerate,batch_CHANNELS_CONTAINER,batch_STAGES); %this global variable may be checked in output functions and
@@ -1303,13 +1311,13 @@ assignin('base','files_completed',files_completed);
                             
                         end
                         if(BATCH_PROCESS.output_files.save2mat)
-                            batch_ARTIFACT_CONTAINER.save2mat(artifact_filenames);
+                            batch_ARTIFACT_CONTAINER.save2mat(artifact_filenames,studyInfo);
                         end
                         if(BATCH_PROCESS.database.save2DB)
                             batch_ARTIFACT_CONTAINER.save2DB(artifact_filenames);
                         end
                         if(BATCH_PROCESS.output_files.save2txt)
-                            batch_ARTIFACT_CONTAINER.save2txt(artifact_filenames);
+                            batch_ARTIFACT_CONTAINER.save2txt(artifact_filenames,studyInfo);
                         end
                     end
 
@@ -1433,13 +1441,13 @@ assignin('base','files_completed',files_completed);
                         end
                         
                         if(BATCH_PROCESS.output_files.save2mat)
-                            batch_EVENT_CONTAINER.save2mat(event_filenames);
+                            batch_EVENT_CONTAINER.save2mat(event_filenames,studyInfo);
                         end
                         if(BATCH_PROCESS.database.save2DB)                            
                             batch_EVENT_CONTAINER.save2DB(DBstruct,cur_filename(1:end-4)); %database_struct contains fileds 'name','user','password' for interacting with a mysql database
                         end
                         if(BATCH_PROCESS.output_files.save2txt)
-                            batch_EVENT_CONTAINER.save2txt(event_filenames);
+                            batch_EVENT_CONTAINER.save2txt(event_filenames,studyInfo);
                         end
                         
                     end
@@ -1502,7 +1510,7 @@ assignin('base','files_completed',files_completed);
                     ['Estimated Time Remaining: ',est_str]};
                 fprintf('%s\n',msg{2});
                 if(ishandle(waitHandle))
-                    waitbar((i-1)/file_count,waitHandle,msg);
+%                     waitbar((i-1)/file_count,waitHandle,char(msg));
                 else
 %                     waitHandle = findall(0,'tag','waitbarHTag');
                 end
@@ -1545,9 +1553,9 @@ assignin('base','files_completed',files_completed);
             
             if(ishandle(waitHandle))
                 fprintf('You finished recently!\n');
-                waitbar((i-1)/file_count,waitHandle,msg);
+%                 waitbar((i-1)/file_count,waitHandle,char(msg));
             else
-                waitHandle = findall(0,'tag','waitbarHTag');
+%                 waitHandle = findall(0,'tag','waitbarHTag');
             end
         end
       else
@@ -1555,7 +1563,7 @@ assignin('base','files_completed',files_completed);
           files_skipped(i) = true;
       end %end if not batch_process.cancelled
     end; %end for all files
-    matlabpool close;
+%     matlabpool close;
     num_files_completed = sum(files_completed);
     num_files_skipped = sum(files_skipped);
     waitHandle = findobj('tag','waitbarTag');

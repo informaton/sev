@@ -898,8 +898,8 @@ classdef CLASS_events < handle
                 %                 ['#EDF Channel Label(number) = ',obj.channel_name,' (',num2str(obj.channel_number),')']};
                 hdr = {obj.label,...
                     [obj.channel_name,' (',num2str(obj.channel_number),')']};
-                fprintf(fid,'Event Label =\t%s\r\nEDF Channel Label(number) = \t%s\r\n',hdr{1},hdr{2});
-                fprintf(fid,'Start_time\tDuration_seconds\tStart_sample\tStop_sample\tEpoch\tStage\tCycle');
+                fprintf(fid,'#Event Label =\t%s\r\n#EDF Channel Label(number) = \t%s\r\n',hdr{1},hdr{2});
+                fprintf(fid,'#Start_time\tDuration_seconds\tStart_sample\tStop_sample\tEpoch\tStage\tCycle');
                 
                 starts = obj.start_stop_matrix(:,1);
                 

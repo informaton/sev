@@ -375,9 +375,23 @@ end%end class definition
 function method_propertiesCallback(hObject,eventdata,handles)
     preference_function = get(handles.button.method_properties,'userdata'); %or get(hObject,...)
     detection_labels = get(handles.popup.method,'string');
-    detection_label = detection_labels{get(handles.popup.method,'value')};
+    method_index = get(handles.popup.method,'value');
+    detection_label = detection_labels{method_index};
     if(~isempty(preference_function))
-        feval(preference_function,detection_label); %saves changes
+        try
+            feval(preference_function,detection_label); %saves changes
+        catch me1
+            %perhaps their is no .plist file?
+            try
+               %run the detection method with no arguments to produce the
+               %.plist data
+               feval(strcat('detection.',handles.user.methods.mfile{method_index})); 
+            catch me2
+                %perhaps it failed, but the .plist data may exist now
+                feval(preference_function,detection_label); %saves changes %let current error be thrown if still have problems at this point.
+                %if not then just go ahead and crash here with me3
+            end
+        end
     end
 end
 

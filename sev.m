@@ -61,8 +61,6 @@ function sev_OpeningFcn(hObject, eventdata, handles, varargin)
 % handles    structure with handles and user data (see GUIDATA)
 % varargin   command line arguments to sev (see VARARGIN)
 
-
-
 %-power? - free memory function?  to clear up any used handles?)
 
  
@@ -135,8 +133,7 @@ catch me
     fprintf(1,['The default settings file is corrupted.',...
         '  This can occur when installing the software on a new computer or from editing the settings file externally.',...
         '\nChoose OK in the popup dialog to correct the settings file.\n']);
-    menu_help_defaults_Callback([],[],[]);
-    
+    menu_help_defaults_Callback([],[],[]);   
 end
     
     
