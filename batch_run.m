@@ -247,7 +247,6 @@ else
     set(handles.pop_spectral_method,'enable','on');
     set(handles.push_add_psd,'enable','on');
     set(get(handles.panel_artifact,'children'),'enable','on');
-    
         
     first_edf_filename = edf_file_list(1).name;
     HDR = loadEDF(fullfile(path,first_edf_filename));
@@ -1499,7 +1498,8 @@ end
                 elapsed_dur_total_sec = etime(clock,startClock);
                 avg_dur_sec = elapsed_dur_total_sec/i;
                 
-                num_files_completed = randi(1,0,100);
+%                 num_files_completed = randi(1,0,100);
+num_files_completed = i;
                 remaining_dur_sec = avg_dur_sec*(file_count-num_files_completed);
                 est_str = sprintf('%01ihrs %01imin %01isec',floor(mod(remaining_dur_sec/3600,24)),floor(mod(remaining_dur_sec/60,60)),floor(mod(remaining_dur_sec,60)));
 

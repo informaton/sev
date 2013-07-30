@@ -92,7 +92,7 @@ EDF_indices2load = EDF_indices2load(loadable_indices);
 studyInfo.startDateTime = HDR.T0;
 studyInfo.study_duration_in_seconds = HDR.duration_sec;
 studyInfo.study_duration_in_samples = HDR.duration_samples;
-studyInfo.num_epochs = floor(HDR.duration_sec/localBATCH_PROCESS.standard_epoch_sec);
+studyInfo.num_epochs = ceil(HDR.duration_sec/localBATCH_PROCESS.standard_epoch_sec);  %take all of the epochs, even the last one...
 
 %The ability to synthesize new channels from loaded channels complicates
 %matters.  Channel indices for the EDF are loaded and then referenced in the order they are loaded

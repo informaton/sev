@@ -247,7 +247,6 @@ else
     set(handles.pop_spectral_method,'enable','on');
     set(handles.push_add_psd,'enable','on');
     set(get(handles.panel_artifact,'children'),'enable','on');
-    
         
     first_edf_filename = edf_file_list(1).name;
     HDR = loadEDF(fullfile(path,first_edf_filename));
@@ -883,7 +882,7 @@ if(pathname)
     waitHandle = waitbar(0,'Initializing batch processing job','name','Batch Processing Statistics','resize','on','createcancelbtn',@cancel_batch_Callback,'userdata',user_cancelled,'tag','waitbarHTag');
     
     
-      BATCH_PROCESS.waitHandle = waitHandle;
+    BATCH_PROCESS.waitHandle = waitHandle;
     %turn off the interpeter so that '_' does not cause subscripting 
     set(findall(waitHandle,'interpreter','tex'),'interpreter','none');
 
@@ -1170,7 +1169,6 @@ if(pathname)
     %     better here.
     
     startClock = clock;
-    detection_path = strrep(DEFAULTS.detection_path,'+','');
     files_attempted = false(file_count,1);
     files_completed = false(file_count,1);
     files_skipped = false(file_count,1); %logical indices to mark which files were skipped
@@ -1202,7 +1200,7 @@ end
       configID = [];
       detectorID = [];
       user_cancelled = false;
-      waitHandle = findall(0,'tag','waitbarHTag');
+%       waitHandle = findall(0,'tag','waitbarHTag');
 
       
       if(~user_cancelled)
@@ -1230,7 +1228,6 @@ end
                 %require stages filename to exist.
                 if(~exist(stages_filename,'file'))
                     skip_file = true;
-                    
                     
                     %%%%%%%%%%%%%%%%%%%%%REVIEW%%%%%%%%%%%%%%%%%%%%%%%%
 %                     if(BATCH_PROCESS.output_files.log_checkbox)
@@ -1501,7 +1498,7 @@ end
                 elapsed_dur_total_sec = etime(clock,startClock);
                 avg_dur_sec = elapsed_dur_total_sec/i;
                 
-                num_files_completed = randi(1,0,100);
+%                 num_files_completed = randi(1,0,100);
                 remaining_dur_sec = avg_dur_sec*(file_count-num_files_completed);
                 est_str = sprintf('%01ihrs %01imin %01isec',floor(mod(remaining_dur_sec/3600,24)),floor(mod(remaining_dur_sec/60,60)),floor(mod(remaining_dur_sec,60)));
 
@@ -1510,7 +1507,7 @@ end
                     ['Estimated Time Remaining: ',est_str]};
                 fprintf('%s\n',msg{2});
                 if(ishandle(waitHandle))
-                    waitbar((i-1)/file_count,waitHandle,char(msg));
+                    waitbar(i/file_count,waitHandle,char(msg));
                 else
 %                     waitHandle = findall(0,'tag','waitbarHTag');
                 end
@@ -1553,7 +1550,7 @@ end
             
             if(ishandle(waitHandle))
                 fprintf('You finished recently!\n');
-                waitbar((i-1)/file_count,waitHandle,char(msg));
+                waitbar(i/file_count,waitHandle,char(msg));
             else
 %                 waitHandle = findall(0,'tag','waitbarHTag');
             end
@@ -1566,12 +1563,13 @@ end
 %     matlabpool close;
     num_files_completed = sum(files_completed);
     num_files_skipped = sum(files_skipped);
-    waitHandle = findobj('tag','waitbarTag');
+%     waitHandle = findobj('tag','waitbarTag');
+    
     finish_str = {'SEV batch process completed!',['Files Completed = ',...
         num2str(num_files_completed)],['Files Skipped = ',num2str(num_files_skipped)],...
         ['Elapsed Time: ',datestr(now-start_time,'HH:MM:SS')]};
         
-    if(ishandle(waitHandle'))
+    if(ishandle(waitHandle))
         waitbar(100,waitHandle,finish_str);
     end;
     
@@ -1613,7 +1611,7 @@ end
     end
     
     if(exist('waitHandle','var')&&ishandle(waitHandle))
-        delete(waitHandle);
+        delete(waitHandle(1));
     end;
 
 else
