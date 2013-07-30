@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>average_power_window_sec</key>
+	<real>45.000000</real>
+	<key>noisefloor_uV_threshold</key>
+	<real>12.000000</real>
+	<key>merge_within_sec</key>
+	<real>30.000000</real>
+	<key>min_duration_sec</key>
+	<real>15.000000</real>
+</dict>
+</plist>

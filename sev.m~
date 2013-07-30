@@ -124,7 +124,7 @@ handles.user.axes2_H = handles.axes2;
 guidata(hObject, handles);
 try
     
-    MARKING = CLASS_UI_marking(hObject,DEFAULTS); %handles.sev_main_fig; these two are equivalent
+    MARKING = CLASS_UI_marking(hObject,settingsStruct.SEV); %handles.sev_main_fig; these two are equivalent
     MARKING.initializeSEV();
 catch me
     %     me.message
@@ -370,10 +370,10 @@ full_paramsFile = fullfile(DEFAULTS.rootpathname,DEFAULTS.parameters_filename);
 
 if(exist(full_paramsFile,'file'))
     loadedParameters = loadParametersFromFile(full_paramsFile);   
-    PSD = loadedParameters.PSD;
-    DEFAULTS = loadedParameters.DEFAULTS;
-    BATCH_PROCESS = loadedParameters.BATCH_PROCESS;
-    MUSIC = loadedParameters.MUSIC;
+    PSD = paramStruct.PSD;
+DEFAULTS = paramStruct.DEFAULTS;
+BATCH_PROCESS = paramStruct.BATCH_PROCESS;
+MUSIC = paramStruct.MUSIC;
 else
     DEFAULTS.src_edf_pathname = '.'; %initial directory to look in for EDF files to load
     DEFAULTS.src_edf_filename = ''; %initial filename to suggest when trying to load an .EDF

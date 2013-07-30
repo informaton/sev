@@ -8,7 +8,6 @@ function saveParametersToFile(filename,inputStruct)
 %   7/10/2012 - added batch_process.images field
 %   5/7/2012 - added batch_process.database field
 %       
-global DEFAULTS;
 global BATCH_PROCESS;
 global PSD;
 global MUSIC;
@@ -24,12 +23,11 @@ if(nargin==1)
     paramStruct.PSD = PSD;
     paramStruct.MUSIC = MUSIC;
     
-    paramStruct.DEFAULTS = DEFAULTS;
+    paramStruct.DEFAULTS = MARKING.getSaveParametersStruct();
     paramStruct.BATCH_PROCESS.output_files = BATCH_PROCESS.output_files;
     paramStruct.BATCH_PROCESS.output_path = BATCH_PROCESS.output_path;
     paramStruct.BATCH_PROCESS.database = BATCH_PROCESS.database;
     paramStruct.BATCH_PROCESS.images = BATCH_PROCESS.images;
-    paramStruct.SEV = MARKING.getSaveParametersStruct();
     
     fid = fopen(filename,'w');
     if(fid<0)

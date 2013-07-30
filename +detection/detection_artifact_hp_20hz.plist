@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>scale_factor</key>
+	<real>3.000000</real>
+	<key>rms_short_sec</key>
+	<real>1.000000</real>
+	<key>rms_long_min</key>
+	<real>30.000000</real>
+    <key>additional_buffer_sec</key>
+	<real>1.0</real>
+    <key>merge_within_sec</key>
+	<real>5.0</real>
+</dict>
+</plist>

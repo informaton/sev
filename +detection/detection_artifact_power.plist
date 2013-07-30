@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>block_len_sec</key>
+	<real>5.000000</real>
+	<key>min_freq_hz</key>
+	<real>5.000000</real>
+	<key>power_threshold</key>
+	<real>500.000000</real>
+	<key>merge_within_blocks</key>
+	<real>10.000000</real>
+</dict>
+</plist>
