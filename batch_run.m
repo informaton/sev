@@ -1170,7 +1170,6 @@ if(pathname)
     %     better here.
     
     startClock = clock;
-    detection_path = strrep(DEFAULTS.detection_path,'+','');
     files_attempted = false(file_count,1);
     files_completed = false(file_count,1);
     files_skipped = false(file_count,1); %logical indices to mark which files were skipped
@@ -1230,7 +1229,6 @@ end
                 %require stages filename to exist.
                 if(~exist(stages_filename,'file'))
                     skip_file = true;
-                    
                     
                     %%%%%%%%%%%%%%%%%%%%%REVIEW%%%%%%%%%%%%%%%%%%%%%%%%
 %                     if(BATCH_PROCESS.output_files.log_checkbox)
@@ -1510,7 +1508,7 @@ end
                     ['Estimated Time Remaining: ',est_str]};
                 fprintf('%s\n',msg{2});
                 if(ishandle(waitHandle))
-%                     waitbar((i-1)/file_count,waitHandle,char(msg));
+                    waitbar((i-1)/file_count,waitHandle,char(msg));
                 else
 %                     waitHandle = findall(0,'tag','waitbarHTag');
                 end
@@ -1553,7 +1551,7 @@ end
             
             if(ishandle(waitHandle))
                 fprintf('You finished recently!\n');
-%                 waitbar((i-1)/file_count,waitHandle,char(msg));
+                waitbar((i-1)/file_count,waitHandle,char(msg));
             else
 %                 waitHandle = findall(0,'tag','waitbarHTag');
             end
@@ -1571,7 +1569,7 @@ end
         num2str(num_files_completed)],['Files Skipped = ',num2str(num_files_skipped)],...
         ['Elapsed Time: ',datestr(now-start_time,'HH:MM:SS')]};
         
-    if(ishandle('waitHandle'))
+    if(ishandle(waitHandle))
         waitbar(100,waitHandle,finish_str);
     end;
     
@@ -1612,7 +1610,7 @@ end
          msgbox(message,'Completed');
     end
     
-    if(exist('waitHandle','var'))
+    if(exist('waitHandle','var')&&ishandle(waitHandle))
         delete(waitHandle);
     end;
 
@@ -1789,6 +1787,9 @@ function figure1_CloseRequestFcn(hObject, eventdata, handles)
 
 % Hint: delete(hObject) closes the figure
 global MARKING;
+global BATCH_PROCESS;
+BATCH_PROCESS = handles.user.BATCH_PROCESS; %need to return this to the global for now 
+% in order to save settings between use.
 try
     if(ishandle(MARKING.figurehandle.sev))
         MARKING.initializeSEV(); %this currently deletes any other MATLAB figures that are up.
