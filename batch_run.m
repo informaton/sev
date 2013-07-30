@@ -883,7 +883,7 @@ if(pathname)
     waitHandle = waitbar(0,'Initializing batch processing job','name','Batch Processing Statistics','resize','on','createcancelbtn',@cancel_batch_Callback,'userdata',user_cancelled,'tag','waitbarHTag');
     
     
-      BATCH_PROCESS.waitHandle = waitHandle;
+    BATCH_PROCESS.waitHandle = waitHandle;
     %turn off the interpeter so that '_' does not cause subscripting 
     set(findall(waitHandle,'interpreter','tex'),'interpreter','none');
 
@@ -1201,7 +1201,7 @@ end
       configID = [];
       detectorID = [];
       user_cancelled = false;
-      waitHandle = findall(0,'tag','waitbarHTag');
+%       waitHandle = findall(0,'tag','waitbarHTag');
 
       
       if(~user_cancelled)
@@ -1508,7 +1508,7 @@ end
                     ['Estimated Time Remaining: ',est_str]};
                 fprintf('%s\n',msg{2});
                 if(ishandle(waitHandle))
-                    waitbar((i-1)/file_count,waitHandle,char(msg));
+                    waitbar(i/file_count,waitHandle,char(msg));
                 else
 %                     waitHandle = findall(0,'tag','waitbarHTag');
                 end
@@ -1551,7 +1551,7 @@ end
             
             if(ishandle(waitHandle))
                 fprintf('You finished recently!\n');
-                waitbar((i-1)/file_count,waitHandle,char(msg));
+                waitbar(i/file_count,waitHandle,char(msg));
             else
 %                 waitHandle = findall(0,'tag','waitbarHTag');
             end
@@ -1564,7 +1564,8 @@ end
 %     matlabpool close;
     num_files_completed = sum(files_completed);
     num_files_skipped = sum(files_skipped);
-    waitHandle = findobj('tag','waitbarTag');
+%     waitHandle = findobj('tag','waitbarTag');
+    
     finish_str = {'SEV batch process completed!',['Files Completed = ',...
         num2str(num_files_completed)],['Files Skipped = ',num2str(num_files_skipped)],...
         ['Elapsed Time: ',datestr(now-start_time,'HH:MM:SS')]};
@@ -1611,7 +1612,7 @@ end
     end
     
     if(exist('waitHandle','var')&&ishandle(waitHandle))
-        delete(waitHandle);
+        delete(waitHandle(1));
     end;
 
 else
