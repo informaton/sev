@@ -48,53 +48,30 @@ classdef CLASS_channel < handle
         show_filtered; 
         %> sampling rate that it was loaded at in Hz
         samplerate; 
-        %> initial sampling rate obtained from the PSG source file (e.g. EDF)
+        %> initial sampling rate obtained from the PSG
         src_samplerate; 
-        %> boolean for whether it is displayed or not...
-        hidden; 
-        %> stores the pmusic spectrum when applicable
-        MUSIC; 
-        %> stores the power spectral density values and parameters used...
-        PSD;
-        %> vector into a global instance of events_container_class of the
-        %> events associated with this channel
-        event_indices_vector; 
-        %> for the actual line that will be drawn.
-        line_handle; 
-        %> current_samples selected for display   (used to be range)
+        hidden; %> boolean for whether it is displayed or not...
+        MUSIC; %> stores the pmusic spectrum when applicable
+        PSD; %> stores the power spectral density values and parameters used...
+        event_indices_vector; %> vector into a global instance of events_container_class of the events associated with this channel
+        line_handle; %> for the actual line that will be drawn.
+        current_samples; %> current_samples selected for display   (used to be range)
         %> range of values currently used for drawing (range(1) is the leftmost sample, range(end) is the right most sample)
-        current_samples; 
-        %> scales the raw_data by this value when plotted
-        scale;  
-        %> color of the lines/text when plotted
-        color; 
-        %> for the label
-        text_handle; 
-        %> used for how far away the label/title will be        
-        label_offset; 
-        %> 3 element vector (x,y,z) for the label's position relative to the
-        %> axes...
-        label_position; 
+        scale;  %>scales the raw_data by this value when plotted
+        color; %>color of the lines/text when plotted
+        text_handle; %>for the label
+        label_offset; %>used for how far away the label/title will be        
+        label_position; %>3 element vector (x,y,z) for the label's position relative to the axes...
         reference_line_offsets;
         reference_line_color;
         reference_line_handles;
-        %> two element vector of text handles that describe the position of
-        %> the reference lines
-        reference_text_handles; 
-        %> flag that indicates whether this channel is being repositioned
-        %by the user (useful to know if the events needed to be updated because of a new offset -  or settings applied
-        repositioning; 
-         %> flag to draw_events;
-        draw_events;
-        %> axes to render to 
-        parent_axes; 
-        %> handle of parent figure where mouse events are assigned
-        parent_fig; 
-        %> handle to the figure used to display summary_stats for this
-        %> channel, if necessary
-        summary_stats_figure_h; 
-        %> handle to the table which holds the summary_stats structure
-        summary_stats_uitable_h; 
+        reference_text_handles; %>two element vector of text handles that describe the position of the reference lines
+        repositioning; %>flag that indicates whether this channel is being repositioned by the user (useful to know if the events needed to be updated because of a new offset -  or settings applied
+        draw_events; %>flag to draw_events;
+        parent_axes; %>axes to render to 
+        parent_fig; %>handle of parent figure where mouse events are assigned
+        summary_stats_figure_h; %>handle to the figure used to display summary_stats for this channel, if necessary
+        summary_stats_uitable_h; %>handle to the table which holds the summary_stats structure
     end;
     methods(Static)
         function stats = data2stats(data)

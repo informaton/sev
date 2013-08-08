@@ -23,6 +23,7 @@ nlfilter_min_past nlfilter_min_past 0 plist_editor_dlg NLFilterMinPast
 nlfilter_max_future nlfilter_max_future 0 plist_editor_dlg NLFilterMaxFuture
 nlfilter_median nlfilter_median 0 plist_editor_dlg NLFilterMedian
 nlfilter_std nlfilter_std 0 plist_editor_dlg std
+nlfilter_quickrms nlfilter_quick_rms 0 plist_editor_dlg RMS
 nlfilter_rms nlfilter_rms 0 plist_editor_dlg RMS
 nlfilter_abs nlfilter_abs 0 none ABS
 nlfilter_plm_noisefloor_passed nlfilter_plm_noisefloor_passed 0 plist_editor_dlg PLM_noisefloorpassed

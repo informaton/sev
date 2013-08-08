@@ -381,15 +381,13 @@ function method_propertiesCallback(hObject,eventdata,handles)
         try
             feval(preference_function,detection_label); %saves changes
         catch me1
-            %perhaps their is no .plist file?
-            try
-               %run the detection method with no arguments to produce the
-               %.plist data
+            try feval
                feval(strcat('detection.',handles.user.methods.mfile{method_index})); 
             catch me2
-                %perhaps it failed, but the .plist data may exist now
-                feval(preference_function,detection_label); %saves changes %let current error be thrown if still have problems at this point.
-                %if not then just go ahead and crash here with me3
+                feval(preference_function,detection_label); %saves changes
+
+                %I give up
+                rethrow me1;
             end
         end
     end

@@ -152,17 +152,7 @@ classdef CLASS_events < handle
             end
         end
         
-        function [merged_events, merged_indices] = buffer_then_merge_nearby_events(events_in,min_samples,additional_buffer_samples,max_samples)
-            %add additional buffer before and after each event and then
-            %merge if within min_samples of each other using
-            %merge_nerarby_events function below
-            events_in = [events_in(:,1)-additional_buffer_samples,events_in(:,2)+additional_buffer_samples];
-            events_in(:,1) = max(events_in(:,1),1);
-            events_in(:,2) = min(events_in(:,2),max_samples);
-            [merged_events, merged_indices] = CLASS_events.merge_nearby_events(events_in,min_samples);
-        end
-
-        function [merged_events, merged_indices] = merge_nearby_events(events_in,min_samples)
+        function [merged_events, merged_indices] = merge_nearby_events(events_in,min_samples,additional_buffer)
             %merge events that are within min_samples of each other, into a
             %single event that stretches from the start of the first event
             %and spans until the last event
@@ -171,11 +161,9 @@ classdef CLASS_events < handle
             %merged_indices is a logical vector of the row indices that
             %were merged from events_in. - these are the indices of the
             %in events_in that are removed/replaced
-            
             if(nargin==1)
                 min_samples = 100;
             end
-            
             merged_indices = false(size(events_in,1),1);
 
             if(~isempty(events_in))
