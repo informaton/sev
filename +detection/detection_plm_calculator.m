@@ -77,7 +77,7 @@ if(isempty(lm_detectStruct.new_events))
     detectStruct = lm_detectStruct;
 else
     %% remove LMs that occur during Stage 7 and before sleep onset
-    params.stages2exclude = 7;
+    params.stages2exclude = 8;
     
     %I think this is faster ....
     firstNonWake = 1;
