@@ -1,22 +1,27 @@
-classdef CLASS_event_toolbox_dialog < handle
-    %provides the backbone for creating gui's of different events using a few
-    %selectable parameters
-    %I envision this class being used in the following manner
-    %1.  The calling program will instatiate an object.  It will then 
-%     - if there is more than one channel to use then allow the selection of multichannel algorithms (lms filtering, ocular detection, etc.).
-%     - drop down list of avaialble channels to choose from for source, and possibly destination (if multichannel selected)
-%     - select if this will be a new channel created, or if artifacts are to be added only
-%     - select destination for artifacts
-%     - list name of artifact 'SEV.ocular.llll'
-%     - 
-%     - Event detection
-%         - criteria method - mean/median
-%         - greater than less than, equal, etc
-%         - moving filter.... (time delay for each)
-%     
+%> @file CLASS_events_toolbox_dialog.m
+%> @brief CLASS_events_toolbox_dialog GUI creation class for SEV's event toolbox.
+% ======================================================================
+%> @brief CLASS_events_toolbox_dialog provides the backbone for creating gui's of 
+%> different events using a few selectable parameters
 %
+%> Envision this class being used in the following manner
+%> 1.  The calling program will instatiate an object.  It will then 
+%>     - if there is more than one channel to use then allow the selection of multichannel algorithms (lms filtering, ocular detection, etc.).
+%>     - drop down list of avaialble channels to choose from for source, and possibly destination (if multichannel selected)
+%>     - select if this will be a new channel created, or if artifacts are to be added only
+%>     - select destination for artifacts
+%>     - list name of artifact 'SEV.ocular.llll'
+%>     - 
+%>     - Event detection
+%>         - criteria method - mean/median
+%>         - greater than less than, equal, etc
+%>         - moving filter.... (time delay for each)
+% ======================================================================
+%     
+% History 
 % Written by Hyatt Moore IV
 % Modified: 10.9.12 - put in MARKING global and removed sev('fcnCalls');
+classdef CLASS_events_toolbox_dialog < handle
     properties
         channel_names;% CHANNELS_CONTAINER will probably be fine...
         types; %{filter/detection/synthesis}
@@ -35,7 +40,7 @@ classdef CLASS_event_toolbox_dialog < handle
     end;
     
     methods
-        function obj = CLASS_event_toolbox_dialog()
+        function obj = CLASS_events_toolbox_dialog()
                global CHANNELS_CONTAINER;
                n= CHANNELS_CONTAINER.num_channels;
 %                obj.channel_names = cell(n,1);

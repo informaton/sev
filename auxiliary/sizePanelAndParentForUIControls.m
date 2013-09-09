@@ -1,6 +1,7 @@
 function [handles] = sizePanelAndParentForUIControls(panel_h,numControls,handles)
 %panel_h is the handle of the panel that is to be resized
-%numControls is a scalar containing the number of controls to be set in the panel
+%numControls is a scalar containing the number of rows of controls to be set in the
+%panel
 %panel_h must have at least one row of uicontrols present with the suffix _1
 %addedHandles is the handles added
 %
@@ -12,7 +13,7 @@ peer_h = get(parent_h,'children');
 pan_children = get(panel_h,'children');
 
 pan_children_tag = get(pan_children,'tag');
-f=regexp(pan_children_tag,'.*_(?<suffix>\d)','names');
+f=regexp(pan_children_tag,'.*_(?<suffix>\d+)','names');
 suffixes = zeros(numel(f),1);
 
 for k=1:numel(f)
@@ -24,6 +25,7 @@ for k=1:numel(f)
 end
 
 max_suffix = max(suffixes);
+
 
 if(max_suffix~=numControls)  %need to adjust up or down, otherwise no change is needed
     %get the units so we can restore later

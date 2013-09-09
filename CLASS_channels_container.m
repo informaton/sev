@@ -1,8 +1,16 @@
+%> @file CLASS_channels_container.m
+%> @brief CLASS_channels_container is a wrapper class for CLASS_channels.
+% ======================================================================
+%> @brief CLASS_channels_container exists for the purpose of organizing,
+%updating, and adjusting instances of CLASS_channels.
+%
+% 
+% History
+% Written by:
+%   Hyatt Moore, IV
+%   last modified: October 8, 2012
+% ======================================================================
 classdef CLASS_channels_container < handle
-%The class channels_container_class exists for the purpose of organizing,
-%updating, and adjusting instances of CLASS_channels.  
-%Written by Hyatt Moore
-%last modified: October 8, 2012
     properties
         cell_of_channels;
         num_channels;  %size of cell_of_channels (and also channel_vector)
@@ -618,8 +626,12 @@ classdef CLASS_channels_container < handle
             loadedEDFIndices = loadedEDFIndices(loadedEDFIndices>0);
         end
         %% sev menu callbacks
-        function EDF_HDR = loadEDFchannels(obj,EDF_fullfilename,EDF_channel_indices)
+        function EDF_HDR = loadEDFchannels(obj,EDF_fullfilename,EDF_channel_indices,use_Default_Samplerate)
             try
+                %default to using the default sample rate
+                if(nargin<4)
+                    use_Default_Samplerate= true;
+                end
                 HDR = loadEDF(EDF_fullfilename);
                 EDF_channel_indices = EDF_channel_indices(EDF_channel_indices>0 &...
                     EDF_channel_indices<=numel(HDR.label));
@@ -630,8 +642,15 @@ classdef CLASS_channels_container < handle
                 for k=1:numel(EDF_channel_indices)
                     EDF_index = EDF_channel_indices(k);
                     src_label = HDR.label{EDF_index}; %just stick with the EDF label as the title for now (default)
-                    obj.addChannel(signals{k},...
-                        src_label,EDF_index,HDR.samplerate(EDF_index));
+                    if(use_Default_Samplerate)
+                        %use default samplerate (100Hz)
+                        obj.addChannel(signals{k},...
+                            src_label,EDF_index,HDR.samplerate(EDF_index));
+                    else
+                        %or use sample rate from Header
+                        obj.addChannel(signals{k},...
+                            src_label,EDF_index,HDR.samplerate(EDF_index),HDR.samplerate(EDF_index));
+                    end
                 end;
             catch ME
                 ME.message
@@ -1015,7 +1034,7 @@ classdef CLASS_channels_container < handle
            % structure for each event and only applied if/as different
            % - this checking is carried out at the next level down in the
            % channel_class objects
-           global STATE;
+           global MARKING;
            src_indices = cell(numel(filterArrayStruct),1);
            [src_indices{:}]=filterArrayStruct.src_channel_index;
            src_indices = cell2mat(src_indices);
@@ -1044,7 +1063,7 @@ classdef CLASS_channels_container < handle
                    obj.cell_of_channels{chan_index}.filter(filterS);
                    %if not in batch mode then update the events for adjusted
                    %channels....
-                   if(~isfield(STATE,'batch_process_running') || isfield(STATE,'batch_process_running')&&~STATE.batch_process_running)
+                   if(~isfield(MARKING.STATE,'batch_process_running') || isfield(MARKING.STATE,'batch_process_running')&&~MARKING.STATE.batch_process_running)
                        event_indices = obj.cell_of_channels{chan_index}.event_indices_vector;
                        for k = 1:numel(event_indices)
                            %run the update event callback

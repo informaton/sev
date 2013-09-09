@@ -1,8 +1,15 @@
+%> @file CLASS_compareEvents_dialog.m
+%> @brief CLASS_compareEvents_dialog creates a dialog to access marking parameters.
+% ======================================================================
+%> @brief CLASS_compareEvents_dialog provides backbone for creating gui
+%> to select events for comparison within the SEV's single study mode.
+%>
+%> run method creates a dialog to access marking parameters.
+%> Documentation is similar to CLASS_marking_dialog; possible overlap may exist between these two classes. 
+% History
+% Written by: Hyatt Moore, IV (< June, 2013)
+% ======================================================================
 classdef CLASS_compareEvents_dialog < handle
-%run method creates a dialog to access marking parameters.
-% 
-
-% Hyatt Moore, IV (< June, 2013)
     properties
         dialog_handle;
         event_labels; %cell containing labels that can be used 

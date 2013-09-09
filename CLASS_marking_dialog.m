@@ -1,8 +1,17 @@
-classdef CLASS_marking_dialog < handle
-%run method creates a dialog to access marking parameters.
+%> @file CLASS_marking_dialog.m
+%> @brief CLASS_marking_dialog creates a dialog to access marking parameters.
+% ======================================================================
+%> @brief CLASS_marking_dialog may not be supported.  See
+%CLASS_compareEvents_dialog which has similar documentation in source file.
+%
+%> run method creates a dialog to access marking parameters.
 % 
+% 
+% History
+% Written by: Hyatt Moore, IV (< June, 2013)
+% ======================================================================
+classdef CLASS_marking_dialog < handle
 
-% Hyatt Moore, IV (< June, 2013)
     properties
         dialog_handle;
         event_labels; %cell containing labels that can be used 

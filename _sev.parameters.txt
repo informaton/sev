@@ -1,3 +1,69 @@
--Last saved: 30-Jul-2013 10:00:16
+-Last saved: 25-Aug-2013 09:57:52
 
-PSD.wintype	hannPSD.FFT_window_sec	2PSD.interval	2PSD.channel_ind	1PSD.freq_min	0PSD.freq_max	50PSD.removemean	1MUSIC.window_length_sec	2MUSIC.interval_sec	2MUSIC.num_sinusoids	6MUSIC.modified	0MUSIC.freq_min	0MUSIC.freq_max	50DEFAULTS.parameters_filename	_sev.parameters.txtDEFAULTS.rootpathname	/Users/hyatt4/git/sevDEFAULTS.src_edf_pathname	/Users/hyatt4/Documents/Sleep Project/Data/WomenStudy/DEFAULTS.src_edf_filename	1_A0020.EDFDEFAULTS.src_event_pathname	/Users/hyatt4/Documents/Sleep Project/Data/WomenStudy/DEFAULTS.batch_folder	.DEFAULTS.yDir	normalDEFAULTS.standard_epoch_sec	30DEFAULTS.samplerate	100DEFAULTS.channelsettings_file	channelsettings.matDEFAULTS.output_pathname	outputDEFAULTS.detectionInf_file	detection.infDEFAULTS.detection_path	+detectionDEFAULTS.filter_path	+filterDEFAULTS.filterInf_file	filter.infDEFAULTS.databaseInf_file	database.infDEFAULTS.screenshot_path	/Users/hyatt4/Google Drive/manuscripts/drafts/SLEEP - PLM comparisons/figures/_summer filter/BATCH_PROCESS.output_files.psd_filename	psd.txtBATCH_PROCESS.output_files.music_filename	MUSICBATCH_PROCESS.output_files.events_filename	evt.BATCH_PROCESS.output_files.artifacts_filename	art.BATCH_PROCESS.output_files.save2txt	1BATCH_PROCESS.output_files.save2mat	0BATCH_PROCESS.output_files.cumulative_stats_flag	0BATCH_PROCESS.output_files.cumulative_stats_filename	SEV.cumulative_stats.txtBATCH_PROCESS.output_files.individual_stats_flag	0BATCH_PROCESS.output_files.individual_stats_filename_suffix	.stats.txtBATCH_PROCESS.output_files.log_checkbox	1BATCH_PROCESS.output_files.log_filename	_log.txtBATCH_PROCESS.output_path.parent	outputBATCH_PROCESS.output_path.power	PSDBATCH_PROCESS.output_path.events	eventsBATCH_PROCESS.output_path.artifacts	artifactsBATCH_PROCESS.output_path.images	imagesBATCH_PROCESS.output_path.roc	ROCBATCH_PROCESS.database.save2DB	0BATCH_PROCESS.database.choice	2BATCH_PROCESS.database.filename	database.infBATCH_PROCESS.database.auto_config	1BATCH_PROCESS.database.config_start	80BATCH_PROCESS.images.save2img	0BATCH_PROCESS.images.limit_count	100BATCH_PROCESS.images.limit_flag	1BATCH_PROCESS.images.format	PNGBATCH_PROCESS.images.buffer_sec	0.5BATCH_PROCESS.images.buffer_flag	1
+PSD.wintype	hann
+PSD.FFT_window_sec	2
+PSD.interval	2
+PSD.channel_ind	1
+PSD.freq_min	0
+PSD.freq_max	50
+PSD.removemean	1
+
+MUSIC.window_length_sec	2
+MUSIC.interval_sec	2
+MUSIC.num_sinusoids	6
+MUSIC.modified	0
+MUSIC.freq_min	0
+MUSIC.freq_max	50
+
+VIEW.parameters_filename	_sev.parameters.txt
+VIEW.rootpathname	/Users/hyatt4/git/sev
+VIEW.src_edf_pathname	/Users/hyatt4/Desktop/capasso_rec/
+VIEW.src_edf_filename	2008-7-27_21-05-47_bed5 x 072708XX5 (7272008).REC
+VIEW.src_event_pathname	/Users/hyatt4/Documents/Sleep Project/Data/WomenStudy/
+VIEW.batch_folder	.
+VIEW.yDir	normal
+VIEW.standard_epoch_sec	30
+VIEW.samplerate	512
+VIEW.channelsettings_file	channelsettings.mat
+VIEW.output_pathname	output
+VIEW.detectionInf_file	detection.inf
+VIEW.detection_path	+detection
+VIEW.filter_path	+filter
+VIEW.filterInf_file	filter.inf
+VIEW.databaseInf_file	database.inf
+VIEW.screenshot_path	/Users/hyatt4/Google Drive/manuscripts/drafts/SLEEP - PLM comparisons/figures/_summer filter/
+
+BATCH_PROCESS.output_files.psd_filename	psd.txt
+BATCH_PROCESS.output_files.music_filename	MUSIC
+BATCH_PROCESS.output_files.events_filename	evt.
+BATCH_PROCESS.output_files.artifacts_filename	art.
+BATCH_PROCESS.output_files.save2txt	1
+BATCH_PROCESS.output_files.save2mat	0
+BATCH_PROCESS.output_files.cumulative_stats_flag	0
+BATCH_PROCESS.output_files.cumulative_stats_filename	SEV.cumulative_stats.txt
+BATCH_PROCESS.output_files.individual_stats_flag	0
+BATCH_PROCESS.output_files.individual_stats_filename_suffix	.stats.txt
+BATCH_PROCESS.output_files.log_checkbox	1
+BATCH_PROCESS.output_files.log_filename	_log.txt
+
+BATCH_PROCESS.output_path.parent	output
+BATCH_PROCESS.output_path.power	PSD
+BATCH_PROCESS.output_path.events	events
+BATCH_PROCESS.output_path.artifacts	artifacts
+BATCH_PROCESS.output_path.images	images
+BATCH_PROCESS.output_path.roc	ROC
+
+BATCH_PROCESS.database.save2DB	0
+BATCH_PROCESS.database.choice	2
+BATCH_PROCESS.database.filename	database.inf
+BATCH_PROCESS.database.auto_config	1
+BATCH_PROCESS.database.config_start	80
+
+BATCH_PROCESS.images.save2img	0
+BATCH_PROCESS.images.limit_count	100
+BATCH_PROCESS.images.limit_flag	1
+BATCH_PROCESS.images.format	PNG
+BATCH_PROCESS.images.buffer_sec	0.5
+BATCH_PROCESS.images.buffer_flag	1
+
+

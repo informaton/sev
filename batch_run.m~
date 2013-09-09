@@ -40,60 +40,71 @@ function batch_run_OpeningFcn(hObject, eventdata, handles, varargin)
 % handles    structure with handles and user data (see GUIDATA)
 % varargin   command line arguments to batch_run (see VARARGIN)
 
-global DEFAULTS;
+global MARKING;
 global GUI_TEMPLATE;
-global PSD;
-global BATCH_PROCESS;
-createGlobalTemplate(handles);
 
-loadDetectionMethods();
-
-
-set(handles.push_synth_CHANNEL_settings,...
-    'callback',{@synthesize_CHANNEL_configuration_callback,...
-    handles.menu_synth_CHANNEL_channel1,handles.edit_synth_CHANNEL_name});
-
-set(handles.menu_event_method,'string',GUI_TEMPLATE.detection.labels,'callback',...
-    {@menu_event_callback,[handles.menu_event_channel1,handles.menu_event_channel2],handles.push_event_settings});
-
-userdata.channel_h = handles.menu_psd_channel;
-userdata.settings_h = handles.push_psd_settings;
-    
-set(handles.pop_spectral_method,'userdata',userdata,'callback',{@pop_spectral_method_Callback,handles.menu_psd_channel,handles.push_psd_settings},...
-    'enable','off','string',GUI_TEMPLATE.spectrum_labels);
-
-set(handles.menu_artifact_method,'string',GUI_TEMPLATE.detection.labels,'callback',...
-    {@menu_event_callback,[handles.menu_artifact_channel1,handles.menu_artifact_channel2],handles.push_artifact_settings});
-
-set(handles.push_psd_settings,'enable','off','userdata',PSD);
-
-
-if(isfield(DEFAULTS,'batch_folder'))
-    if(~isdir(DEFAULTS.batch_folder) || strcmp(DEFAULTS.batch_folder,'.'))
-        DEFAULTS.batch_folder = pwd;
-    end;
-    set(handles.edit_edf_directory,'string',DEFAULTS.batch_folder);
+%if MARKING is not initialized, then call sev.m with 'batch' argument in
+%order to initialize the MARKING global before returning here.
+if(isempty(MARKING))
+    sev('batch'); %runs the sev first, and then goes to the default batch run...?
 else
-    set(handles.edit_edf_directory,'string',pwd);
+    
+    %still using a global here; not great...
+    createGlobalTemplate(handles);
+    
+    loadDetectionMethods();
+    
+    
+    set(handles.push_synth_CHANNEL_settings,...
+        'callback',{@synthesize_CHANNEL_configuration_callback,...
+        handles.menu_synth_CHANNEL_channel1,handles.edit_synth_CHANNEL_name});
+    
+    set(handles.menu_event_method,'string',GUI_TEMPLATE.detection.labels,'callback',...
+        {@menu_event_callback,[handles.menu_event_channel1,handles.menu_event_channel2],handles.push_event_settings});
+    
+    userdata.channel_h = handles.menu_psd_channel;
+    userdata.settings_h = handles.push_psd_settings;
+    
+    set(handles.pop_spectral_method,'userdata',userdata,'callback',{@pop_spectral_method_Callback,handles.menu_psd_channel,handles.push_psd_settings},...
+        'enable','off','string',GUI_TEMPLATE.spectrum_labels);
+    
+    set(handles.menu_artifact_method,'string',GUI_TEMPLATE.detection.labels,'callback',...
+        {@menu_event_callback,[handles.menu_artifact_channel1,handles.menu_artifact_channel2],handles.push_artifact_settings});
+    
+    set(handles.push_psd_settings,'enable','off','userdata',MARKING.SETTINGS.PSD);
+    
+    
+    if(isfield(MARKING.SETTINGS.BATCH_PROCESS,'edf_folder'))
+        if(~isdir(MARKING.SETTINGS.BATCH_PROCESS.edf_folder) || strcmp(MARKING.SETTINGS.BATCH_PROCESS.edf_folder,'.'))
+            MARKING.SETTINGS.BATCH_PROCESS = pwd;
+        end;
+        set(handles.edit_edf_directory,'string',DEFAULTS.edf_folder);
+    else
+        set(handles.edit_edf_directory,'string',pwd);
+    end
+    
+    checkPathForEDFs(handles);
+    
+    
+    set([handles.menu_artifact_channel1
+        handles.menu_event_channel1],'enable','off','string','Channel 1');
+    set([handles.menu_artifact_channel2
+        handles.menu_event_channel2],'enable','off','string','Channel 2');
+    set([handles.push_event_settings
+        handles.push_artifact_settings],'enable','off');
+    handles.user.BATCH_PROCESS = MARKING.SETTINGS.BATCH_PROCESS;
+    handles.user.PSD = MARKING.SETTINGS.PSD;
+    handles.user.PSD = MARKING.SETTINGS.PSD;
+    update_view(handles);
+    
+    % Choose default command line output for batch_run
+    handles.output = hObject;
+    
+    % Update handles structure
+    guidata(hObject, handles);
+    
 end
 
-checkPathForEDFs(handles);
-
-
-set([handles.menu_artifact_channel1
-    handles.menu_event_channel1],'enable','off','string','Channel 1');
-set([handles.menu_artifact_channel2
-    handles.menu_event_channel2],'enable','off','string','Channel 2');
-set([handles.push_event_settings
-    handles.push_artifact_settings],'enable','off');
-handles.user.BATCH_PROCESS = BATCH_PROCESS;
-update_view(handles);
-
-% Choose default command line output for batch_run
-handles.output = hObject;
-
-% Update handles structure
-guidata(hObject, handles);
 
 function addCHANNELRow(handles)
 resizeForAddedRow(handles,handles.panel_synth_CHANNEL);
@@ -113,7 +124,7 @@ resizeForAddedRow(handles,handles.panel_psd);
 
 function resizeForAddedRow(handles,resized_panel_h)
 global GUI_TEMPLATE;
-global PSD;
+
 
 %move all of the children up to account for the change in size and location
 %of the panel being resized.
@@ -150,7 +161,7 @@ end
 %add the additional controls depending on the panel being adjusted.
 if(resized_panel_h==handles.panel_psd)
     hc1 = uicontrol(GUI_TEMPLATE.channel1,'parent',resized_panel_h,'string',GUI_TEMPLATE.EDF.labels);
-    h_params = uicontrol(GUI_TEMPLATE.push_parameter_settings,'parent',resized_panel_h,'userdata',PSD);
+    h_params = uicontrol(GUI_TEMPLATE.push_parameter_settings,'parent',resized_panel_h,'userdata',handles.user.PSD);
     userdata.channel_h = hc1;
     userdata.settings_h = h_params;
     uicontrol(GUI_TEMPLATE.spectrum,'parent',resized_panel_h,'enable','on',...
@@ -191,16 +202,17 @@ function push_directory_Callback(hObject, eventdata, handles)
 % hObject    handle to push_directory (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-global DEFAULTS;
-
+global MARKING;
 path = get(handles.edit_edf_directory,'string');
 if(~exist(path,'file'))
-    path = DEFAULTS.batch_folder;
+    path = MARKING.SETTINGS.BATCH_PROCESS.edf_folder;
 end;
 pathname = uigetdir(path,'Select the directory containing EDF files to process');
 
 if(isempty(pathname)||(isnumeric(pathname)&&pathname==0))
     pathname = path;
+else
+    MARKING.SETTINGS.BATCH_PROCESS.edf_folder = pathname; %update for the next time..
 end;
 
 set(handles.edit_edf_directory,'string',pathname);
@@ -296,7 +308,10 @@ function push_run_Callback(hObject, eventdata, handles)
 
 
 global GUI_TEMPLATE;
-global DEFAULTS;
+global MARKING;
+
+DEFAULTS = MARKING.SETTINGS.VIEW; 
+
 
 BATCH_PROCESS = handles.user.BATCH_PROCESS;
 
@@ -713,11 +728,13 @@ GUI_TEMPLATE.spectrum_labels = {'None','PSD','MUSIC'};
 function loadDetectionMethods()
 %load up any available detection methods found in the detection_path
 %(initially this was labeled '+detection' from the working path
-global DEFAULTS;
+
+global MARKING;
 global GUI_TEMPLATE;
 
-if(isfield(DEFAULTS,'detection_path'))
-    detection_inf = fullfile(DEFAULTS.detection_path,'detection.inf');
+
+if(isfield(MARKING.SETTINGS.VIEW,'detection_path'))
+    detection_inf = fullfile(MARKING.SETTINGS.VIEW.detection_path,'detection.inf');
 else
     detection_inf = fullfile('+detection','detection.inf');
 end
@@ -818,29 +835,13 @@ set(hObject,'userdata',user_cancelled);
 %%%%%%%%%%%%%%%%%%%%%%%%%%
 function batch_process(pathname, BATCH_PROCESS)
 %this function executes the batch job with the specified parameters
-global DEFAULTS;
-global STATE;
-persistent log_fid;
+global MARKING;
 
 
-% BATCH_PROCESS.output_files =
-%           psd_filename: 'psd.txt'
-%                music_filename: 'MUSIC'
-%               events_filename: 'evt.'
-%            artifacts_filename: 'art.'
-%                      save2mat: 0
-%                       save2DB: 0
-%     cumulative_stats_checkbox: 0
-%     cumulative_stats_filename: 'SEV_cumulative_stats.txt'
-%                  log_checkbox: 1
-%                  log_filename: '_log.txt'
-%         images_save_directory: 'images'
-%                 images_format: 'PNG'
+%why does this need to be persistent?  
+persistent log_fid; 
 
-% BATCH_PROCESS.database.filename = 'database.inf';
-% BATCH_PROCESS.database.choice = 1;
-% BATCH_PROCESS.database.auto_config = 1;
-% BATCH_PROCESS.database.config_start = 1;
+DEFAULTS = MARKING.SETTINGS.VIEW;
 
 % BATCH_PROCESS.output_path =
 %        parent: 'output'
@@ -865,7 +866,7 @@ if(pathname)
         file_list = [dir(fullfile(pathname, '*.EDF'));dir(fullfile(pathname, '*.edf'))]; %dir(fullfile(path, '*.EDF'))];
     end
     
-    STATE.batch_process_running = true;
+    MARKING.STATE.batch_process_running = true;
     
 %     output_path = DEFAULTS.output_pathname;
     
@@ -1418,7 +1419,7 @@ end
                                             truth_filename = fullfile(rocStruct.truth_pathname,truth_file(1).name);
                                             if(exist(truth_filename,'file'))
                                                 
-                                                batch_EVENT_CONTAINER.loadEvtFile(truth_filename,STATE.batch_process_running);
+                                                batch_EVENT_CONTAINER.loadEvtFile(truth_filename,MARKING.STATE.batch_process_running);
                                                 
                                                 %add this check here since the EVENT_CONTAINER will not load the event from a file if it was previously
                                                 %loaded.  Without this check, the roc may produce 100% matches since it would be comparing to itself
@@ -1498,7 +1499,8 @@ end
                 elapsed_dur_total_sec = etime(clock,startClock);
                 avg_dur_sec = elapsed_dur_total_sec/i;
                 
-%                 num_files_completed = randi(1,0,100);
+                %                 num_files_completed = randi(1,0,100);
+                num_files_completed = i;
                 remaining_dur_sec = avg_dur_sec*(file_count-num_files_completed);
                 est_str = sprintf('%01ihrs %01imin %01isec',floor(mod(remaining_dur_sec/3600,24)),floor(mod(remaining_dur_sec/60,60)),floor(mod(remaining_dur_sec,60)));
 
@@ -1586,7 +1588,7 @@ end
     %this function call in order for everything to go back to what it was
     %before hand ...;
     
-    STATE.batch_process_running = false;
+    MARKING.STATE.batch_process_running = false;
 %     message = sprintf('Batch Processing finished.\r\n%i files attempted.\r\n%i files processed successfully.\r\n%i files skipped.',...
 %         num_files_attempted,num_files_completed,files_skipped);
     message = finish_str;
@@ -1594,8 +1596,8 @@ end
     if(num_files_skipped>0)
         skipped_filenames = cell(num_files_skipped,1);
         [skipped_filenames{:}]=file_list(files_skipped).name;
-        [selections,clicked_ok]= listdlg('PromptString',message,'ListString',skipped_filenames,'Name','Batch Completed',...
-            'OKString','Copy to Clipboard','CancelString','Close','ListSize',[160*2,numel(skipped_filenames)*16]);
+        [selections,clicked_ok]= listdlg('PromptString',message,'Name','Batch Completed',...
+            'OKString','Copy to Clipboard','CancelString','Close','ListString',skipped_filenames);
         
         if(clicked_ok)
             %char(10) is newline
@@ -1605,7 +1607,6 @@ end
             clipboard('copy',skipped_files(:)'); %make it a column (1 row) vector
             disp([num2str(numel(selections)),' filenames copied to the clipboard.']);
         end;
-
     else
          msgbox(message,'Completed');
     end
@@ -1644,8 +1645,9 @@ function pop_spectral_method_Callback(hObject, eventdata, channels_h, settings_h
 % hObject    handle to pop_spectral_method (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-global PSD;
-global MUSIC;
+global MARKING;
+PSD = MARKING.SETTINGS.PSD;
+MUSIC = MARKING.SETTINGS.MUSIC;
 contents = cellstr(get(hObject,'String'));% returns pop_spectral_method contents as cell array
 selection = contents{get(hObject,'Value')}; %returns selected item from pop_spectral_method
 

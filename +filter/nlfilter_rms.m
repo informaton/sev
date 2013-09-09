@@ -35,27 +35,19 @@ win_length = params.order;
 if(win_length>=length(sig)|| win_length<=1)
     filtsig=rms(sig);
 else
-    ma.params = params;
-    ma.params.rms = 0;
-    %square it and mean it
-    filtsig = sqrt(filter.filter_ma(sig.*sig,ma.params));
- 
-%     mrms = zeros(1,numel(sig));
-%     
-%     %handle initial values before the window starts moving
-%     msquares = sum(sig(1:win_length).^2);
-%     mrms(1:ceil(window_half)) = sqrt(msquares/win_length);
-%     
-%     %move the window through the values
-%     for k = ceil(window_half)+1:length(sig)-floor(window_half)
-%         msquares = msquares - sig(k-ceil(window_half))^2 + sig(k+floor(window_half))^2;
-%         mrms(k) = msquares;
-%     end;
-%     
-%     mrms = sqrt(mrms/win_length);
-%     %finish up the last values
-%     mrms(length(sig)-floor(window_half)+1:end)=sqrt(msquares/win_length);
-%     
+
+       %use the quick version
+       qrms.params.win_length_samples=win_length;
+
+       filtsig = filter.nlfilter_quickrms(sig,qrms.params);
+    
+
+       %the grind it out method
+       %     ma.params = params;
+       %     ma.params.rms = 0;
+       %     %square it and mean it
+       %     filtsig = sqrt(filter.filter_ma(sig.*sig,ma.params));
+    
 end;
 
 end

@@ -27,7 +27,7 @@ set(panel_h,'position',pos);
 
 %adjust everything up the newly resized panel
 for k =1:numel(pan_children)
-    if(children_pos(4)>0)
+    if(children_pos(k,4)>0)
         set(pan_children(k),'position',children_pos(k,:));
     end;
 end

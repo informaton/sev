@@ -32,7 +32,7 @@ function varargout = sev(varargin)
 % loadSTAGES(stages_filename,num_epochs)
 % Edit the above text to modify the response to help sev
 
-% Last Modified by GUIDE v2.5 21-Jan-2013 09:26:20
+% Last Modified by GUIDE v2.5 26-Aug-2013 00:34:05
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 0;
@@ -66,15 +66,14 @@ function sev_OpeningFcn(hObject, eventdata, handles, varargin)
  
 % Choose default command line output for sev
 clear global;
-global DEFAULTS;
 global MARKING;
 
 import plist.*; %struct to xml plist format conversions and such
 import detection.*; %detection algorithms and such
 import filter.*;
 
-sev_path = fileparts(mfilename('fullpath'));
-addpath(fullfile(sev_path,'auxiliary'));
+sev_pathname = fileparts(mfilename('fullpath'));
+addpath(fullfile(sev_pathname,'auxiliary'));
 % filter_inf = fullfile(DEFAULTS.filter_path,'filter.inf');
 % if(exist(filter_inf,'file'))
 %     [mfile, evt_label, num_reqd_indices, unused_param_gui, unused_batch_mode_label] = textread(filter_inf,'%s%s%n%s%c','commentstyle','shell');
@@ -90,42 +89,23 @@ addpath(fullfile(sev_path,'auxiliary'));
 
 handles.output = hObject;
 
-
-%did someone try to load a previous settings file at startup
-if(numel(varargin)<1)
-    DEFAULTS.parameters_filename = '_sev.parameters.txt';  
-% including the working directory problems when it comes time to save the
-% parameters to disk later on if the sev is copied to a new directory,
-% since the old directory name is loaded as part of the _sevparameters
-%     DEFAULTS.parameters_filename = fullfile(pwd,'_sev.parameters.txt');
-
-else
-    DEFAULTS.parameters_filename = varargin{1};
-end;
-
-DEFAULTS.rootpathname = fileparts(mfilename('fullpath'));
-
-%initialize GLOBAL variables...
-settingsStruct = initializeGLOBALs();
-
-DEFAULTS.rootpathname = fileparts(mfilename('fullpath'));
-
+%set some basic gui figure properties
 initializeGUI(hObject);
 
 %set default values
-
 handles.user.annotationH = -1;
-
 
 %to enable swapping and such...
 handles.user.axes1_H = handles.axes1;
 handles.user.axes2_H = handles.axes2;
 
+sev_pathname = fileparts(mfilename('fullpath'));
+
 guidata(hObject, handles);
 try
     
-    MARKING = CLASS_UI_marking(hObject,DEFAULTS); %handles.sev_main_fig; these two are equivalent
-    MARKING.initializeSEV();
+    MARKING = CLASS_UI_marking(hObject,sev_pathname); 
+    
 catch me
     %     me.message
     %     me.stack(1)
@@ -136,19 +116,25 @@ catch me
     menu_help_defaults_Callback([],[],[]);   
 end
     
-    
-if(numel(varargin)>1)
+if(numel(varargin)==1 &&  strcmpi(varargin{1},'batch'))
+    MARKING.menu_batch_run_callback();
+elseif(numel(varargin)>1)
+        
     [path, name, ext] = fileparts(varargin{2});
     cur_filename =  strcat(name,ext);
     cur_pathname = path;
+    MARKING.initializeView(); %don't want to do this if running through batch mode?
+    
     MARKING.loadEDFintoSEV(cur_filename,cur_pathname);
+else
+    MARKING.initializeView(); %don't want to do this if running through batch mode?
+
 end
 
 % Update handles structure
 guidata(hObject, handles);
 
-
-function initializeGUI(hObject,handles)
+function initializeGUI(hObject)
 
 % set(hObject,'visible','on');
 figColor = get(hObject,'color');
@@ -163,6 +149,7 @@ set(ch,'backgroundcolor',figColor);
 ch = findobj(hObject,'-regexp','tag','axes.*');
 set(ch,'units','normalized');
 
+
 % --- Outputs from this function are returned to the command line.
 function varargout = sev_OutputFcn(hObject, eventdata, handles) 
 % varargout  cell array for returning output args (see VARARGOUT);
@@ -172,8 +159,6 @@ function varargout = sev_OutputFcn(hObject, eventdata, handles)
 
 % Get default command line output from handles structure
 varargout{1} = handles.output;
-
-
    
 % --- Executes on key press with focus on sev_main_fig and no controls selected.
 function sev_main_fig_KeyPressFcn(hObject, eventdata, handles)
@@ -274,33 +259,14 @@ function sev_main_fig_CloseRequestFcn(hObject, eventdata, handles)
 % hObject    handle to sev_main_fig (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-global DEFAULTS;
-% global MARKING;
-% global PSD;
-% global CHANNELS_CONTAINER;
-% global EVENT_CONTAINER;
-% global MARKING;
+global MARKING;
+ 
 try
-
-saveParametersToFile(fullfile(DEFAULTS.rootpathname,DEFAULTS.parameters_filename));
-% Hint: delete(hObject) closes the figure
-
-%close other children too? - kill all?
-
-% delete(MARKING);
-% clear MARKING;
-% clear ans;
-% clear PSD;
-% clear CHANNELS_CONTAINER;
-% clear EVENT_CONTAINER;
-% clear MARKING;
-delete(hObject);
-
-
+    MARKING.close(); 
+    MARKING = []; %remove the global reference count...
+    delete(hObject);
 catch ME
-    ME.stack(1).line
-    ME.stack(1).file
-    disp(ME.message);
+    showME(ME);
     killall;
 end
 
@@ -357,106 +323,7 @@ if(strncmp(choice,'OK',2))
     sev_restart();
 end
 
-% --------------------------------------------------------------------
-function loadedParameters = initializeGLOBALs()
-%initialize global variables in SEV....
 
-global DEFAULTS;
-global BATCH_PROCESS;
-global PSD;
-global MUSIC;
-
-full_paramsFile = fullfile(DEFAULTS.rootpathname,DEFAULTS.parameters_filename);
-
-if(exist(full_paramsFile,'file'))
-    loadedParameters = loadParametersFromFile(full_paramsFile);   
-    PSD = loadedParameters.PSD;
-    DEFAULTS = loadedParameters.DEFAULTS;
-    BATCH_PROCESS = loadedParameters.BATCH_PROCESS;
-    MUSIC = loadedParameters.MUSIC;
-else
-    DEFAULTS.src_edf_pathname = '.'; %initial directory to look in for EDF files to load
-    DEFAULTS.src_edf_filename = ''; %initial filename to suggest when trying to load an .EDF
-    DEFAULTS.src_event_pathname = '.'; %initial directory to look in for EDF files to load
-    DEFAULTS.batch_folder = '.'; %'/Users/hyatt4/Documents/Sleep Project/EE Training Set/';
-    DEFAULTS.yDir = 'normal';  %or can be 'reverse'
-    DEFAULTS.standard_epoch_sec = 30; %perhaps want to base this off of the hpn file if it exists...
-    DEFAULTS.samplerate = 100;
-    DEFAULTS.screenshot_path = DEFAULTS.rootpathname; %initial directory to look in for EDF files to load
-    
-    DEFAULTS.channelsettings_file = 'channelsettings.mat'; %used to store the settings for the file
-    DEFAULTS.output_pathname = 'output';
-    DEFAULTS.detectionInf_file = 'detection.inf';
-    DEFAULTS.detection_path = '+detection';
-    DEFAULTS.filter_path = '+filter';
-    DEFAULTS.filterInf_file = 'filter.inf';
-    DEFAULTS.databaseInf_file = 'database.inf';
-    DEFAULTS.parameters_filename = '_sev.parameters.txt';
-
-    MUSIC.window_length_sec = 2;
-    MUSIC.interval_sec = 2;
-    MUSIC.num_sinusoids = 6;
-    MUSIC.modified = false;
-    MUSIC.freq_min = 0; %display min
-    MUSIC.freq_max = 30; %display max
-    
-    PSD.wintype = 'hann';
-    PSD.removemean = 'true';
-    PSD.FFT_window_sec = 2; %length in second over which to calculate the PSD
-    PSD.interval = 2; %how often to take the FFT's
-    PSD.freq_min = 0; %display min
-    PSD.freq_max = 30; %display max
-    
-    
-    BATCH_PROCESS.output_path.parent = 'output';
-    BATCH_PROCESS.output_path.roc = 'ROC';
-    BATCH_PROCESS.output_path.power = 'PSD';
-    BATCH_PROCESS.output_path.events = 'events';
-    BATCH_PROCESS.output_path.artifacts = 'artifacts';
-    BATCH_PROCESS.output_path.images = 'images';
-    
-    %power spectrum analysis
-    BATCH_PROCESS.output_files.psd_filename = 'psd.txt';
-    BATCH_PROCESS.output_files.music_filename = 'MUSIC';
-    
-    %artifacts and events
-    BATCH_PROCESS.output_files.events_filename = 'evt.';
-    BATCH_PROCESS.output_files.artifacts_filename = 'art.';
-    BATCH_PROCESS.output_files.save2txt = 1;
-    BATCH_PROCESS.output_files.save2mat = 0;
-    
-    %database supplement
-    BATCH_PROCESS.database.save2DB = 0;
-    BATCH_PROCESS.database.filename = 'database.inf';
-    BATCH_PROCESS.database.choice = 1;
-    BATCH_PROCESS.database.auto_config = 1;
-    BATCH_PROCESS.database.config_start = 1;
-    
-    %summary information
-    BATCH_PROCESS.output_files.cumulative_stats_flag = 0;
-    BATCH_PROCESS.output_files.cumulative_stats_filename = 'SEV.cumulative_stats.txt';
-    
-    BATCH_PROCESS.output_files.individual_stats_flag = 0;
-    BATCH_PROCESS.output_files.individual_stats_filename_suffix = '.stats.txt';
-    
-    
-    BATCH_PROCESS.output_files.log_checkbox = 1;
-    BATCH_PROCESS.output_files.log_filename = '_log.txt';
-    
-    %images
-    BATCH_PROCESS.images.save2img = 1;
-    BATCH_PROCESS.images.format = 'PNG';
-    BATCH_PROCESS.images.limit_count = 100;
-    BATCH_PROCESS.images.limit_flag = 1;
-    BATCH_PROCESS.images.buffer_sec = 0.5;
-    BATCH_PROCESS.images.buffer_flag = 1;
-    
-    loadedParameters.DEFAULTS = DEFAULTS;
-    loadedParameters.PSD = PSD;
-    loadedParameters.MUSIC = MUSIC;
-    loadedParameters.SEV = DEFAULTS;
-    
-end;
 
 
 % --------------------------------------------------------------------

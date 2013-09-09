@@ -1,10 +1,27 @@
-classdef CLASS_UI_marking < handle
-%The class CLASS_UI_marking serves as the UI component of event marking in the SEV
+%> @file CLASS_UI_marking.m
+%> @brief CLASS_UI_marking serves as the UI component of event marking in
+%> the SEV.  In the model, view, controller paradigm, this is the
+%> controller.
+% ======================================================================
+%> @brief CLASS_UI_marking serves as the UI component of event marking in
+%> the SEV.  
+%
+%> In the model, view, controller paradigm, this is the
+%> controller.  It is used by SEV to initialize, store, and update
+%> user preferences in the SEV.
+
+%The class CLASS_UI_marking serves as the UI component of event marking in
+%the SEV
+%
+% ======================================================================
+% History
 % Written by Hyatt Moore IV
 % 9.30.2012
 % modified 4/24/2012 - corrected center here callback; after centering the
 % epoch would be set and, on occassion, interfere with the desired
 % centering.
+% ======================================================================
+classdef CLASS_UI_marking < handle
 
     properties
         hg_group; %for the patch handles when editing and dragging
@@ -46,6 +63,8 @@ classdef CLASS_UI_marking < handle
         startDateTime;
         study_duration_in_seconds;
         study_duration_in_samples;
+        STATE; %struct to keep track of various SEV states
+        SETTINGS; %CLASS_settings object - this is brought in to eliminate the need for several globals
         sev; %struct for maintaining sev parameters, which includes these fields:
         %         sev.samplerate; %display samplerate
         %         sev.standard_epoch_sec; %standard epoch size in sev - this is for displaying stages, which hsould be of duration standard epoch size in seconds for each scored stage
@@ -95,62 +114,54 @@ classdef CLASS_UI_marking < handle
     % function contextmenu_ref_line_color_callback(hObject,eventdata)
     % function contextmenu_ref_line_remove_callback(hObject,eventdata)
     %function compare_events_callback(hObject,eventdata)
-    %function menu_analyzer_quad_Callback(hObject, eventdata, handles)
+    %function menu_tools_quad_Callback(hObject, eventdata, handles)
     %     function contextmenu_align_channels_callback(hObject,eventdata)
+    %SETTINGS object (type CLASS_settings) added as a parameter 
+    %function close();  %close down, which now uses the SETTINGS close out
+    %function clear(); %overloaded destructor
+    %to save settings to text.
 
     methods
-        function obj = CLASS_UI_marking(sev_fig_h,sevParamStruct)
-            %blank constructor - necessary for parallel computing
-            %functionality
-            if(nargin==0)
+        
+        function obj = CLASS_UI_marking(sev_fig_h,...
+                rootpathname,...
+                parameters_filename)
+            if(nargin<1)
                 sev_fig_h = [];
             end
-            if(nargin>1)
-                obj.sev = sevParamStruct;
+            if(nargin<2)
+                rootpathname = fileparts(mfilename('fullpath'));
             end
             
-            obj.sev.rootpathname = fileparts(mfilename('fullpath'));  %start here initially
+            %check to see if a settings file exists
+            if(nargin<3)
+                parameters_filename = '_sev.parameters.txt';
+            end;
+            
+            
+            %create/intilize the settings object            
+            obj.SETTINGS = CLASS_settings(rootpathname,parameters_filename);
 
             obj.figurehandle.sev = sev_fig_h;
             if(ishandle(sev_fig_h))
                 obj.initializeProperties();
-            end
-                
-        end
-        function clear(obj)
-            obj.toolbarhandle.jCombo = 0;
-            delete(obj.toolbarhandle.jCombo);
-            clear(obj);
+            end                
         end
         
+        function close(obj)
+            obj.toolbarhandle.jCombo = [];
+            obj.SETTINGS = [];
+        end
+        
+        
         function paramStruct = getSaveParametersStruct(obj)
-            paramStruct = obj.sev;
+            paramStruct = obj.SETTINGS.VIEW;
         end
             
         function initializeProperties(obj) %the constructor more or less
-            %
-            %             if(nargin>1 && isempty(paramStruct))
-            %                 fields = fieldnames(paramStruct);
-            %
-            %                 for f=1:numel(fields)
-            %                     fname = fields{f};
-            %
-            %                     if(isfield(obj,fname))
-            %                         obj.(fname) = paramStruct.(fname);
-            %                     end
-            %                 end
-            %
-            %             end
-            %             paramsToSave = {};
-            %             for p=1:numel(paramsToSave)
-            %                 pName = paramsToSave{p};
-            %                 if(isfield(obj,pName))
-            %                     paramStruct.(pName) = obj.(pName);
-            %                 end
-            %             end
-            
-            
             handles = guidata(obj.figurehandle.sev);
+            obj.STATE.batch_process_running = false;
+            obj.STATE.single_study_running = false;
             obj.shift_display_samples_delta = 10;
             obj.axeshandle.main = handles.axes1;
             obj.axeshandle.timeline = handles.axes2;
@@ -161,7 +172,7 @@ classdef CLASS_UI_marking < handle
             obj.class_channel_index = 0;
             obj.channel_label = '';
             obj.start_stop_matrix_index = 0;
-            obj.event_label_cell = {'Muscle Activity','Ocular Movement','Electrode Pop','Flat Line','Artifact','Unknown','LM_Eileen','PLM_Eileen','Create New'};
+            obj.event_label_cell = {'Muscle Activity','Ocular Movement','Electrode Pop','Flat Line','Artifact','Unknown','Leg Movement','PLM','Create New'};
             obj.event_label =''; %make it empty at first
             obj.event_index = 0;
             obj.state_choices_cell = {'off','Marking','Editing'};
@@ -183,6 +194,10 @@ classdef CLASS_UI_marking < handle
             
             obj.addToolbar();
             obj.restore_state();
+        end
+        
+        function exit(obj)
+            obj.SETTINGS.saveParametersToFile();
         end
         
         %% -- Button settings for utitlity axes
@@ -219,11 +234,17 @@ classdef CLASS_UI_marking < handle
             set(handles.(strcat('radio_',lower(type_string))),'value',1);
             switch type_string
                 case 'PSD'
-                    set(cur_axes,'xlim',[0.5 obj.sev.samplerate/2-0.5],'ylimmode','auto');
+                    set(cur_axes,'xlim',[0.5 obj.SETTINGS.VIEW.samplerate/2-0.5],'ylimmode','auto');
                     set(cur_axes,'xtickmode','auto');
                     set(obj.contextmenuhandle.axesutility.psd_autoscale,'checked','on'); %clean up the context menu to reflect the ylimmode being on auto now
                     set(cur_axes,'uicontextmenu',obj.contextmenuhandle.axesutility.psd);                    
-                    set(button_h,'callback',@obj.updatePreferencesPSD_callback);
+                    set(button_h,'callback',@obj.updateSettings_PSD_callback);
+                case 'MUSIC'
+                    set(cur_axes,'xlim',[0.5 obj.SETTINGS.VIEW.samplerate/2-0.5],'ylimmode','auto');
+                    set(cur_axes,'xtickmode','auto');
+                    set(obj.contextmenuhandle.axesutility.psd_autoscale,'checked','on'); %clean up the context menu to reflect the ylimmode being on auto now
+                    set(cur_axes,'uicontextmenu',obj.contextmenuhandle.axesutility.psd);                    
+                    set(button_h,'callback',@obj.updateSettings_MUSIC_callback);
                 case 'ROC'
                     set(cur_axes,'xlim',[0 1],'ylimmode','manual','ylim',[0 1]);
                     if(~isempty(EVENT_CONTAINER.roc_truth_ind)&&~isempty(EVENT_CONTAINER.roc_estimate_ind))
@@ -267,7 +288,7 @@ classdef CLASS_UI_marking < handle
                             cur_stage = stage_selection(k)-1; %-1 b/c 1 based and first stage is 0
                             comparison_epoch_ind = comparison_epoch_ind|obj.sev_STAGES.line==cur_stage;
                         end
-                        samples_per_epoch = obj.sev.standard_epoch_sec*obj.sev.samplerate;
+                        samples_per_epoch = obj.SETTINGS.VIEW.standard_epoch_sec*obj.SETTINGS.VIEW.samplerate;
                         epoch_ind=[(0:numel(obj.sev_STAGES.line)-1)'*samples_per_epoch+1,(1:numel(obj.sev_STAGES.line))'*samples_per_epoch];
                         comparison_range = epoch_ind(comparison_epoch_ind,:);
                         merge_within_num_samples = 2;
@@ -288,27 +309,52 @@ classdef CLASS_UI_marking < handle
                 warndlg('Not enough events available yet [2]');
             end
         end
-        function updatePreferencesPSD_callback(obj,varargin)
-            global PSD;
-            global MUSIC; %update the music frequency range as well here since I don't have
-            % another GUI for it yet.
+        
+        function updateSettings_PSD_callback(obj,varargin)
             global CHANNELS_CONTAINER;
-            newPSD = psd_dlg(PSD);
-            
-            if(newPSD.modified || (isfield(CHANNELS_CONTAINER,'current_psd_channel_index') && newPSD.channel_ind~=CHANNELS_CONTAINER.current_psd_channel_index))
-                newPSD = rmfield(newPSD,'modified');
-                PSD = newPSD;
+            wasModified = obj.SETTINGS.update_callback('PSD');
+            if(~isempty(CHANNELS_CONTAINER) && wasModified && (isfield(CHANNELS_CONTAINER,'current_psd_channel_index'))) 
+                    CHANNELS_CONTAINER.current_spectrum_channel_index = obj.SETTINGS.PSD.channel_ind;
+                    CHANNELS_CONTAINER.showPSD(obj.SETTINGS.PSD);
+            end
                 
-                MUSIC.freq_min = PSD.freq_min;
-                MUSIC.freq_max = PSD.freq_max;
-                
-                if(~isempty(CHANNELS_CONTAINER))
-                    CHANNELS_CONTAINER.current_spectrum_channel_index = newPSD.channel_ind;
-                    CHANNELS_CONTAINER.showPSD(PSD);
-                end
-                
-            end;
         end
+        function updateSettings_MUSIC_callback(obj,varargin)
+            global CHANNELS_CONTAINER;
+            wasModified = obj.SETTINGS.update_callback('MUSIC');
+            if(~isempty(CHANNELS_CONTAINER) && wasModified && (isfield(CHANNELS_CONTAINER,'current_psd_channel_index')))
+                CHANNELS_CONTAINER.current_spectrum_channel_index = obj.SETTINGS.MUSIC.channel_ind;
+                CHANNELS_CONTAINER.showMUSIC(obj.SETTINGS.MUSIC);
+            end
+        end
+        
+        function updateSettings_callback(obj,hObject,eventdata,settingsName)
+            %settingsName is a string specifying the settings to update:
+            %   'PSD','MUSIC','CLASSIFIER','BATCH_PROCESS','VIEW'
+            wasModified = obj.SETTINGS.update_callback(settingsName);
+            if(wasModified)
+                set(obj.axeshandle.main,...
+                    'ydir',obj.SETTINGS.VIEW.yDir);
+%                 seconds_per_epoch = obj.getSecondsPerEpoch();
+%                 if(seconds_per_epoch == obj.SETTINGS.VIEW.standard_epoch_sec)
+% %                     set(obj.axeshandle.main,'dataaspectratiomode','manual','dataaspectratio',[30 12 1]);
+%                     set(obj.axeshandle.main,'plotboxaspectratiomode','manual','plotboxaspectratio',[30 12 1]);
+%                 else
+% %                     set(obj.axeshandle.main,'dataaspectratiomode','auto');
+%                     set(obj.axeshandle.main,'plotboxaspectratiomode','auto');
+%                 end;
+% 
+%                 %show the PSD, ROC, events, etc.
+% %                 set(obj.axeshandle.utility,...
+% %                     'xlim',[0 obj.SETTINGS.VIEW.samplerate/2]);
+% %             
+                if(obj.STATE.single_study_running)
+                    obj.setAxesResolution()
+                    obj.refreshAxes();
+                end
+            end
+        end
+
 
         %% -- Menubar configuration --
         function configureMenubar(obj)
@@ -334,23 +380,29 @@ classdef CLASS_UI_marking < handle
             set(handles.menu_file_load_EDF,'callback',@obj.load_EDF_callback);%
             
             
-            set(handles.menu_analyzer_event_toolbox,'callback',@obj.eventtoolbox_callback);
-            set(handles.menu_analyzer_filter_toolbox,'callback',@obj.filter_channel_callback);%             filter_channel_Callback
-            set(handles.menu_analyzer_compare_events,'callback',@compare_events_callback);
-            set(handles.menu_analyzer_quad,'callback',@obj.menu_analyzer_quad_callback);            
-            set(handles.menu_analyzer_roc,'callback',@obj.roc_directory_callback);
-            set(handles.menu_analyzer_timelineEventsSelection,'callback',@obj.menu_preferences_timelineEventsSelection_callback);
+            set(handles.menu_tools_event_toolbox,'callback',@obj.eventtoolbox_callback);
+            set(handles.menu_tools_filter_toolbox,'callback',@obj.filter_channel_callback);%             filter_channel_Callback
+            set(handles.menu_tools_compare_events,'callback',@compare_events_callback);
+            set(handles.menu_tools_quad,'callback',@obj.menu_tools_quad_callback);            
+            set(handles.menu_tools_roc,'callback',@obj.roc_directory_callback);
+            set(handles.menu_tools_timelineEventsSelection,'callback',@obj.menu_tools_timelineEventsSelection_callback);
             
             
             %preferences
-            set(handles.menu_preferences_psd,'callback',@obj.updatePreferencesPSD_callback);
-            set(handles.menu_preferences_roc,'callback',@obj.updatePreferencesROC_callback);
-            set(handles.menu_preferences_classifiers,'callback',@obj.menu_preferences_classifiers_callback);
-            set(handles.menu_preferences_saveChannelConfig,'callback',@obj.menu_preferences_saveChannelConfig_callback);
+            set(handles.menu_settings_power_psd,'callback',@obj.updateSettings_PSD_callback);
+            set(handles.menu_settings_power_music,'callback',@obj.updateSettings_MUSIC_callback);
+            set(handles.menu_settings_roc,'callback',@obj.updatePreferencesROC_callback);
+            set(handles.menu_settings_classifiers,'callback',{@obj.updateSettings_callback,'CLASSIFIER'});
+            set(handles.menu_settings_defaults,'callback',{@obj.updateSettings_callback,'DEFAULTS'});
+            set(handles.menu_settings_saveChannelConfig,'callback',@obj.menu_settings_defaults_callback);
+            set(handles.menu_settings_saveChannelConfig,'callback',@obj.menu_settings_saveChannelConfig_callback);
             
+            
+            
+
             %batch mode
             set(handles.menu_batch_run,'callback',@obj.menu_batch_run_callback);
-            set(handles.menu_batch_roc_directory,'callback',@obj.roc_directory_callback);
+            set(handles.menu_tools_roc_directory,'callback',@obj.roc_directory_callback);
             set(handles.menu_batch_roc_database,'callback',@obj.menu_batch_roc_database_callback);
             
 
@@ -373,14 +425,14 @@ classdef CLASS_UI_marking < handle
             % eventdata  reserved - to be defined in a future version of MATLAB
             % handles    structure with handles and user data (see GUIDATA)
             
-            if(~isfield(obj.sev,'screenshot_path'))
-                obj.sev.screenshot_path = pwd;
+            if(~isfield(obj.SETTINGS.VIEW,'screenshot_path'))
+                obj.SETTINGS.VIEW.screenshot_path = pwd;
             end
             
             filterspec = {'png','PNG';'jpeg','JPEG'};
             save_format = {'-dpng','-djpeg'};
-            img_filename = [obj.sev.src_edf_filename,'_epoch ',num2str(obj.current_epoch),'.png'];
-            [img_filename, img_pathname, filterindex] = uiputfile(filterspec,'Screenshot name',fullfile(obj.sev.screenshot_path,img_filename));
+            img_filename = [obj.SETTINGS.VIEW.src_edf_filename,'_epoch ',num2str(obj.current_epoch),'.png'];
+            [img_filename, img_pathname, filterindex] = uiputfile(filterspec,'Screenshot name',fullfile(obj.SETTINGS.VIEW.screenshot_path,img_filename));
             if isequal(img_filename,0) || isequal(img_pathname,0)
                 disp('User pressed cancel')
             else
@@ -444,7 +496,7 @@ cropFigure2Axes(f,axes1_copy);
                     %         set(handles.axes1,'position',apos,'dataaspectratiomode','manual' ,'dataaspectratio',dataaspectratio,'parent',handles.sev_main_fig)
                     delete(f);
                     
-                    obj.sev.screenshot_path = img_pathname;
+                    obj.SETTINGS.VIEW.screenshot_path = img_pathname;
                 catch ME
                     showME(ME);
                     %         set(handles.axes1,'parent',handles.sev_main_fig);
@@ -454,7 +506,7 @@ cropFigure2Axes(f,axes1_copy);
         
         % --------------------------------------------------------------------
         function menu_help_outputHDR_callback(obj,hObject, eventdata)
-            % hObject    handle to menu_analyzer_printHDR (see GCBO)
+            % hObject    handle to menu_tools_printHDR (see GCBO)
             % eventdata  reserved - to be defined in a future version of MATLAB
             % handles    structure with handles and user data (see GUIDATA)
             %display the HDR information for the currently loaded EDF
@@ -477,8 +529,8 @@ cropFigure2Axes(f,axes1_copy);
             % handles    structure with handles and user data (see GUIDATA)
             global EVENT_CONTAINER;
             
-            suggested_filename = fullfile([obj.sev.src_edf_filename(1:end-4),'.SCO']);
-            suggested_pathname = obj.sev.src_event_pathname;
+            suggested_filename = fullfile([obj.SETTINGS.VIEW.src_edf_filename(1:end-4),'.SCO']);
+            suggested_pathname = obj.SETTINGS.VIEW.src_event_pathname;
             
             if(exist(fullfile(suggested_pathname,suggested_filename),'file'))
                 sco_suggestion = fullfile(suggested_pathname,suggested_filename);
@@ -489,7 +541,7 @@ cropFigure2Axes(f,axes1_copy);
                 '*.SCO','All .SCO files';'*.*','All Files (*.*)'},'Event File Finder',...
                 sco_suggestion);
             if(filename~=0)
-                obj.sev.src_event_pathname = pathname;
+                obj.SETTINGS.VIEW.src_event_pathname = pathname;
                 EVENT_CONTAINER.loadEventsFromSCOFile(fullfile(pathname,filename));
                 obj.refreshAxes();
             end;
@@ -505,8 +557,8 @@ cropFigure2Axes(f,axes1_copy);
             % handles    structure with handles and user data (see GUIDATA)
             global EVENT_CONTAINER;
             
-            suggested_filename = fullfile(['evt.',obj.sev.src_edf_filename(1:end-4),'.*']);
-            suggested_pathname = obj.sev.src_event_pathname;
+            suggested_filename = fullfile(['evt.',obj.SETTINGS.VIEW.src_edf_filename(1:end-4),'.*']);
+            suggested_pathname = obj.SETTINGS.VIEW.src_event_pathname;
             suggested_file = getFilenames(suggested_pathname,suggested_filename);
             if(~isempty(suggested_file))
                 suggestion = fullfile(suggested_pathname,suggested_file{1});
@@ -517,7 +569,7 @@ cropFigure2Axes(f,axes1_copy);
                 '*.*','All Files (*.*)'},'Event File Finder',...
                 suggestion);
             if(filename~=0)
-                obj.sev.src_event_pathname = pathname;
+                obj.SETTINGS.VIEW.src_event_pathname = pathname;
 
                 EVENT_CONTAINER.loadEvtFile(fullfile(pathname,filename));
                 obj.refreshAxes();
@@ -533,10 +585,10 @@ cropFigure2Axes(f,axes1_copy);
             
             
             [filename,pathname]=uigetfile({'*.MAT;*.mat','Matlab format'},'Event File Finder',...
-                obj.sev.src_event_pathname);
+                obj.SETTINGS.VIEW.src_event_pathname);
             if(filename~=0)
                 EVENT_CONTAINER.loadEventsContainerFromFile(fullfile(pathname,filename));
-                obj.sev.src_event_pathname = pathname;
+                obj.SETTINGS.VIEW.src_event_pathname = pathname;
                 obj.refreshAxes();
             end;
         end
@@ -558,12 +610,12 @@ cropFigure2Axes(f,axes1_copy);
             
             if(~isempty(selection))
                 %prepare database import fields
-                selection.DB = loadDatabaseStructFromInf(obj.sev.databaseInf_file);
+                selection.DB = loadDatabaseStructFromInf(obj.SETTINGS.VIEW.databaseInf_file);
                 DB_fields = fieldnames(selection.DB);
                 for k=1:numel(DB_fields)
                     selection.DB.(DB_fields{k}) = selection.DB.(DB_fields{k}){selection.database_choice};
                 end
-                selection.patstudy = obj.sev.src_edf_filename;
+                selection.patstudy = obj.SETTINGS.VIEW.src_edf_filename;
                 try
                     EVENT_CONTAINER.loadEventsFromDatabase(selection);
                     obj.refreshAxes();
@@ -587,7 +639,7 @@ cropFigure2Axes(f,axes1_copy);
         function menu_file_export_psd2txt_callback(obj,hObject, eventdata, handles)
             global CHANNELS_CONTAINER;
             
-            CHANNELS_CONTAINER.savePSD2txt(obj.sev.src_edf_filename);
+            CHANNELS_CONTAINER.savePSD2txt(obj.SETTINGS.VIEW.src_edf_filename);
         end
         
         
@@ -596,18 +648,17 @@ cropFigure2Axes(f,axes1_copy);
             % hObject    handle to menu_file_export_events_container (see GCBO)
             % eventdata  reserved - to be defined in a future version of MATLAB
             % handles    structure with handles and user data (see GUIDATA)            
-            global BATCH_PROCESS;
-            global STATE;            
+            global BATCH_PROCESS;          
             global EVENT_CONTAINER;
             
-            filename_out = obj.sev.src_edf_filename;
-            if(STATE.batch_process_running)
+            filename_out = obj.SETTINGS.VIEW.src_edf_filename;
+            if(obj.STATE.batch_process_running)
                 filename_out = [filename_out(1:end-3) BATCH_PROCESS.output_files.events_filename];
             else
                 filename_out = [filename_out(1:end-3) 'evt.mat'];
             end;
             
-            filename= fullfile(obj.sev.src_event_pathname,obj.sev.output_pathname,filename_out);
+            filename= fullfile(obj.SETTINGS.VIEW.src_event_pathname,obj.SETTINGS.VIEW.output_pathname,filename_out);
             
             EVENT_CONTAINER.saveEventsContainerToFile(filename);
             disp(['Events saved to file: ', filename]);
@@ -645,7 +696,7 @@ cropFigure2Axes(f,axes1_copy);
         %--------------------------------%        
         % --------------------------------------------------------------------
         function filter_channel_callback(obj,hObject, eventdata)
-            % hObject    handle to menu_analyzer_filter_toolbox (see GCBO)
+            % hObject    handle to menu_tools_filter_toolbox (see GCBO)
             % eventdata  reserved - to be defined in a future version of MATLAB
             % handles    structure with handles and user data (see GUIDATA)
             global CHANNELS_CONTAINER;
@@ -655,7 +706,7 @@ cropFigure2Axes(f,axes1_copy);
                 channel_label_str{k} = CHANNELS_CONTAINER.cell_of_channels{k}.EDF_label;
             end
             
-            filter_struct = prefilter_dlg(channel_label_str,CHANNELS_CONTAINER.filterArrayStruct,[],obj.sev.filter_path,obj.sev.filterInf_file,CHANNELS_CONTAINER);
+            filter_struct = prefilter_dlg(channel_label_str,CHANNELS_CONTAINER.filterArrayStruct,[],obj.SETTINGS.VIEW.filter_path,obj.SETTINGS.VIEW.filterInf_file,CHANNELS_CONTAINER);
             
             %filter_struct has the following fields
             % src_channel_index   (the index of the event_container EDF channel)
@@ -709,8 +760,8 @@ cropFigure2Axes(f,axes1_copy);
         end
         
         % --------------------------------------------------------------------
-        function menu_analyzer_quad_callback(obj,hObject, eventdata)
-            % hObject    handle to menu_analyzer_quad (see GCBO)
+        function menu_tools_quad_callback(obj,hObject, eventdata)
+            % hObject    handle to menu_tools_quad (see GCBO)
             % eventdata  reserved - to be defined in a future version of MATLAB
             % handles    structure with handles and user data (see GUIDATA)
             
@@ -731,8 +782,19 @@ cropFigure2Axes(f,axes1_copy);
         end
         
         % --------------------------------------------------------------------
-        function menu_preferences_timelineEventsSelection_callback(obj,hObject, eventdata)
-            % hObject    handle to menu_analyzer_viewAllEvents (see GCBO)
+        function menu_settings_defaults_callback(obj,hObject, eventdata, handles)
+            %Purpose: let user change default settings
+            % hObject    handle to menu_settings_Defaults (see GCBO)
+            % eventdata  reserved - to be defined in a future version of MATLAB
+            % handles    structure with handles and user data (see GUIDATA)
+            
+
+            
+        end
+        
+        % --------------------------------------------------------------------
+        function menu_tools_timelineEventsSelection_callback(obj,hObject, eventdata)
+            % hObject    handle to menu_tools_viewAllEvents (see GCBO)
             % eventdata  reserved - to be defined in a future version of MATLAB
             % handles    structure with handles and user data (see GUIDATA)
             %called from the menu bar, and is used to determine how the lower axes
@@ -867,21 +929,18 @@ cropFigure2Axes(f,axes1_copy);
             end;
         end
 
-        % --------------------------------------------------------------------
-        function menu_preferences_classifiers_callback(obj,hObject, eventdata)
-            plist_editor_dlg();
-        end
+
         
         
         % --------------------------------------------------------------------
-        function menu_preferences_saveChannelConfig_callback(obj,hObject, eventdata, handles)
-            % hObject    handle to menu_preferences_saveChannelConfig (see GCBO)
+        function menu_settings_saveChannelConfig_callback(obj,hObject, eventdata, handles)
+            % hObject    handle to menu_settings_saveChannelConfig (see GCBO)
             % eventdata  reserved - to be defined in a future version of MATLAB
             % handles    structure with handles and user data (see GUIDATA)
             global CHANNELS_CONTAINER;
             
             if(~isempty(CHANNELS_CONTAINER))
-                CHANNELS_CONTAINER.saveSettings(obj.sev.channelsettings_file);
+                CHANNELS_CONTAINER.saveSettings(obj.SETTINGS.VIEW.channelsettings_file);
             end
         end
         
@@ -1046,7 +1105,7 @@ cropFigure2Axes(f,axes1_copy);
         end
         
         function eventtoolbox_callback(obj,hObject,eventdata)
-            %sets up and calls the CLASS_event_toolbox_dialog function which in turn
+            %sets up and calls the CLASS_events_toolbox_dialog function which in turn
             %synthesizes new channels and events as determined by the user.
             global EVENT_CONTAINER;
             
@@ -1056,11 +1115,11 @@ cropFigure2Axes(f,axes1_copy);
                 channel_index = 1;
             end;
             
-            event_toolbox = CLASS_event_toolbox_dialog(); %create an empty object...
+            event_toolbox = CLASS_events_toolbox_dialog(); %create an empty object...
             event_toolbox.num_sources = 1;
             event_toolbox.channel_selections = channel_index;
-            event_toolbox.detection_path = obj.sev.detection_path;
-            event_toolbox.detection_inf_file = obj.sev.detectionInf_file;
+            event_toolbox.detection_path = obj.SETTINGS.VIEW.detection_path;
+            event_toolbox.detection_inf_file = obj.SETTINGS.VIEW.detectionInf_file;
             try
                 event_toolbox.run();
                 
@@ -1226,7 +1285,7 @@ cropFigure2Axes(f,axes1_copy);
             
             
             %% load EDF folder icon
-            loadedf_img = imread(fullfile(obj.sev.rootpathname,'icons/folder-24x24.png'));
+            loadedf_img = imread(fullfile(obj.SETTINGS.VIEW.rootpathname,'icons/folder-24x24.png'));
             
             resolution = size(loadedf_img);
             backgroundImg = ones(resolution);
@@ -1244,7 +1303,7 @@ cropFigure2Axes(f,axes1_copy);
             
             %% Toolbox
             % toolbox_img = imread(fullfile(obj.sev.rootpathname,'icons/toolbox-16x16.png'));
-            toolbox_img = imread(fullfile(obj.sev.rootpathname,'icons/toolbox-24x24.png'));
+            toolbox_img = imread(fullfile(obj.SETTINGS.VIEW.rootpathname,'icons/toolbox-24x24.png'));
             blank_ind = xor(toolbox_img,backgroundImg);
             toolbox_img(blank_ind) = backgroundImg(blank_ind);
             obj.toolbarhandle.toolbox_push = uipushtool(th,'CData',toolbox_img,'separator','on',...
@@ -1254,7 +1313,7 @@ cropFigure2Axes(f,axes1_copy);
             
             %% Filter toolbox
             % filter_img = imread(fullfile(obj.sev.rootpathname,'icons/filter-16x16.png'));
-            filter_img = imread(fullfile(obj.sev.rootpathname,'icons/filter2-24x24.png'));
+            filter_img = imread(fullfile(obj.SETTINGS.VIEW.rootpathname,'icons/filter2-24x24.png'));
             % blank_ind = xor(filter_img,backgroundImg);
             % filter_img(blank_ind) = backgroundImg(blank_ind);
             
@@ -1264,7 +1323,7 @@ cropFigure2Axes(f,axes1_copy);
             
             
             % compare_img = imread('icons/balance-16x16.png');
-            compare_img = imread(fullfile(obj.sev.rootpathname,'icons/balance-24x24.png'));
+            compare_img = imread(fullfile(obj.SETTINGS.VIEW.rootpathname,'icons/balance-24x24.png'));
             blank_ind = xor(compare_img,backgroundImg);
             compare_img(blank_ind) = backgroundImg(blank_ind);
             obj.toolbarhandle.eventcomparisons_push = uipushtool(th,'CData',compare_img,'separator','off',...
@@ -1274,7 +1333,7 @@ cropFigure2Axes(f,axes1_copy);
             
             %% General Edit
             
-            general_edit_on_img = imread(fullfile(obj.sev.rootpathname,'icons/hand-24x24.png'));
+            general_edit_on_img = imread(fullfile(obj.SETTINGS.VIEW.rootpathname,'icons/hand-24x24.png'));
             general_edit_off_img = general_edit_on_img;
             
             resolution = size(general_edit_on_img);
@@ -1298,7 +1357,7 @@ cropFigure2Axes(f,axes1_copy);
             
             %% Marking toolbar icon
             %this icon has a black background by default
-            marking_on_img = imread(fullfile(obj.sev.rootpathname,'icons/pencil-24x24.png'));
+            marking_on_img = imread(fullfile(obj.SETTINGS.VIEW.rootpathname,'icons/pencil-24x24.png'));
             marking_off_img = marking_on_img;
             
             resolution = size(marking_on_img);
@@ -1352,9 +1411,9 @@ cropFigure2Axes(f,axes1_copy);
             %SEV figure callback for choosing a source EDF file for loading
             
             try
-                suggested_pathname = obj.sev.src_edf_pathname;
+                suggested_pathname = obj.SETTINGS.VIEW.src_edf_pathname;
                 
-                suggested_file = fullfile(suggested_pathname,obj.sev.src_edf_filename);
+                suggested_file = fullfile(suggested_pathname,obj.SETTINGS.VIEW.src_edf_filename);
                 if(exist(suggested_file,'file'))
                     suggestion = suggested_file;
                 else
@@ -1385,16 +1444,15 @@ cropFigure2Axes(f,axes1_copy);
             %function that loads a selected EDF and begins with asking for
             %which channels to load
             global CHANNELS_CONTAINER;
-            obj.sev.src_edf_filename = EDF_filename;
-            obj.sev.src_edf_pathname = EDF_pathname;
+            obj.SETTINGS.VIEW.src_edf_filename = EDF_filename;
+            obj.SETTINGS.VIEW.src_edf_pathname = EDF_pathname;
             obj.sev_loading_file_flag = true;
-            obj.initializeSEV();
+            obj.initializeView();
             
             new_channels_loaded = obj.load_EDFchannels_callback();
             if(new_channels_loaded)
-                %                 stages_filename = fullfile(obj.sev.src_edf_pathname,strrep(obj.sev.src_edf_filename,'EDF','STA'));
-                [~,name,~]= fileparts(obj.sev.src_edf_filename);
-                stages_filename = fullfile(obj.sev.src_edf_pathname,strcat(name,'.STA'));
+                [~,name,~]= fileparts(obj.SETTINGS.VIEW.src_edf_filename);
+                stages_filename = fullfile(obj.SETTINGS.VIEW.src_edf_pathname,strcat(name,'.STA'));
                 obj.setDateTimeFromHDR();
                 
                 if(~exist(stages_filename,'file'))
@@ -1410,7 +1468,8 @@ cropFigure2Axes(f,axes1_copy);
                 CHANNELS_CONTAINER.setChannelSettings();
                 
                 enableFigureHandles(obj.figurehandle.sev);
-                set(obj.texthandle.src_filename,'string',obj.sev.src_edf_filename);
+                set(obj.texthandle.src_filename,'string',obj.SETTINGS.VIEW.src_edf_filename);
+                obj.STATE.single_study_running = true;
             end
             obj.sev_loading_file_flag = false;
         end
@@ -1420,7 +1479,7 @@ cropFigure2Axes(f,axes1_copy);
 %             new_channels_loaded_flag is true if new channels were
 %             loaded/added and otherwise false
             global CHANNELS_CONTAINER
-            EDF_filename = fullfile(obj.sev.src_edf_pathname,obj.sev.src_edf_filename);
+            EDF_filename = fullfile(obj.SETTINGS.VIEW.src_edf_pathname,obj.SETTINGS.VIEW.src_edf_filename);
             
             loadedIndices = CHANNELS_CONTAINER.getLoadedEDFIndices();
             obj.EDF_HDR = loadEDF(EDF_filename);
@@ -1469,7 +1528,7 @@ cropFigure2Axes(f,axes1_copy);
             
             %This caused problems when channels are of different sampling rates or durations.  Everything should be converted to 100 Hz, but still there were some problems in APOE.  Convert to time to adjust.
             obj.study_duration_in_seconds = HDR.duration_sec;
-            obj.study_duration_in_samples = obj.study_duration_in_seconds*obj.sev.samplerate;
+            obj.study_duration_in_samples = obj.study_duration_in_seconds*obj.SETTINGS.VIEW.samplerate;
             
             seconds_per_epoch = obj.getSecondsPerEpoch();
             
@@ -1480,14 +1539,14 @@ cropFigure2Axes(f,axes1_copy);
             end
         end
         
-        function initializeSEV(obj)
+        function initializeView(obj)
             %initializes the axes and makes sure everything is good to go for a first
             %time use or when loading a new file or recovering from an error
             global CHANNELS_CONTAINER;
             global EVENT_CONTAINER;
-            CHANNELS_CONTAINER = CLASS_channels_container(obj.figurehandle.sev,obj.axeshandle.main,obj.axeshandle.utility,obj.sev);
-            CHANNELS_CONTAINER.loadSettings(obj.sev.channelsettings_file);
-            EVENT_CONTAINER = CLASS_events_container(obj.figurehandle.sev,obj.axeshandle.main,obj.sev.samplerate,CHANNELS_CONTAINER);
+            CHANNELS_CONTAINER = CLASS_channels_container(obj.figurehandle.sev,obj.axeshandle.main,obj.axeshandle.utility,obj.SETTINGS.VIEW);
+            CHANNELS_CONTAINER.loadSettings(obj.SETTINGS.VIEW.channelsettings_file);
+            EVENT_CONTAINER = CLASS_events_container(obj.figurehandle.sev,obj.axeshandle.main,obj.SETTINGS.VIEW.samplerate,CHANNELS_CONTAINER);
             
             disableFigureHandles(obj.figurehandle.sev);
             
@@ -1528,7 +1587,7 @@ cropFigure2Axes(f,axes1_copy);
                 'nextplot','replacechildren','box','on',...
                 'xlim',obj.sev_mainaxes_xlim,...
                 'ylim',obj.sev_mainaxes_ylim,...  %avoid annoying resolution changes on first load
-                'ydir',obj.sev.yDir);
+                'ydir',obj.SETTINGS.VIEW.yDir);
             
             set(obj.axeshandle.timeline,'Units','normalized',... %normalized allows it to resize automatically
                 'xgrid','off','ygrid','off',...
@@ -1542,11 +1601,15 @@ cropFigure2Axes(f,axes1_copy);
                 'nextplot','replacechildren','box','on');
 
             seconds_per_epoch = obj.getSecondsPerEpoch();
-            if(seconds_per_epoch == obj.sev.standard_epoch_sec)
-                set(obj.axeshandle.main,'dataaspectratiomode','manual','dataaspectratio',[30 12 1]);
+            if(seconds_per_epoch == obj.SETTINGS.VIEW.standard_epoch_sec)
+                %                 set(obj.axeshandle.main,'dataaspectratiomode','manual','d
+                %                 ataaspectratio',[30 12 1]);
+                set(obj.axeshandle.main,'plotboxaspectratiomode','manual','plotboxaspectratio',[30 12 1]);
             else
-                set(obj.axeshandle.main,'dataaspectratiomode','auto');
-            end;
+                %                     set(obj.axeshandle.main,'dataaspectratiomode','auto');
+                set(obj.axeshandle.main,'plotboxaspectratiomode','auto');
+            end
+                
 
             
             set(obj.axeshandle.utility,'Units','normalized',... %normalized allows it to resize automatically
@@ -1566,8 +1629,7 @@ cropFigure2Axes(f,axes1_copy);
                 'ytickmode','auto',...
                 'xtickmode','auto',...
                 'ytickmode','auto',...
-                'xlim',[0 obj.sev.samplerate/2]);
-            
+                'xlim',[0 obj.SETTINGS.VIEW.samplerate/2]);            
             
             if(~isfield(obj.linehandle,'x_minorgrid')||isempty(obj.linehandle.x_minorgrid)||~ishandle(obj.linehandle.x_minorgrid))
                 obj.linehandle.x_minorgrid = line('xdata',[],'ydata',[],'parent',obj.axeshandle.main,'color',[0.8 0.8 0.8],'linewidth',0.5,'linestyle',':','hittest','off','visible','on');
@@ -1576,21 +1638,27 @@ cropFigure2Axes(f,axes1_copy);
             %turn on the appropriate menu items still for initial use before any EDF's
             %are loaded
             handles = guidata(obj.figurehandle.sev);
-            set(handles.menu_batch_roc_database,'enable','on');
-            set(handles.menu_batch_roc_directory,'enable','on');
             
             set(handles.menu_file_createEDF,'enable','on');
             set(handles.menu_file_load_EDF,'enable','on');
             set(handles.menu_file,'enable','on');
-%             set(handles.menu_analyzer,'enable','on');
             set(handles.menu_file_export,'enable','on');
             set(handles.menu_file_import,'enable','on');
-            set(handles.menu_batch_run,'enable','on');
-            set(handles.menu_preferences,'enable','on');
-            set(handles.menu_preferences_psd,'enable','on');
+            
+            set(handles.menu_tools,'enable','on');
+            set(handles.menu_tools_roc_directory,'enable','on');
+            
+            set(handles.menu_settings,'enable','on');
+            set(handles.menu_settings_power,'enable','on');
+            set(handles.menu_settings_power_psd,'enable','on');
+            set(handles.menu_settings_power_music,'enable','on');
+%             set(handles.menu_settings_roc,'enable','on'); %wait until
+%             there are at least two events to examine.
+            set(handles.menu_settings_classifiers,'enable','on');
+            set(handles.menu_settings_defaults,'enable','on');            
+            
             set(handles.menu_batch_run,'enable','on');
             set(handles.menu_batch,'enable','on');
-            set(handles.menu_preferences_classifiers,'enable','on');
             
             set(handles.menu_help,'enable','on');
             set(handles.menu_help_defaults,'enable','on');
@@ -1598,8 +1666,6 @@ cropFigure2Axes(f,axes1_copy);
             
             set(obj.toolbarhandle.loadedf_push,'enable','on');
             set(handles.radio_psd,'value',1);
-            
-            
             
             obj.restore_state();
         end
@@ -1716,7 +1782,7 @@ cropFigure2Axes(f,axes1_copy);
                     end
                 end
                 obj.epoch_resolution.selection_choices = epoch_selection;
-                obj.epoch_resolution.current_selection_index = find(obj.epoch_resolution.sec==obj.sev.standard_epoch_sec);
+                obj.epoch_resolution.current_selection_index = find(obj.epoch_resolution.sec==obj.SETTINGS.VIEW.standard_epoch_sec);
                 
                 
                 obj.epoch_resolution.menu_h = time_scale_menu_h_in;
@@ -1727,7 +1793,7 @@ cropFigure2Axes(f,axes1_copy);
         function refreshAxes(obj)
             obj.showBusy('Updating Plot');
             handles = guidata(obj.figurehandle.sev);
-                    
+            
             obj.updateMainAxes();
             
             obj.updateTimelineAxes();
@@ -1738,7 +1804,6 @@ cropFigure2Axes(f,axes1_copy);
             
             obj.showReady();
             set(handles.text_status,'string','');
-            
         end
         
         function showBusy(obj,status_label)
@@ -1747,12 +1812,14 @@ cropFigure2Axes(f,axes1_copy);
                 set(obj.texthandle.status,'string',status_label);
             end
             drawnow();
-        end        
+        end  
+        
         function showReady(obj)
             set(obj.figurehandle.sev,'pointer','arrow');
             set(obj.texthandle.status,'string','');
             drawnow();
         end
+        
         function updateMainAxes(obj)
             %limits and lines are set/drawn
             global CHANNELS_CONTAINER;
@@ -1773,7 +1840,6 @@ cropFigure2Axes(f,axes1_copy);
                 set(obj.texthandle.previous_stage,'position',[obj.sev_mainaxes_xlim(1)+samples_per_epoch/20,-240,0],'string',['< ', num2str(previous_stage)],'parent',obj.axeshandle.main,'color',[1 1 1]*.8,'fontsize',35);
                 set(obj.texthandle.next_stage,'position',[obj.sev_mainaxes_xlim(1)+samples_per_epoch*9/10,-240,0],'string',[num2str(next_stage) ' >'],'parent',obj.axeshandle.main,'color',[1 1 1]*.8,'fontsize',35);
             end;
-            
             
             x_ticks = obj.sev_mainaxes_xlim(1):samples_per_epoch/6:obj.sev_mainaxes_xlim(end);
             set(obj.axeshandle.main,'xlim',obj.sev_mainaxes_xlim,'ylim',obj.sev_mainaxes_ylim,...
@@ -1874,8 +1940,7 @@ cropFigure2Axes(f,axes1_copy);
                 set(obj.annotationhandle.timeline,'x',[startX startX],'y',[pos(2) pos(2)+pos(4)]);
             else
                 obj.annotationhandle.timeline = annotation(obj.figurehandle.sev,'line',[startX, startX], [pos(2) pos(2)+pos(4)],'hittest','off');
-            end;
-            
+            end;  
         end
         
         function updateUtilityAxes(obj)
@@ -1923,7 +1988,7 @@ cropFigure2Axes(f,axes1_copy);
                 fmt = 'HH:MM:SS';
             end
             datetime = repmat(obj.startDateTime,numel(sample_points),1);
-            datetime(:,end) = datetime(:,end)+sample_points(:)/obj.sev.samplerate;
+            datetime(:,end) = datetime(:,end)+sample_points(:)/obj.SETTINGS.VIEW.samplerate;
             
             timeStrCell = datestr(datenum(datetime),fmt);
             
@@ -1938,7 +2003,7 @@ cropFigure2Axes(f,axes1_copy);
         function epoch =  getSEVEpochAtSamplePt(obj,x)
             %returns the epoch that x occurs in based on the standard epoch
             %length used in the sev (e.g. 30 seconds per epoch 
-            epoch = obj.sample2epoch(x, obj.sev.standard_epoch_sec);
+            epoch = obj.sample2epoch(x, obj.SETTINGS.VIEW.standard_epoch_sec);
         end
         
         function stage = getCurrentStage(obj)
@@ -1974,10 +2039,10 @@ cropFigure2Axes(f,axes1_copy);
             %[epoch_dur_sec] = [30]
             %[sampleRate] = [100]
             if(nargin<4)
-                sampleRate = obj.sev.samplerate;
+                sampleRate = obj.SETTINGS.VIEW.samplerate;
             end
             if(nargin<3)
-                epoch_dur_sec = obj.sev.standard_epoch_sec;
+                epoch_dur_sec = obj.SETTINGS.VIEW.standard_epoch_sec;
             end;
             epoch = ceil(index/(epoch_dur_sec*sampleRate));
             
@@ -1995,17 +2060,26 @@ cropFigure2Axes(f,axes1_copy);
             units_for_epoch = obj.epoch_resolution.selection_choices(obj.epoch_resolution.current_selection_index).units;
         end
         function samples_per_epoch = getSamplesPerEpoch(obj)
-            samples_per_epoch  = obj.getSecondsPerEpoch()*obj.sev.samplerate;
+            samples_per_epoch  = obj.getSecondsPerEpoch()*obj.SETTINGS.VIEW.samplerate;
         end
         
         function setAxesResolution(obj)
             global CHANNELS_CONTAINER;
             seconds_per_epoch = obj.getSecondsPerEpoch();
-            if(seconds_per_epoch == obj.sev.standard_epoch_sec)
-                set(obj.axeshandle.main,'dataaspectratiomode','manual','dataaspectratio',[30 12 1]);
+            if(seconds_per_epoch == obj.SETTINGS.VIEW.standard_epoch_sec)
+                %                     set(obj.axeshandle.main,'dataaspectratiomode','manual','dataaspectratio',[30 12 1]);
+                set(obj.axeshandle.main,'plotboxaspectratiomode','manual','plotboxaspectratio',[30 12 1]);
             else
-                set(obj.axeshandle.main,'dataaspectratiomode','auto');
+                %                     set(obj.axeshandle.main,'dataaspectratiomode','auto');
+                set(obj.axeshandle.main,'plotboxaspectratiomode','auto');
             end;
+
+%             
+%             if(seconds_per_epoch == obj.SETTINGS.VIEW.standard_epoch_sec)
+%                 set(obj.axeshandle.main,'dataaspectratiomode','manual','dataaspectratio',[30 12 1]);
+%             else
+%                 set(obj.axeshandle.main,'dataaspectratiomode','auto');
+%             end;
 
             if(seconds_per_epoch<0)
                 set(obj.edit_epoch_h,'enable','off');
@@ -2013,7 +2087,7 @@ cropFigure2Axes(f,axes1_copy);
                 if(strcmpi(epoch_units,'stage'))
                     stage2show = obj.epoch_resolution.selection_choices(obj.epoch_resolution.current_selection_index).stage;
                     stage_epoch_ind = find(obj.sev_STAGES.line==stage2show);
-                    epochs2samples = obj.sev.samplerate*obj.sev.standard_epoch_sec;
+                    epochs2samples = obj.SETTINGS.VIEW.samplerate*obj.SETTINGS.VIEW.standard_epoch_sec;
                     if(isempty(stage_epoch_ind))
                         warndlg('This stage does not exist for the current study - just showing first epoch');
                         obj.display_samples = 1:epochs2samples;
@@ -2036,7 +2110,7 @@ cropFigure2Axes(f,axes1_copy);
             else
                 set(obj.edit_epoch_h,'enable','on');                            
                 obj.num_epochs = ceil(obj.study_duration_in_seconds/seconds_per_epoch);
-                new_epoch = sample2epoch(obj.sev_mainaxes_xlim(1),seconds_per_epoch,obj.sev.samplerate);
+                new_epoch = sample2epoch(obj.sev_mainaxes_xlim(1),seconds_per_epoch,obj.SETTINGS.VIEW.samplerate);
             end
             CHANNELS_CONTAINER.setDrawEvents();  %inform the channel container to notify all channels that their events need to be redrawn (to reflect change of axes);
             
@@ -2258,7 +2332,7 @@ cropFigure2Axes(f,axes1_copy);
                 xdata = [start_stop;start_stop];
                 w = diff(start_stop);
                 num_events = size(EVENT_CONTAINER.cell_of_events{obj.event_index}.start_stop_matrix,1);
-                dur_sec = w/obj.sev.samplerate;
+                dur_sec = w/obj.SETTINGS.VIEW.samplerate;
                 %status Text...
                 set(obj.texthandle.status,'string',sprintf('%s (%s)[%u of %u]: %0.2f s',obj.event_label,obj.channel_label,obj.start_stop_matrix_index,num_events,dur_sec));
             %editing a new event
@@ -2356,7 +2430,7 @@ cropFigure2Axes(f,axes1_copy);
             set(rectangle_h,'position',rec_pos);
             set(surf_h,'xdata',repmat([rec_pos(1),rec_pos(1)+rec_pos(3)],2,1),'ydata',repmat([rec_pos(2);rec_pos(2)+rec_pos(4)],1,2));
             
-            dur_sec = w/obj.sev.samplerate;
+            dur_sec = w/obj.SETTINGS.VIEW.samplerate;
             %status Text...
             set(obj.texthandle.status,'string',sprintf('%s (%s): %0.2f s',obj.event_label,obj.channel_label,dur_sec));
         end
@@ -2499,7 +2573,7 @@ cropFigure2Axes(f,axes1_copy);
             %grid_handle is a graphics handle to the line
             parent_axes = obj.axeshandle.main;
             spacing_sec = 1.0;
-            y_lines = obj.sev_mainaxes_xlim(1):spacing_sec*obj.sev.samplerate:obj.sev_mainaxes_xlim(2);
+            y_lines = obj.sev_mainaxes_xlim(1):spacing_sec*obj.SETTINGS.VIEW.samplerate:obj.sev_mainaxes_xlim(2);
 
             
             y_lim = get(parent_axes,'ylim');
@@ -2528,7 +2602,7 @@ cropFigure2Axes(f,axes1_copy);
         end
         
         function detectMethodStruct = getDetectionMethodsStruct(obj)
-           detectMethodStruct = CLASS_events_container.loadDetectionMethodsInf(fullfile(obj.sev.rootpathname,obj.sev.detection_path),obj.sev.detectionInf_file);
+           detectMethodStruct = CLASS_events_container.loadDetectionMethodsInf(fullfile(obj.SETTINGS.VIEW.rootpathname,obj.SETTINGS.VIEW.detection_path),obj.SETTINGS.VIEW.detectionInf_file);
         end
         
     end
