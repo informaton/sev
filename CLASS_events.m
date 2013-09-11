@@ -47,11 +47,11 @@ classdef CLASS_events < handle
         start_stop_matrix;
         batch_mode_label;        
         
-        %> the configuration identifier (1..M) for this event.  Output from
+        %> @brief the configuration identifier (1..M) for this event.  Output from
         %> detectors with configurable parameter settings can be uniquely identified in conjunction with this ID and the batch.saveDetectorConfigLegend.m function
         configID;
         
-        %> primary key for detectorinfo_t record an instance of this class
+        %> @brief primary key for detectorinfo_t record an instance of this class
         %> is associated with
         detectorID;
         
@@ -61,12 +61,12 @@ classdef CLASS_events < handle
         %> y value to draw the event patch at.
         evt_patch_y;
         
-        %> starting sample of the current sev display, where all of the
+        %> @brief starting sample of the current sev display, where all of the
         %> channels and events begin from on the x-axis
         epoch_start_x; 
         evt_patch_height;
         
-        %> range over which to apply an roc comparison to between events -
+        %> @brief range over which to apply an roc comparison to between events -
         %> normally for manually loaded events
         roc_comparison_range; 
         
@@ -74,23 +74,23 @@ classdef CLASS_events < handle
         parent_axes; 
         parent_fig;
         
-        %> vector of handles to lines (one for each source) - defined
+        %> @brief vector of handles to lines (one for each source) - defined
         %> outside of the class and then assigned directly to this property
         evt_patch_h; 
         cur_color;
         
-        %> vector of handles to the textboxes that will contain the
+        %> @brief vector of handles to the textboxes that will contain the
         %> descriptions of these patches...
         label_h;
         
         %> handle to the context menu associated with this event
         contextmenu_evt_patch_h;
         
-        %> whether the element is visible or not (patch and labelhandle
+        %> @brief whether the element is visible or not (patch and labelhandle
         %> specifically)
         hidden; 
         
-        %> this is the parameters of interest for this event that will
+        %> @brief this is the parameters of interest for this event that will
         %> likely be saved later for post analysis
         paramStruct;
         
@@ -103,28 +103,28 @@ classdef CLASS_events < handle
         %> cell of fieldnames in paramStruct
         paramFieldNames;
         
-        %> structure of summary statistics calculated in
+        %> @brief structure of summary statistics calculated in
         %> calculate_summary_stats method and returned by get_summary_stats() method
         summary_stats_Struct; 
-        %> set to true whenever the object's event has been updated so that
+        %> @brief set to true whenever the object's event has been updated so that
         %> a new summary stats will be calculated before being returned
         summary_stats_needs_updating_Bool; 
         
-        %> struct that contains the following fields
-        %> .algorithm :  .m file/function call associated with creating this event...
-        %> .channel_indices : the channels that were used in creating
+        %> @brief struct that contains the following fields
+        %> - .algorithm :  .m file/function call associated with creating this event...
+        %> - .channel_indices : the channels that were used in creating
         %>   this event - as passed to the source.algorithm
-        %>.editor = 'none';
-        %> .sourceStruct.pStruct = pStruct;
+        %> - .editor = 'none';
+        %> - .sourceStruct.pStruct = pStruct;
         %>   pStruct is a plist struct whose fields and associated
         %>   values are specific to the parameters used in creating
         %>   the event when there is a .plist associated with the
         %>   event's creation detection algorithm.
         %>   pBatchStruct has the fields
-        %>       .start -> start parameter value
-        %>       .stop -> stop parameter value
-        %>       .key -> name of the parameter/property field
-        %>       .num_steps -> number of steps to take between the
+        %>  -     .start -> start parameter value
+        %>  -     .stop -> stop parameter value
+        %>  -     .key -> name of the parameter/property field
+        %>  -     .num_steps -> number of steps to take between the
         %>       start and stop value
         source;
     end
@@ -246,6 +246,12 @@ classdef CLASS_events < handle
             end
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_channel class.
+        %> @param
+        %> @retval obj instance of CLASS_channel class.
+        % =================================================================
         function obj = setContextmenus(obj,contextmenu_patch_h, contextmenu_label_h,updateEvent_callback)
             %the contextmenu here is for the patches that represent the
             %discrete start stop sample events of an instance of this
@@ -285,6 +291,12 @@ classdef CLASS_events < handle
 
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_channel class.
+        %> @param
+        %> @retval obj instance of CLASS_channel class.
+        % =================================================================
         function obj = updateColor(obj,newColor)
             obj.cur_color = newColor;
             set(obj.evt_patch_h,'edgecolor',newColor,'facecolor',newColor);
@@ -292,6 +304,12 @@ classdef CLASS_events < handle
             
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_channel class.
+        %> @param
+        %> @retval obj instance of CLASS_channel class.
+        % =================================================================
         function summary_stats = get_summary_stats(obj,stageStruct)
             if(isempty(obj.summary_stats_Struct) || obj.summary_stats_needs_updating_Bool)
                 obj.summary_stats_Struct = obj.calculate_summary_stats(obj.samplerate,obj.start_stop_matrix,stageStruct);
@@ -300,6 +318,12 @@ classdef CLASS_events < handle
             obj.summary_stats_needs_updating_Bool = false;  %it has been updated, and does not need further updating.  
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_channel class.
+        %> @param
+        %> @retval obj instance of CLASS_channel class.
+        % =================================================================
         function obj = delete(obj)
             %deconstructor for this class
             %             global CHANNELS_CONTAINER;
@@ -319,6 +343,12 @@ classdef CLASS_events < handle
             obj = [];
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_channel class.
+        %> @param
+        %> @retval obj instance of CLASS_channel class.
+        % =================================================================
         function obj = hide(obj)
             obj.hidden = true;
             set(obj.evt_patch_h,'handlevisibility','off','visible','off');
@@ -329,6 +359,12 @@ classdef CLASS_events < handle
 
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_channel class.
+        %> @param
+        %> @retval obj instance of CLASS_channel class.
+        % =================================================================
         function obj = show(obj)
             obj.hidden = false;
             set(obj.evt_patch_h,'handlevisibility','on','visible','on');
@@ -336,6 +372,12 @@ classdef CLASS_events < handle
             obj.showParameterValues();
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_channel class.
+        %> @param
+        %> @retval obj instance of CLASS_channel class.
+        % =================================================================
         function detectStruct = rerun(obj,detection_path)
             %rerun the detectionStruct for the current method, likely called when the channel
             %changes due to filtering
@@ -346,6 +388,12 @@ classdef CLASS_events < handle
             
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events class.
+        %> @param
+        %> @retval obj instance of CLASS_events class.
+        % =================================================================
         function obj = draw_all(obj,parentH,y_offset,max_height,stagesStruct)
             %plots on the overall lower axes, the artifacts listed in art, which is a vector containing 1's where
             %an artifact should be drawn and 0 otherwise.
@@ -400,6 +448,12 @@ classdef CLASS_events < handle
             set(h,'position',label_position);
         end;
 
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events class.
+        %> @param
+        %> @retval obj instance of CLASS_events class.
+        % =================================================================
         function setCurrentEpochStartX(obj,start_x)
             if(obj.epoch_start_x~=start_x)
                 obj.epoch_start_x = start_x;
@@ -408,6 +462,12 @@ classdef CLASS_events < handle
             end
         end
 
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events class.
+        %> @param
+        %> @retval obj instance of CLASS_events class.
+        % =================================================================
         function setYOffset(obj,parent_y_offset)
             %update the y position of our event patch based on the input
             %parent y offset.  If it is different from before, then draw it
@@ -418,6 +478,12 @@ classdef CLASS_events < handle
             end
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events class.
+        %> @param
+        %> @retval obj instance of CLASS_events class.
+        % =================================================================
         function draw(obj)
             %range is a vector containing the x-values to be examined over
             %for events (i.e. the time line in samples)
@@ -435,6 +501,12 @@ classdef CLASS_events < handle
             end
         end;
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events class.
+        %> @param
+        %> @retval obj instance of CLASS_events class.
+        % =================================================================
         function showLabel(obj)
             if(~obj.hidden && ~isempty(obj.evt_patch_h))                
                 text_extent = get(obj.label_h(1),'extent');
@@ -444,6 +516,12 @@ classdef CLASS_events < handle
             end
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events class.
+        %> @param
+        %> @retval obj instance of CLASS_events class.
+        % =================================================================
         function showParameterValues(obj)
             %makes textboxes to display parameter values in for the current
             %epoch...
@@ -476,6 +554,12 @@ classdef CLASS_events < handle
             end
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events class.
+        %> @param
+        %> @retval obj instance of CLASS_events class.
+        % =================================================================
         function obj = changeEventIndex(obj,new_event_index)
 
             obj.current_event_index = new_event_index;
@@ -492,6 +576,12 @@ classdef CLASS_events < handle
             
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events class.
+        %> @param
+        %> @retval obj instance of CLASS_events class.
+        % =================================================================
         function event_indices = getEventIndicesInEpoch(obj,epoch_x_lim)
             %returns the indices of the events for this object that occur
             %at the epoch which starts at the sample point x_pos and is of
@@ -506,6 +596,12 @@ classdef CLASS_events < handle
             event_indices = find(obj.start_stop_matrix(:,1)>=epoch_x_lim(1)&obj.start_stop_matrix(:,1)<=epoch_x_lim(2));
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events class.
+        %> @param
+        %> @retval obj instance of CLASS_events class.
+        % =================================================================
         function event_index = findNearestEvent(obj,epoch_sample_start)
             global MARKING;
             if(nargin<2)
@@ -520,6 +616,12 @@ classdef CLASS_events < handle
             end            
         end;
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events class.
+        %> @param
+        %> @retval obj instance of CLASS_events class.
+        % =================================================================
         function obj = save2images(obj,full_filename_prefix,settings)
             %this method saves the events to individual files
             global CHANNELS_CONTAINER;
@@ -606,6 +708,12 @@ classdef CLASS_events < handle
             close(tmp_fig);
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events class.
+        %> @param
+        %> @retval obj instance of CLASS_events class.
+        % =================================================================
         %> adds a single event start_stop vector to the current
         %> start_stop_matrix and updates the data to be drawn...
         function appendEvent(obj,single_event)
@@ -619,6 +727,12 @@ classdef CLASS_events < handle
             end            
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events class.
+        %> @param
+        %> @retval obj instance of CLASS_events class.
+        % =================================================================
         function deleteDatabaseRecords(obj,DBtable,optional_PatStudyKey)
             %remove the events with the same label and detector ID as this
             %one (i.e. obj).  If optional_PatStudyKey is included, then the
@@ -633,6 +747,12 @@ classdef CLASS_events < handle
             end
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events class.
+        %> @param
+        %> @retval obj instance of CLASS_events class.
+        % =================================================================
         function save2DB(obj,DBtable,PatStudyKey,stagesStruct)
             %DBtable is the table name to load the events into
             %patidkey is the patidkey the events are associated with and
@@ -696,6 +816,12 @@ classdef CLASS_events < handle
             
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events class.
+        %> @param
+        %> @retval obj instance of CLASS_events class.
+        % =================================================================
         function save2mat(obj,filename,stagesStruct)
             %this function requires filename to meet OS file naming requirements
             %or it will crash - it overwrites any preexisting file with the
@@ -735,6 +861,12 @@ classdef CLASS_events < handle
             save(filename,'event_start_stop','source','paramStruct','label','duration','start_stages','start_epochs','start_cycle','start_stop_matrix');
         end
 
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events class.
+        %> @param
+        %> @retval obj instance of CLASS_events class.
+        % =================================================================
         function obj = remove(obj,start_stop_matrix_index)
            %removes the event entry in start_stop_matrix found at row index start_stop_matrix_index
            if(start_stop_matrix_index>0 && start_stop_matrix_index <= size(obj.start_stop_matrix,1))
@@ -743,10 +875,22 @@ classdef CLASS_events < handle
            end            
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events class.
+        %> @param
+        %> @retval obj instance of CLASS_events class.
+        % =================================================================
         function result = isempty(obj)
             result = isempty(obj.start_stop_matrix);
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events class.
+        %> @param
+        %> @retval obj instance of CLASS_events class.
+        % =================================================================
         function save2text(obj,filename,studyStruct)
             %this function requires filename to meet OS file naming requirements
             %or it will crash - it appends to the file if filename already
@@ -846,6 +990,12 @@ classdef CLASS_events < handle
         % --------------------------------------------------------------------
 
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events class.
+        %> @param
+        %> @retval obj instance of CLASS_events class.
+        % =================================================================
         function obj = rename(obj,new_label)
             if(ischar(new_label))
                 obj.label = new_label;
@@ -854,12 +1004,24 @@ classdef CLASS_events < handle
                 obj.label);
         end
 
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events class.
+        %> @param
+        %> @retval obj instance of CLASS_events class.
+        % =================================================================
         function contextmenu_parameter_selection_callback(obj,hObject,~,selection_index)
             obj.paramFieldIndex = selection_index;
             set(hObject,'checked','on');         
             obj.showParameterValues();
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events class.
+        %> @param
+        %> @retval obj instance of CLASS_events class.
+        % =================================================================
         function contextmenu_parameter_selection_prep_callback(obj,hObject,~)
             child_h = flipud(get(hObject,'children'));
             set(child_h,'checked','off');
@@ -870,6 +1032,12 @@ classdef CLASS_events < handle
             end
         end
 
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events class.
+        %> @param
+        %> @retval obj instance of CLASS_events class.
+        % =================================================================
         function buttondown_patch_callback(obj,hObject,event_data)
             global MARKING;
             global CHANNELS_CONTAINER;
@@ -902,6 +1070,11 @@ classdef CLASS_events < handle
     
     methods(Static)
         
+        % =================================================================
+        %> @brief
+        %> @param
+        %> @retval 
+        % =================================================================
         function params = loadXMLparams(pfile)
             [pathstr,filename, ext] = fileparts(pfile);
             if(~strcmp(ext,'.plist'))
@@ -923,6 +1096,11 @@ classdef CLASS_events < handle
             end
         end
 
+        % =================================================================
+        %> @brief
+        %> @param
+        %> @retval 
+        % =================================================================
         function summary_stats = calculate_summary_stats(samplerate,start_stop_matrix, stage_struct)
             %stage_struct is a structure with fields count and line which is a 
             % vector of size size(start_stop_matrix,1) that 
@@ -989,6 +1167,11 @@ classdef CLASS_events < handle
             end
         end
         
+        % =================================================================
+        %> @brief
+        %> @param
+        %> @retval 
+        % =================================================================
         function [merged_events, merged_indices] = buffer_then_merge_nearby_events(event_mat_in,min_samples,additional_buffer_samples,max_samples)
             %add additional buffer before and after each event and then
             %merge if within min_samples of each other using
@@ -1044,6 +1227,11 @@ classdef CLASS_events < handle
             end;
         end
         
+        % =================================================================
+        %> @brief
+        %> @param
+        %> @retval 
+        % =================================================================
         function clean_events = cleanup_events(event_mat_in,min_samples)
             %extract only those events (from event_mat_in) that exceed a minimum duration
             %(min_samples)
@@ -1060,6 +1248,11 @@ classdef CLASS_events < handle
             end;
         end
         
+        % =================================================================
+        %> @brief
+        %> @param
+        %> @retval 
+        % =================================================================
         function filled_events = fill_bins_with_events(event_mat_start_stop, num_samples)
             %this function breaks a timeline into num_samples chunks, and fills the
             %entire chunck with 1's if it contains at least one event that is not 0

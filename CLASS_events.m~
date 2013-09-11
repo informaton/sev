@@ -5,6 +5,7 @@
 %> corresponding channel name (chan_name) with a two column matrix that
 %> contains the start and stop indices for the events provided in the cell
 %> message.  
+%
 %> Typically the constructor will receive a messageStr or cell with each
 %> string being of the form source.event.quality
 %> This message is parsed into its different elements based on the '.' token.
@@ -46,11 +47,11 @@ classdef CLASS_events < handle
         start_stop_matrix;
         batch_mode_label;        
         
-        %> the configuration identifier (1..M) for this event.  Output from
+        %> @brief the configuration identifier (1..M) for this event.  Output from
         %> detectors with configurable parameter settings can be uniquely identified in conjunction with this ID and the batch.saveDetectorConfigLegend.m function
         configID;
         
-        %> primary key for detectorinfo_t record an instance of this class
+        %> @brief primary key for detectorinfo_t record an instance of this class
         %> is associated with
         detectorID;
         
@@ -60,12 +61,12 @@ classdef CLASS_events < handle
         %> y value to draw the event patch at.
         evt_patch_y;
         
-        %> starting sample of the current sev display, where all of the
+        %> @brief starting sample of the current sev display, where all of the
         %> channels and events begin from on the x-axis
         epoch_start_x; 
         evt_patch_height;
         
-        %> range over which to apply an roc comparison to between events -
+        %> @brief range over which to apply an roc comparison to between events -
         %> normally for manually loaded events
         roc_comparison_range; 
         
@@ -73,23 +74,23 @@ classdef CLASS_events < handle
         parent_axes; 
         parent_fig;
         
-        %> vector of handles to lines (one for each source) - defined
+        %> @brief vector of handles to lines (one for each source) - defined
         %> outside of the class and then assigned directly to this property
         evt_patch_h; 
         cur_color;
         
-        %> vector of handles to the textboxes that will contain the
+        %> @brief vector of handles to the textboxes that will contain the
         %> descriptions of these patches...
         label_h;
         
         %> handle to the context menu associated with this event
         contextmenu_evt_patch_h;
         
-        %> whether the element is visible or not (patch and labelhandle
+        %> @brief whether the element is visible or not (patch and labelhandle
         %> specifically)
         hidden; 
         
-        %> this is the parameters of interest for this event that will
+        %> @brief this is the parameters of interest for this event that will
         %> likely be saved later for post analysis
         paramStruct;
         
@@ -102,28 +103,28 @@ classdef CLASS_events < handle
         %> cell of fieldnames in paramStruct
         paramFieldNames;
         
-        %> structure of summary statistics calculated in
+        %> @brief structure of summary statistics calculated in
         %> calculate_summary_stats method and returned by get_summary_stats() method
         summary_stats_Struct; 
-        %> set to true whenever the object's event has been updated so that
+        %> @brief set to true whenever the object's event has been updated so that
         %> a new summary stats will be calculated before being returned
         summary_stats_needs_updating_Bool; 
         
-        %> struct that contains the following fields
-        %> .algorithm :  .m file/function call associated with creating this event...
-        %> .channel_indices : the channels that were used in creating
+        %> @brief struct that contains the following fields
+        %> - .algorithm :  .m file/function call associated with creating this event...
+        %> - .channel_indices : the channels that were used in creating
         %>   this event - as passed to the source.algorithm
-        %>.editor = 'none';
-        %> .sourceStruct.pStruct = pStruct;
+        %> - .editor = 'none';
+        %> - .sourceStruct.pStruct = pStruct;
         %>   pStruct is a plist struct whose fields and associated
         %>   values are specific to the parameters used in creating
         %>   the event when there is a .plist associated with the
         %>   event's creation detection algorithm.
         %>   pBatchStruct has the fields
-        %>       .start -> start parameter value
-        %>       .stop -> stop parameter value
-        %>       .key -> name of the parameter/property field
-        %>       .num_steps -> number of steps to take between the
+        %>  -     .start -> start parameter value
+        %>  -     .stop -> stop parameter value
+        %>  -     .key -> name of the parameter/property field
+        %>  -     .num_steps -> number of steps to take between the
         %>       start and stop value
         source;
     end
@@ -245,6 +246,12 @@ classdef CLASS_events < handle
             end
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_channel class.
+        %> @param
+        %> @retval obj instance of CLASS_channel class.
+        % =================================================================
         function obj = setContextmenus(obj,contextmenu_patch_h, contextmenu_label_h,updateEvent_callback)
             %the contextmenu here is for the patches that represent the
             %discrete start stop sample events of an instance of this
@@ -699,7 +706,7 @@ classdef CLASS_events < handle
             %this function requires filename to meet OS file naming requirements
             %or it will crash - it overwrites any preexisting file with the
             %same name
-            events_start_stop = obj.start_stop_matrix;
+            event_start_stop = obj.start_stop_matrix;
             source = obj.source;
             paramStruct = obj.paramStruct;
             label = obj.label;
@@ -725,13 +732,13 @@ classdef CLASS_events < handle
             start_stages = stagesStruct_STAGES.line(start_epochs);
             start_cycle = stagesStruct_STAGES.cycles(start_epochs);
             
-            duration = (events_start_stop(:,2)-events_start_stop(:,1))/obj.samplerate;
+            duration = (event_start_stop(:,2)-event_start_stop(:,1))/obj.samplerate;
             %             y = [obj.start_stop_matrix, duration(:)];
 %             y = [duration(:),start_epochs(:),start_stages(:)];
             
             start_stop_matrix = obj.start_stop_matrix;
             filename = [filename,'.',obj.channel_name,'.',obj.label,'.',num2str(obj.configID),'.mat'];
-            save(filename,'events_start_stop','source','paramStruct','label','duration','start_stages','start_epochs','start_cycle','start_stop_matrix');
+            save(filename,'event_start_stop','source','paramStruct','label','duration','start_stages','start_epochs','start_cycle','start_stop_matrix');
         end
 
         function obj = remove(obj,start_stop_matrix_index)
@@ -769,7 +776,7 @@ classdef CLASS_events < handle
                 t0 = studyStruct.startDateTime;
                 STAGES = studyStruct.STAGES;
                 
-                events_start_stop = obj.start_stop_matrix;
+                event_start_stop = obj.start_stop_matrix;
 %                 if(obj.batch_mode_label ~= '_')
 %                     if(iscell(obj.batch_mode_label))
 %                         filename = [filename,'.',char(obj.batch_mode_label),'.',num2str(obj.configID),'.txt'];
@@ -803,7 +810,7 @@ classdef CLASS_events < handle
                 start_stages = STAGES.line(start_epochs);
                 start_cycle = STAGES.cycles(start_epochs);
                 
-                duration = (events_start_stop(:,2)-events_start_stop(:,1)+1)/obj.samplerate;
+                duration = (event_start_stop(:,2)-event_start_stop(:,1)+1)/obj.samplerate;
                 %             y = [obj.start_stop_matrix, duration(:)];
                 y = [duration(:),obj.start_stop_matrix,start_epochs(:),start_stages(:),start_cycle(:)];
                 
@@ -934,11 +941,11 @@ classdef CLASS_events < handle
             % table_data
             %
             % count is a struct with the following fields
-            %    evt_all - numeric count of all events_start_stop
+            %    evt_all - numeric count of all event_start_stop
             %    evt_stage = vector with numeric event count by stage 
             % dur_sec is a struct with the following fields
-            %    evt_all - duration in seconds of all events_start_stop
-            %    evt_stage = vector with duration of events_start_stop by stage in seconds
+            %    evt_all - duration in seconds of all event_start_stop
+            %    evt_stage = vector with duration of event_start_stop by stage in seconds
             %    study_all - duration of entire study in seconds
             %    study_stage = vector of stage durations in seconds
             starts = start_stop_matrix(:,1);
@@ -948,7 +955,7 @@ classdef CLASS_events < handle
             start_epochs = sample2epoch(starts,stage_struct.standard_epoch_sec,samplerate);
             start_stages = stage_struct.line(start_epochs);
             
-            summary_stats.count.evt_all = all_count; %number of events_start_stop total
+            summary_stats.count.evt_all = all_count; %number of event_start_stop total
             summary_stats.count.evt_stage = zeros(size(stage_struct.count)); %number of events grouped by stage
             summary_stats.dur_sec.evt_all = all_dur_sec; %duration of all events
             summary_stats.dur_sec.evt_stage = zeros(size(stage_struct.count)); %duration of events grouped by stage
@@ -988,87 +995,87 @@ classdef CLASS_events < handle
             end
         end
         
-        function [merged_events, merged_indices] = buffer_then_merge_nearby_events(events_in,min_samples,additional_buffer_samples,max_samples)
+        function [merged_events, merged_indices] = buffer_then_merge_nearby_events(event_mat_in,min_samples,additional_buffer_samples,max_samples)
             %add additional buffer before and after each event and then
             %merge if within min_samples of each other using
             %merge_nerarby_events function below
-            events_in = [events_in(:,1)-additional_buffer_samples,events_in(:,2)+additional_buffer_samples];
-            events_in(:,1) = max(events_in(:,1),1);
-            events_in(:,2) = min(events_in(:,2),max_samples);
-            [merged_events, merged_indices] = CLASS_events.merge_nearby_events(events_in,min_samples);
+            event_mat_in = [event_mat_in(:,1)-additional_buffer_samples,event_mat_in(:,2)+additional_buffer_samples];
+            event_mat_in(:,1) = max(event_mat_in(:,1),1);
+            event_mat_in(:,2) = min(event_mat_in(:,2),max_samples);
+            [merged_events, merged_indices] = CLASS_events.merge_nearby_events(event_mat_in,min_samples);
         end
 
         % ======================================================================
         %> @brief Brief description of the merge_nearby_events method
         %>
         %> This method is static
-        %> @param events_in Description of events_in
+        %> @param event_mat_in Description of event_mat_in
         %> @param min_samples Description of min_samples
         %> @retval merged_events first return value of this method
         %> @retval merged_indices second return value of this method
         % =================================================================
-        function [merged_events, merged_indices] = merge_nearby_events(events_in,min_samples)
+        function [merged_events, merged_indices] = merge_nearby_events(event_mat_in,min_samples)
             %merge events that are within min_samples of each other, into a
             %single event that stretches from the start of the first event
             %and spans until the last event
-            %events_in is a two column matrix
+            %event_mat_in is a two column matrix
             %min_samples is a scalar value
             %merged_indices is a logical vector of the row indices that
-            %were merged from events_in. - these are the indices of the
-            %in events_in that are removed/replaced
+            %were merged from event_mat_in. - these are the indices of the
+            %in event_mat_in that are removed/replaced
             
             if(nargin==1)
                 min_samples = 100;
             end
             
-            merged_indices = false(size(events_in,1),1);
+            merged_indices = false(size(event_mat_in,1),1);
 
-            if(~isempty(events_in))
-                merged_events = zeros(size(events_in));
+            if(~isempty(event_mat_in))
+                merged_events = zeros(size(event_mat_in));
                 num_events_out = 1;
-                num_events_in = size(events_in,1);
-                merged_events(num_events_out,:) = events_in(1,:);
+                num_events_in = size(event_mat_in,1);
+                merged_events(num_events_out,:) = event_mat_in(1,:);
                 for k = 2:num_events_in
-                    if(events_in(k,1)-merged_events(num_events_out,2)<min_samples)
-                        merged_events(num_events_out,2) = events_in(k,2);
+                    if(event_mat_in(k,1)-merged_events(num_events_out,2)<min_samples)
+                        merged_events(num_events_out,2) = event_mat_in(k,2);
                         merged_indices(k) = true;
                     else
                         num_events_out = num_events_out + 1;
-                        merged_events(num_events_out,:) = events_in(k,:);
+                        merged_events(num_events_out,:) = event_mat_in(k,:);
                     end                    
                 end;
                 merged_events = merged_events(1:num_events_out,:);
             else
-                merged_events = events_in;
+                merged_events = event_mat_in;
             end;
         end
         
-        function clean_events = cleanup_events(events_in,min_samples)
-            %extract only those events (from events_in) that exceed a minimum duration
+        function clean_events = cleanup_events(event_mat_in,min_samples)
+            %extract only those events (from event_mat_in) that exceed a minimum duration
             %(min_samples)
-            %events_in is a two column matrix
+            %event_mat_in is a two column matrix
             %min_samples is a scalar value
             if(nargin==1)
                 min_samples = 100;
             end
-            if(~isempty(events_in))
-                clean_indices = (events_in(:,2)-events_in(:,1))>min_samples;
-                clean_events = events_in(clean_indices,:);
+            if(~isempty(event_mat_in))
+                clean_indices = (event_mat_in(:,2)-event_mat_in(:,1))>min_samples;
+                clean_events = event_mat_in(clean_indices,:);
             else
-                clean_events = events_in;
+                clean_events = event_mat_in;
             end;
         end
         
-        function filled_events = fill_bins_with_events(events, num_samples)
+        function filled_events = fill_bins_with_events(event_mat_start_stop, num_samples)
             %this function breaks a timeline into num_samples chunks, and fills the
             %entire chunck with 1's if it contains at least one event that is not 0
-            %events is a two column matrix of start and stop indices (columns 1 and 2)
-            %for the events
+            %event_mat_start_stop is a two column matrix of start and stop indices (columns 1 and 2)
+            %for the event_mat_start_stop
             num_samples = floor(num_samples);            
-            if(isempty(events)||num_samples<=1)
-                filled_events = events;
+            if(isempty(event_mat_start_stop)||num_samples<=1)
+                filled_events = event_mat_start_stop;
             else
-                first_events = [floor(events(:,1)/num_samples)*num_samples+1,ceil(events(:,2)/num_samples)*num_samples];
+                first_events = [floor(event_mat_start_stop(:,1)/num_samples)*num_samples+1,ceil(event_mat_start_stop(:,2)/num_samples)*num_samples];
                 filled_events = zeros(size(first_events));
                 
                 %clean up any overlapping portions...

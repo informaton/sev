@@ -262,7 +262,8 @@ function sev_main_fig_CloseRequestFcn(hObject, eventdata, handles)
 global MARKING;
  
 try
-    MARKING.close(); 
+    MARKING.close();
+    MARKING.exit();
     MARKING = []; %remove the global reference count...
     delete(hObject);
 catch ME

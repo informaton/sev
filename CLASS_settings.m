@@ -16,29 +16,46 @@ classdef  CLASS_settings < handle
     %     c.  Interface for editing the settings
     
     properties
+        %> pathname of SEV working directory - determined at run time.
         rootpathname
+        %> @brief name of text file that stores the SEV's settings
+        %> (CLASS_UI_marking constructor will set this to <i>_sev.parameters.txt</i> by default)        
         parameters_filename
-        fieldNames; %The field names of the parameters to be shown to the user (i.e. VIEW, BATCH_PROCESS, PSD,....)
+        %> @brief cell of string names corresponding to the struct properties that
+        %> contain settings  <b><i> {'VIEW', 'BATCH_PROCESS', 'PSD',
+        %> 'MUSIC'}</b></i>
+        fieldNames;
+        %> struct of SEV's single study mode (i.e. view) settings.
         VIEW;
+        %> struct of SEV's batch mode settings.
         BATCH_PROCESS;
+        %> struct of power spectral density settings.
         PSD;
-        MUSIC;  
-        visibleObj;
+        %> struct of multiple spectrum independent component settings.
+        MUSIC;          
+        %visibleObj;
     end
     
     methods(Static)
         
+        % ======================================================================
+        %> @brief Returns a structure of parameters parsed from the text file identified by the
+        %> the input filename.  
+        %> Parameters in the text file are stored per row using the
+        %> following form:
+        %> - fieldname1 value1
+        %> - fieldname2 value2
+        %> - ....
+        %>an optional ':' is allowed after the fieldname such as
+        %>fieldname: value
+        %
+        %The parameters is 
+        %>
+        %> @param filename String identifying the filename to load.
+        %> @retval paramStruct Structure that contains the listed fields found in the
+        %> file 'filename' along with their corresponding values
+        % =================================================================
         function paramStruct = loadParametersFromFile(filename)
-            %loads a file whose parameters are stored as such per row
-            %fieldname1 value1
-            %fieldname2 value2
-            %....
-            %an optional ':' is allowed after the fieldname such as
-            %fieldname: value
-            %
-            %The parameters is a structure that contains the listed fields found in the
-            %file 'filename' along with their corresponding values
-            
             % written by Hyatt Moore
             % edited: 10.3.2012 - removed unused globals; and changed PSD
             % 8/25/2013 - ported into CLASS_settings
@@ -48,15 +65,18 @@ classdef  CLASS_settings < handle
             fclose(fid);            
         end
         
+        %> @brief Parses the file with file identifier fid to find structure
+        %> and substructure value pairs.  If pstruct is passed as an input argument
+        %> then the file substructure and value pairings will be put into it as new
+        %> or overwriting fields and subfields.  If pstruct is not included then a
+        %> new/original structure is created and returned.
+        %> fid must be open for this to work.  fid is not closed at the end
+        %> of this function.
+        %> @param fid file identifier to parse
+        %> @param pstruct (optional)
+        %> @retval pstruct return value of tokens2struct call.
         function pstruct = loadStruct(fid,pstruct)
-            %pstruct = loadStruct(fid,{pstruct})
-            %loadStruct will parse the file with file identifier fid to find structure
-            %and substructure value pairs.  If pstruct is passed as an input argument
-            %then the file substructure and value pairings will be put into it as new
-            %or overwriting fields and subfields.  If pstruct is not included then a
-            %new/original structure is created and returned.
-            %fid must be open for this to work.  fid is not
-            %closed at the end of this function.
+        %pstruct = loadStruct(fid,{pstruct})
             
             % Hyatt Moore IV (< June, 2013)
             
@@ -86,16 +106,17 @@ classdef  CLASS_settings < handle
         end
         
         
+        %> @brief helper function for loadStruct
+        %> @param pstruct parent struct by which the tok cell will be converted to
+        %> @tok cell array - the last cell is the value to be assigned while the
+        %> previous cells are increasing nestings of the structure (i.e. tok{1} is
+        %> the highest parent structure, tok{2} is the substructure of tok{1} and so
+        %> and on and so forth until tok{end-1}.  tok{end} is the value to be
+        %> assigned.
+        %> the tok structure is added as a child to the parent pstruct.
+        %> @retval pstruct Input pstruct with any additional tok
+        %> children added.
         function pstruct = tokens2struct(pstruct,tok)
-            %helper function for loadStruct
-            %pstruct is the parent struct by which the tok cell will be converted to
-            %tok is a cell array - the last cell is the value to be assigned while the
-            %previous cells are increasing nestings of the structure (i.e. tok{1} is
-            %the highest parent structure, tok{2} is the substructure of tok{1} and so
-            %and on and so forth until tok{end-1}.  tok{end} is the value to be
-            %assigned.
-            %the tok structure is added as a child to the parent pstruct.
-            
             if(numel(tok)>1 && isvarname(tok{1}{:}))
                 
                 fields = '';
@@ -118,7 +139,21 @@ classdef  CLASS_settings < handle
     end
     
     methods
+        
         % --------------------------------------------------------------------
+        % ======================================================================
+        %> @brief Class constructor
+        %>
+        %> Stores the root path and parameters file and invokes initialize
+        %> method.  Default settings are used if no parameters filename is
+        %> provided or found.
+        %>
+        %> @param string rootpathname Pathname of SEV execution directory (string)
+        %> @param string parameters_filename Name of text file to load
+        %> settings from.
+        %>
+        %> @return instance of the classDocumentationExample class.
+        % =================================================================
         function obj = CLASS_settings(rootpathname,parameters_filename)
             %initialize settings in SEV....
             if(nargin==0)
@@ -131,7 +166,15 @@ classdef  CLASS_settings < handle
         end
         
 
+        
         % --------------------------------------------------------------------
+        % =================================================================
+        %> @brief Constructor helper function.  Initializes class
+        %> either from parameters_filename if such a file exists, or
+        %> hardcoded default values (i.e. setDefaults).
+        %>
+        %> @param obj instance of the CLASS_settings class.
+        % =================================================================
         function initialize(obj)
             %initialize global variables in SEV....
             obj.fieldNames = {'VIEW','BATCH_PROCESS','PSD','MUSIC'};
@@ -149,6 +192,16 @@ classdef  CLASS_settings < handle
             end;           
         end
         
+        % -----------------------------------------------------------------
+        % =================================================================
+        %> @brief Activates GUI for editing single study mode settings
+        %> (<b>VIEW</b>,<b>PSD</b>,<b>MUSIC</b>)
+        %>
+        %> @param obj instance of CLASS_settings.
+        
+        %> @retval wasModified a boolean value; true if any changes were
+        %> made to the settings in the GUI and false otherwise.
+        % =================================================================
         % --------------------------------------------------------------------
         function wasModified = update_callback(obj,settingsField)
             wasModified = false;
@@ -176,21 +229,14 @@ classdef  CLASS_settings < handle
         end
         
         % -----------------------------------------------------------------
-        function copyObj = copy(obj)
-            %create a new CLASS_settings object with the same property
-            %values as this one (i.e. of obj)
-            copyObj = CLASS_settings();
-            
-            props = properties(obj);
-            if(~iscell(props))
-                props = {props};
-            end
-            for p=1:numel(props)
-                pname = props{p};
-                copyObj.(pname) = obj.(pname);
-            end
-        end
-        % -----------------------------------------------------------------
+        % =================================================================
+        %> @brief Activates GUI for editing single study mode settings
+        %> (<b>VIEW</b>,<b>PSD</b>,<b>MUSIC</b>)
+        %>
+        %> @param obj instance of CLASS_settings class.
+        %> @retval wasModified a boolean value; true if any changes were
+        %> made to the settings in the GUI and false otherwise.
+        % =================================================================
         function wasModified = defaultsEditor(obj)
             tmp_obj = obj.copy();
             lite_fieldNames = {'VIEW','PSD','MUSIC'}; %these are only one structure deep
@@ -208,9 +254,21 @@ classdef  CLASS_settings < handle
                 wasModified = false;
             end
         end
-        % --------------------------------------------------------------------
-        function saveParametersToFile(obj,saveStruct)
-            %saves all of the fields in inputStruct to a file filename as a .txt file
+        
+        % -----------------------------------------------------------------
+        % =================================================================
+        %> @brief saves all of the fields in saveStruct to the file filename
+        %> as a .txt file
+        %
+        %
+        %> @param obj instance of CLASS_settings class.
+        %> @param saveStruct (optional) structure of parameters and values
+        %> to save to the text file identfied by obj property filename or
+        %> the input paramater filename.
+        %> @param filename (optional) name of file to save parameters to.
+        % =================================================================
+        % -----------------------------------------------------------------
+        function saveParametersToFile(obj,saveStruct,filename)
             %written by Hyatt Moore IV sometime during his PhD (2010-2011'ish)
             %
             %last modified
@@ -227,6 +285,9 @@ classdef  CLASS_settings < handle
                 end
                 
             end;
+            if(nargin==2)
+                filename = obj.parameters_filename;
+            end
             fid = fopen(filename,'w');
             if(fid<0)
                 [path, fname, ext]  = fileparts(filename);
@@ -247,7 +308,15 @@ classdef  CLASS_settings < handle
             end
         end
         
-                % --------------------------------------------------------------------
+        % --------------------------------------------------------------------
+        %> @brief sets default values for the class parameters listed in
+        %> the input argument <i>fieldNames</i>.
+        %> @param obj instance of CLASS_settings.
+        %> @param fieldNames (optional) string identifying which of the object's
+        %> parameters to reset.  Multiple field names may be listed using a
+        %> cell structure to hold additional strings.  If no argument is provided or fieldNames is empty
+        %> then object's <i>fieldNames</i> property is used and all
+        %> parameter structs are reset to their default values.
         function setDefaults(obj,fieldNames)
             if(nargin<2)
                 fieldNames = obj.fieldNames; %reset all then
@@ -341,5 +410,29 @@ classdef  CLASS_settings < handle
                 end
             end
         end
+    end
+    
+    methods (Access = private)
+        
+        % -----------------------------------------------------------------
+        %> @brief create a new CLASS_settings object with the same property
+        %> values as this one (i.e. of obj)
+        %> @param obj instance of CLASS_settings
+        %> @retval copyObj a new instance of CLASS_settings having the same
+        %> property values as obj.
+        % -----------------------------------------------------------------
+        function copyObj = copy(obj)
+            copyObj = CLASS_settings();
+            
+            props = properties(obj);
+            if(~iscell(props))
+                props = {props};
+            end
+            for p=1:numel(props)
+                pname = props{p};
+                copyObj.(pname) = obj.(pname);
+            end
+        end
+ 
     end
 end
