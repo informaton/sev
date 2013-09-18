@@ -368,29 +368,28 @@ classdef CLASS_channel < handle
         end
         
         % =================================================================
-        %> @brief 
+        %> @brief Calculates the power spectral density for this instance 
+        %> of CLASS_channel.
         %> @param obj instance of CLASS_channel class.
-        %> @param 
-        %> @retval obj instance of CLASS_channel class.
+        %> @param PSD_settings PSD settings to use.
+        %> @param optional_sample_range Optional range to calculate the PSD
+        %> over.  Otherwise the entire data set is calculated.  
+        %> @retval S Vector of spectrum values corresponding to frequencies
+        %> at F
+        %> @retval F Vector of frequency values that the spectrum S is
+        %> calculated at.
+        %> @retval nfft Number of fast fourier transform taps used to calculate
+        %> PSD with.
         % =================================================================
         %calculates the PSD for the entire data set
-        function [S,F,nfft] = calculate_PSD(obj,optional_range,optional_PSD_settings)
-            global PSD;
-            if(nargin<=1)
+        function [S,F,nfft] = calculate_PSD(obj,PSD_settings,optional_sample_range)
+            
+            if(nargin<=2 || isempty(optional_sample_range))
                 psd_range = 1:numel(obj.raw_data);
             else
-            
-                if(isempty(optional_range))
-                    psd_range = 1:numel(obj.raw_data);
-                else
-                    psd_range = optional_range;
-                end
-            end;
-            if(nargin>=3)
-                PSD_settings = optional_PSD_settings;
-            else
-                PSD_settings = PSD;
+                psd_range = optional_sample_range;
             end
+            
             obj.PSD = PSD_settings;
             [obj.PSD.magnitude obj.PSD.x obj.PSD.nfft] = calcPSD(obj.getData(psd_range),obj.samplerate,obj.PSD);
             if(nargout>0)
@@ -891,7 +890,7 @@ classdef CLASS_channel < handle
                     if(nargin<=2)
                         obj.calculate_PSD();
                     else
-                        obj.calculate_PSD([],optional_PSD_settings);                        
+                        obj.calculate_PSD(optional_PSD_settings);  
                     end
                 end;
                 

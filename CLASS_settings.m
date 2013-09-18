@@ -278,16 +278,16 @@ classdef  CLASS_settings < handle
             %   5/7/2012 - added batch_process.database field
             %   8/24/2013 - import into settings class; remove globals
             
-            if(nargin==1)
-                fnames = obj.fieldNames;
-                for f=1:numel(fnames)
-                    saveStruct.(fnames{f}) = obj.(fnames{f});
-                end
-                
-            end;
-            if(nargin==2)
+            if(nargin<3)
                 filename = obj.parameters_filename;
+                if(nargin<2)
+                    fnames = obj.fieldNames;
+                    for f=1:numel(fnames)
+                        saveStruct.(fnames{f}) = obj.(fnames{f});
+                    end                    
+                end
             end
+            
             fid = fopen(filename,'w');
             if(fid<0)
                 [path, fname, ext]  = fileparts(filename);

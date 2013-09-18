@@ -13,31 +13,47 @@
 classdef CLASS_channels_container < handle
     properties
         cell_of_channels;
-        num_channels;  %size of cell_of_channels (and also channel_vector)
-        current_samples; %sample space of the data currently being viewed
-        current_channel_index; %index of the channel currently selected 
-        current_spectrum_channel_index; %index of psd channel to show/0 if off
-        filterArrayStruct;  %array of filter structures for applying filters to the data here.  
-                     %array struct of filter rules that are applied to the
-                     %channel data
-                     % the filterStruct is obtained from prefilter_dlg and
-                     % has the following fields
-                     % outputStruct.src_channel_index = [];
-                     %            .src_channel_label = [];
-                     %            .m_file = [];
-                     %            .ref_channel_index = [];
-                     %            .ref_channel_label = {};
-        settingsFilename = []; %.MAT filename which holds or will hold adjustable channel settings
-        storedChannelSettings = []; %vector of structs containing stored field values of children channel objects - useful for gui display preference tracking between sessions
-        psd_axes = []; %axes handle to plot PSD results to when applicable
-        parent_fig = []; %fiugre handle for results to go to and contextmenus to attach
-        main_axes = [];  %where channels are drawn/rendered
-        mainline_contextmenu_h;%context menu handles to be used for added children
+        %> size of cell_of_channels (and also channel_vector)
+        num_channels;  
+        %>sample space of the data currently being viewed
+        current_samples; 
+        %> index of the channel currently selected 
+        current_channel_index; 
+        %>index of psd channel to show/0 if off
+        current_spectrum_channel_index; 
+        
+        %> @brief array of filter structures for applying filters to the data here.
+        %> array struct of filter rules that are applied to the
+        %> channel data.
+        %> The filterStruct is obtained from prefilter_dlg and
+        %> has the following fields
+        %> outputStruct.src_channel_index = [];
+        %> -            .src_channel_label = [];
+        %> -            .m_file = [];
+        %> -            .ref_channel_index = [];
+        %> -            .ref_channel_label = {};
+        filterArrayStruct;
+        
+        %> .MAT filename which holds or will hold adjustable channel settings
+        settingsFilename = []; 
+        %> vector of structs containing stored field values of children channel objects - useful for gui display preference tracking between sessions
+        storedChannelSettings = []; 
+        %> axes handle to plot PSD results to when applicable
+        psd_axes = []; 
+        %> figure handle for results to go to and contextmenus to attach
+        parent_fig = []; 
+        %> where channels are drawn/rendered
+        main_axes = [];  
+        %> context menu handles to be used for added children
+        mainline_contextmenu_h;
         referenceline_contextmenu_h; 
-        detection_inf_file;  %file with detection data on it.
+        %> file with detection data on it.
+        detection_inf_file;  
         default_samplerate;
-        EVENT_CONTAINER; %pointer to the current event_container instance
-        sevDefaults; % struct with sev related information for finding detection paths, files, etc.
+        %> pointer to the current event_container instance
+        EVENT_CONTAINER; 
+        %> struct with sev related information for finding detection paths, files, etc.
+        sevDefaults; 
     end
     methods        
         % =================================================================
@@ -465,29 +481,30 @@ classdef CLASS_channels_container < handle
        end
        
        % =================================================================
-       %> @brief
+       %> @brief Displays the PSD of the input channel index on the range
+       %> of samples identified by sample_indices using the PSD settings
+       %> listd in the input struct spectrum_settings.
        %> @param obj instance of CLASS_channel class.
-       %> @param
-       %> @retval obj instance of CLASS_channel class.
+       %> @param spectrum_settings struct with PSD settings to use
+       %> @param axes_h Axes handle to plot power spectrum to.
+       %> @param channel_index Index of the channel object to calculate PSD
+       %> of.
+       %> @param sample_indices range of samples to calculate the PSD over.
        % =================================================================
        function showPSD(obj,spectrum_settings,axes_h,channel_index,sample_indices)
-           global PSD;
-           if(nargin<2)
-               spectrum_settings = PSD;
-           end
-           if(nargin<=2)
-               axes_h = obj.psd_axes;
-           end
-           if(nargin <4)
-               channel_index = obj.current_spectrum_channel_index;
-           end
            if(nargin <5)
                sample_indices = obj.current_samples;
+               if(nargin <4)
+                   channel_index = obj.current_spectrum_channel_index;
+                   if(nargin<3)
+                       axes_h = obj.psd_axes;
+                   end
+               end
            end
            
            if(channel_index>0 && channel_index<=obj.num_channels) %just show this for one channel then...
                channelObj = obj.getChannel(channel_index);
-               [S F] = channelObj.calculate_PSD(sample_indices,spectrum_settings);
+               [S F] = channelObj.calculate_PSD(spectrum_settings,sample_indices);
                
                %just look at a subset right now...
                freq_range = F<=spectrum_settings.freq_max & F>=spectrum_settings.freq_min;
@@ -964,10 +981,12 @@ classdef CLASS_channels_container < handle
        end
        
        % =================================================================
-       %> @brief
+       %> @brief getChannel returns the CLASS_channel object found in the
+       % cell parameter cell_of_channels at index container_index
        %> @param obj instance of CLASS_channel class.
-       %> @param
-       %> @retval obj instance of CLASS_channel class.
+       %> @param container_index Index of the channel to obtain from the
+       %> parameter cell_of_channels.
+       %> @retval channel_obj instance of CLASS_channel class.
        % =================================================================
        function channel_obj = getChannel(obj,container_index)
            if(iscell(container_index))

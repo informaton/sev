@@ -19,41 +19,75 @@ classdef CLASS_events_container < handle
 
     properties
         cell_of_events;
-        num_events;  %size of cell_of_events (and also channel_vector)
-        channel_vector; %vector of channel indices that are associated with the corresponding elements of cell_of_events
-                        %a value of 0 in this vector represents a
-                        %nonassociated event, likely from an external
-                        %(file) source
-                        % this is useful when removing events, and needing
-                        % to make sure that they are no longer referenced
-                        % by the source channel or when editing an event
-        defaults; %used to initialize events when initialization parameters are not provided
-        roc_truth_ind; %index of the event to be used as truth in ROC curves
-        roc_estimate_ind; %index of the event to be used for the estimate in ROC curves 
-        roc_artifact_ind; %index of the event to b used as the artifact index in the ROC curves...
-        roc_comparison_range; %two column matrix of valid sample ranges to compare ROC events over
-        roc_stage_selection; %vector of plus-one stage values selected from settings_roc_dlg()        
-        roc_axes_needs_update; %boolean flag that indicates if the roc_axes has been updated or not with the latest changes
-        summary_stats; %summary statistics structure for the current event (cur_event_index) when selected.  default is empty (not selected or calculated)
-        summary_stats_axes_needs_update; %boolean flag that indicates if the axes needs to be updated or not for events
-        summary_stats_figure_h; %handle to the figure used to display summary_stats
-        summary_stats_uitable_h; %handle to the table which holds the summary_stats structure        
-        summary_stats_settings;  %structure to hold settings of summary stats to display in a parent axes 
-                            % .type  - a string 'count' or 'dur_sec'
-                            % .show_density - true or false
-        detection_path; %folder that contains the detection algorithms and hopefully the detection.inf file
-        cur_event_index; %event group currently selected by the user.... - default is 0; no selection
-        parent_axes; %where these things will be plotted too.
+        %>size of cell_of_events (and also channel_vector)
+        num_events;
+        
+        %> @brief vector of channel indices that are associated with the corresponding elements of cell_of_events
+        %> a value of 0 in this vector represents a
+        %> nonassociated event, likely from an external
+        %> (file) source
+        %> this is useful when removing events, and needing
+        %> to make sure that they are no longer referenced
+        %> by the source channel or when editing an event
+        channel_vector;
+        %> @brief used to initialize events when initialization parameters
+        %> are not provided
+        defaults; 
+        %> index of the event to be used as truth in ROC curves
+        roc_truth_ind; 
+        %> index of the event to be used for the estimate in ROC curves 
+        roc_estimate_ind; 
+        %> index of the event to b used as the artifact index in the ROC curves...
+        roc_artifact_ind; 
+        %> two column matrix of valid sample ranges to compare ROC events over
+        roc_comparison_range; 
+        %> vector of plus-one stage values selected from settings_roc_dlg()        
+        roc_stage_selection; 
+        
+        %> boolean flag that indicates if the roc_axes has been updated or not with the latest changes
+        roc_axes_needs_update; 
+        %> summary statistics structure for the current event (cur_event_index) when selected.  default is empty (not selected or calculated)
+        summary_stats; 
+        %> @brief boolean flag that indicates if the axes needs to be
+        %> updated or not for events
+        summary_stats_axes_needs_update; 
+        %> handle to the figure used to display summary_stats
+        summary_stats_figure_h; 
+        %> handle to the table which holds the summary_stats structure        
+        summary_stats_uitable_h; 
+        %> @brief structure to hold settings of summary stats to display in
+        %> a parent axes 
+        %> - .type  - a string 'count' or 'dur_sec'
+        %> - .show_density - true or false
+        summary_stats_settings;  
+                           
+        %> folder that contains the detection algorithms and hopefully the detection.inf file
+        detection_path; 
+        %> event group currently selected by the user.... - default is 0; no selection
+        cur_event_index; 
+        %> where these things will be plotted too.
+        parent_axes; 
         parent_fig;
-        children_contextmenu_patch_h; %contextmenu handle to attach to event patches (the rectangles shown for each event instance)
-        children_contextmenu_label_h; %contextmenu handle to attach to event labels
-        event_indices_to_plot; %vector containing indices of the events that should be plotted.
-        CHANNELS_CONTAINER; %POINTER (I hope) to an instance object of CLASS_channels_container
-        stageStruct; %structure of stages
+        
+        %> contextmenu handle to attach to event patches (the rectangles shown for each event instance)
+        children_contextmenu_patch_h;
+        %> contextmenu handle to attach to event labels
+        children_contextmenu_label_h; 
+        %> vector containing indices of the events that should be plotted.
+        event_indices_to_plot; 
+        %> POINTER (I hope) to an instance object of CLASS_channels_container
+        CHANNELS_CONTAINER; 
+        %> structure of stages
+        stageStruct; 
     end
     
     methods
-        
+        % =================================================================
+        %> @brief Constructor
+        %> @param obj instance of CLASS_events_container class.
+        %> @param 
+        %> @retval obj instance of CLASS_events_container class.
+        % =================================================================
         function obj = CLASS_events_container(parent_fig,parent_axes, base_samplerate,CHANNELS_CONTAINER, stageStruct)
             
             if(nargin == 0)
@@ -111,7 +145,13 @@ classdef CLASS_events_container < handle
             end
 
         end
-        
+
+        % =================================================================
+        %> @brief 
+        %> @param obj instance of CLASS_events_container class.
+        %> @param 
+        %> @retval paramStruct 
+        % =================================================================        
         function paramStruct = loadDetectionParams(obj,detectorFcn)
             pfile = fullfile(obj.CHANNELS_CONTAINER.sevDefaults.rootpathname,obj.CHANNELS_CONTAINER.sevDefaults.detection_path,strcat(strrep(detectorFcn,'.m',''),'.plist'));
             matfile = fullfile(obj.CHANNELS_CONTAINER.sevDefaults.rootpathname,obj.CHANNELS_CONTAINER.sevDefaults.detection_path,strcat(strrep(detectorFcn,'.m',''),'.mat'));
@@ -133,6 +173,13 @@ classdef CLASS_events_container < handle
                 end
             end
         end
+        
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function [detectStruct, source_pStruct] = evaluateDetectFcn(obj,shortDetectorFcn,source_indices,params)
             localDetectorFcn = strcat(strrep(obj.detection_path,'+',''),'.',shortDetectorFcn);
 
@@ -173,15 +220,34 @@ classdef CLASS_events_container < handle
             detectStruct = feval(localDetectorFcn,data,params,obj.stageStruct);
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function setStageStruct(obj,stageStruct)
             obj.stageStruct = stageStruct;
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function setDefaultSamplerate(obj,sampleRate)
             if(sampleRate>0)
                 obj.defaults.parent_channel_samplerate = sampleRate;
             end
         end
+        
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function makeContextmenus(obj)
             %label contextmenu for the label on the left hand side
             label_contextmenu_h = uicontextmenu('parent',obj.parent_fig,...
@@ -224,6 +290,12 @@ classdef CLASS_events_container < handle
             
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function detectorID = getDetectorID(obj,DBstruct, event_indices)
             %detectorID is a vector of size channel_indices which contains
             %the detector ID key from detectorinfo_t table found in
@@ -249,6 +321,12 @@ classdef CLASS_events_container < handle
              end
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function setDetectorID(obj,DBstruct, event_indices,optional_DetectorID)
             %sets the detectorID for event children objects located at
             %indices stored in event_indices. 
@@ -267,6 +345,12 @@ classdef CLASS_events_container < handle
              end
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function deleteDatabaseEventRecords(obj, DBstruct,optional_patstudy)
             %database_struct contains fields 'name','user','password', and 'table' for interacting with a mysql database
             %removes the database events when necessary.
@@ -310,11 +394,23 @@ classdef CLASS_events_container < handle
             end
         end
 
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function obj = updateColor(obj,newColor,eventIndex)
             %consider using obj.cur_event_index if only newColor is passed;
             obj.cell_of_events{eventIndex}.updateColor(newColor);
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function obj = calculate_summary_stats(obj)
             %calculates and stores the summary stats for obj.cur_event_index 
             if(obj.cur_event_index>0 && obj.cur_event_index<=obj.num_events)
@@ -323,6 +419,12 @@ classdef CLASS_events_container < handle
             end
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function draw_summary_stats(obj, parent_axes)
            %puts the histogram of the summary_stats method 
            count_or_duration_str = obj.summary_stats_settings.type; %count or dur_sec
@@ -356,6 +458,12 @@ classdef CLASS_events_container < handle
            end
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function hide(obj,events2hide)
             for k=1:numel(events2hide)
                 event_index = events2hide(k);
@@ -365,6 +473,12 @@ classdef CLASS_events_container < handle
             end;
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function show(obj,event_indices)
             for k=1:numel(event_indices)
                 event_index = event_indices(k);
@@ -374,6 +488,12 @@ classdef CLASS_events_container < handle
             end;
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function cell_of_names = get_event_labels(obj)
             cell_of_names = cell(obj.num_events,1);
             for k = 1:obj.num_events
@@ -381,6 +501,12 @@ classdef CLASS_events_container < handle
             end
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function event_name = getName(obj,event_index)
             if(event_index>0 && event_index<=obj.num_events)
                 event_name = obj.cell_of_events{event_index}.label;
@@ -388,6 +514,14 @@ classdef CLASS_events_container < handle
                 event_name = '';
             end
         end
+        
+        
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function num_events_in_channel = getNumEventsInChannel(obj,class_channel_index)
             if(obj.num_events>0)
                 num_events_in_channel = sum(class_channel_index(1)==obj.channel_vector);
@@ -396,7 +530,14 @@ classdef CLASS_events_container < handle
             end;
         end
         
-        %return the number of events and their total duration in seconds
+        
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval
+        % =================================================================
+%return the number of events and their total duration in seconds
         %in the cell at event_index
         function [count, time_in_sec] = events_count(obj,event_index)
              if(event_index>0 && event_index<=obj.num_events)
@@ -410,12 +551,24 @@ classdef CLASS_events_container < handle
              end;   
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function rename_event(obj,event_index,event_label)
             %changes the label of the event specified by event_index to
             %event_label if event_label is of type char.
             obj.cell_of_events{event_index}.rename(event_label);
         end
 
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         %to be used primarily for interactive additions or edits of
         %existing events by the user
         %single_event  = start_stop vector of the event
@@ -442,6 +595,12 @@ classdef CLASS_events_container < handle
             obj.draw_events(event_index);
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function updateYOffset(obj,event_indices,y_offset)
             for e = 1:numel(event_indices)
                 event_index = event_indices(e);
@@ -451,6 +610,12 @@ classdef CLASS_events_container < handle
             end
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function updateCurrentEpochStartX(obj,event_indices,start_x)            
             %if the parent (i.e. channel) has moved up/down, we want to
             %make sure the attached events (event_indices) are adjusted accordingly
@@ -464,6 +629,12 @@ classdef CLASS_events_container < handle
             end
         end
 
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function show_labels(obj, event_indices)
             for k=1:numel(event_indices)
                 index = event_indices(k);
@@ -475,6 +646,12 @@ classdef CLASS_events_container < handle
             end             
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function draw_events(obj,event_indices)
             for k=1:numel(event_indices)
                 index = event_indices(k);
@@ -484,6 +661,12 @@ classdef CLASS_events_container < handle
             end
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function num_start_stops = getEventCount(obj,event_index)
             %returns the number of start/stop pairs in the event object
             %located at event_index. 
@@ -494,6 +677,12 @@ classdef CLASS_events_container < handle
             end
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function obj = addEmptyEvent(obj,event_label,parent_index,sourceStruct,paramStruct)
            %adds an empty event - this method is a necessary addition to the class which became
            %clear when running the batch mode and finding cases where no
@@ -544,6 +733,12 @@ classdef CLASS_events_container < handle
                obj.parent_axes);           
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function obj = addEvent(obj,event_data, event_label,parent_index,sourceStruct,paramStruct)
             %appends the event to the last event cell
             %check that the event_data is not empty
@@ -621,6 +816,12 @@ classdef CLASS_events_container < handle
             end;
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function configureChildrenContextmenus(obj,event_index)
             
             childobj = obj.getEventObj(event_index);
@@ -634,6 +835,12 @@ classdef CLASS_events_container < handle
         % -------------------------------------------------------------------- 
         % Event Patches contextmenu callback section
         % -------------------------------------------------------------------- 
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function contextmenu_patch_callback(obj,hObject,eventdata)
             %parent context menu that pops up before any of the children contexts are
             %drawn...
@@ -643,12 +850,24 @@ classdef CLASS_events_container < handle
             obj.cur_event_index = event_index; % MARKING.event_index;
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function contextmenu_changeColorcallback(obj,hObject,eventdata)
             global MARKING;
             obj.summary_stats_axes_needs_update = true;
             MARKING.setUtilityAxesType('EvtStats');
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function contextmenu_changeColor_callback(obj,hObject,eventdata)
             global MARKING;
             eventObj = obj.getCurrentChild();
@@ -659,10 +878,22 @@ classdef CLASS_events_container < handle
             MARKING.refreshAxes();
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function contextmenu_patch_adjustOffset_callback(obj,hObject,eventdata)
             disp('To Do contextmenu_evt_patch_adjust_offset_callback');
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function contextmenu_patch_removeInstance_callback(obj,hObject,eventdata)
             global MARKING;
             obj.remove_event_instance(obj.cur_event_index,MARKING.start_stop_matrix_index);
@@ -670,6 +901,12 @@ classdef CLASS_events_container < handle
             MARKING.refreshAxes();
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function set_Channel_drawEvents(obj,event_index)
             %draw the events on the main psg axes            
             eventObj = obj.getEventObj(event_index);
@@ -681,6 +918,12 @@ classdef CLASS_events_container < handle
             end
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function obj = replaceEvent(obj,event_data, event_index,event_paramStruct,source_pStruct)
             %replaces the start_stop_matrix of the event at event_index
             %with event_data
@@ -700,6 +943,12 @@ classdef CLASS_events_container < handle
             obj.set_Channel_drawEvents(event_index);
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function obj = remove_event_instance(obj,event_index,start_stop_matrix_index)
             %removes the individual event instance of one event object as
             %specified by the input arguments
@@ -715,6 +964,12 @@ classdef CLASS_events_container < handle
             end
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function obj = removeEvent(obj,event_index)
             %removes the event class found at index event_index from
             %obj.cell_of_events                        
@@ -749,6 +1004,12 @@ classdef CLASS_events_container < handle
             end
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function event_index = eventExists(obj, event_label,class_channel_index)
             %event_index is the index of the event whose label is event_label
             %otherwise 0/false is returned.
@@ -767,6 +1028,12 @@ classdef CLASS_events_container < handle
             end;
         end
 
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function updateExistingEvent(obj,event_data,event_index,event_paramStruct, source_pStruct)
            %similar to updateEvent, but in this case we know the event already exists, and
            %its event_index is passed as the only parameter
@@ -783,6 +1050,12 @@ classdef CLASS_events_container < handle
            end
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function sourceStruct = getSourceStruct(obj,event_index)
             %this method is not referenced and may be dropped in the future
             %determine if there is a gui to use for this method to
@@ -801,6 +1074,12 @@ classdef CLASS_events_container < handle
             end
         end
             
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function event_index = updateEvent(obj,event_data,event_label,class_channel_index,sourceStruct,paramStruct)
         %event_data is a start_stop matrix of events
         %event_label is the label associated with the events listed in
@@ -840,6 +1119,12 @@ classdef CLASS_events_container < handle
             end
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         %varargin is an optional start stop range that can be used to put
         %bounds on the events under consideration
         function [score, event_space] = compareEvents(obj,event_indices,varargin)
@@ -856,6 +1141,12 @@ classdef CLASS_events_container < handle
             
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function quadData = calculateQuadAnalysis(obj, indices)
             %quadData is a 2x2 matrix with the following values
             %A&B, !A&B
@@ -877,6 +1168,12 @@ classdef CLASS_events_container < handle
             
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function comparisonStruct = getComparisonStruct(obj, optional_truth_ind, optional_estimate_ind,optional_artifact_ind,optional_rangeIn)
             %indices must be a two element vector whose elements are within
             %the range of available events
@@ -934,6 +1231,12 @@ classdef CLASS_events_container < handle
             
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function save2images(obj,event_index,full_filename_prefix,settings)
            %this method saves the event data, located in event_object at
            %event_index to disk.
@@ -948,6 +1251,12 @@ classdef CLASS_events_container < handle
            obj.cell_of_events{event_index}.save2images(full_filename_prefix,settings);            
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function save2DB(obj,DBstruct,patstudy,localStageStruct)
             % DBstruct contains the following fields for database interaction
             % .name, .user, .password, .table
@@ -982,6 +1291,12 @@ classdef CLASS_events_container < handle
             end
         end;
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function saveEventsContainerToFile(obj,filename,indices2save)
             %it is important to save the start and stop matrices of each
             %event, as well as its label name, sampling rate, and associated parent
@@ -990,6 +1305,12 @@ classdef CLASS_events_container < handle
             
         end;
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function obj = loadEventsContainerFromFile(obj,filename)            
             X = load(filename,'-mat');
             for k=1:numel(X.obj.cell_of_events)
@@ -1019,6 +1340,12 @@ classdef CLASS_events_container < handle
         
         
                     
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function obj = loadEventsFromDatabase(obj,databaseImportStruct)
             %databaseImportStruct has the following fields
             % detectorID - detectorID from detectorinfo_t database table
@@ -1076,6 +1403,12 @@ classdef CLASS_events_container < handle
             
         end;
 
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function embla_evt_Struct = loadEmbla_evt(obj,evtFilename,embla_samplerate)
             embla_evt_Struct = obj.parseEmbla_evt(evtFilename,embla_samplerate,obj.defaults.parent_channel_samplerate);
             if(~isempty(embla_evt_Struct) && embla_evt_Struct.HDR.num_records>0)
@@ -1090,6 +1423,12 @@ classdef CLASS_events_container < handle
             end
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function eventStruct = loadEmbla_nvt(obj,nvtFilename,embla_samplerate)
             eventStruct = obj.parseEmbla_nvt(nvtFilename,embla_samplerate,obj.defaults.parent_channel_samplerate);
             if(~isempty(eventStruct) && eventStruct.HDR.num_records>0)
@@ -1104,6 +1443,12 @@ classdef CLASS_events_container < handle
             end
         end        
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function loadGenericEvents(obj,start_stop_matrix,evt_label,source_label,paramStruct)
             %parse data from twin file
             if(~isempty(start_stop_matrix))
@@ -1125,6 +1470,12 @@ classdef CLASS_events_container < handle
             end
         end
                 
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function obj = loadEventsFromSCOFile(obj,filename)
             %load events from .SCO file, which came with .EDF from WSC data
             
@@ -1164,6 +1515,12 @@ classdef CLASS_events_container < handle
         end
         
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
 %         function obj = loadSingleEventsFromMatFile(obj,filename,optional_batch_process_running)
         function cur_event = loadEvtFile(obj,filename,optional_batch_process_running)
             %see evtTxt2evtStruct(filename) for external file calling            
@@ -1234,6 +1591,12 @@ classdef CLASS_events_container < handle
         end
         
 
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function save2roc_txt(obj,filename,est_event_indices,truth_event_suffix,study_name)
             %save2roc_txt(obj,filename,est_event_indices) saves the ROC data of the events as compared to
             %the current truth data.  The information is stored as text,
@@ -1295,6 +1658,12 @@ classdef CLASS_events_container < handle
             fclose(fid);
         end
                         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function save2mat(obj,filename, markingObj)            
             global MARKING;
             if(nargin<3)
@@ -1328,6 +1697,12 @@ classdef CLASS_events_container < handle
             end
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function save2txt(obj,varargin)
             %save2text() opens a dialog where the user can select which
             %events they want to save and enter a filename to save the
@@ -1454,6 +1829,12 @@ classdef CLASS_events_container < handle
             end
         end  %end save2txt(obj,varargin)
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         %% contextmenus which are attached to the children event labels that are on the
         % the left hand side of the sev axes
         function contextmenu_label_deleteEvent_callback(obj,hObject,~)
@@ -1463,6 +1844,14 @@ classdef CLASS_events_container < handle
             obj.removeEvent(curEvent_index);
             MARKING.refreshAxes();
         end
+        
+        
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function contextmenu_label_callback(obj,hObject,eventdata)
             %added this to ensure the event's textbox is highlighted and the user does
             %not accidentally delete the wrong event by mistake
@@ -1482,6 +1871,12 @@ classdef CLASS_events_container < handle
         end
 
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function contextmenu_label_previousEvent_callback(obj,hObject,~)
             %get to the next epoch containing this event...
             %             global EVENT_CONTAINER;
@@ -1498,6 +1893,14 @@ classdef CLASS_events_container < handle
             end
 
         end
+        
+        
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function contextmenu_label_nextEvent_callback(obj,hObject,~)
             %get to the next epoch containing this event...
             global MARKING;
@@ -1513,6 +1916,12 @@ classdef CLASS_events_container < handle
             
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function refresh(obj, event_index)
             %rerun the detection method, likely called when the channel
             %changes due to filtering
@@ -1537,10 +1946,22 @@ classdef CLASS_events_container < handle
             end
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function childobj = getCurrentChild(obj)
             childobj = obj.getEventObj(obj.cur_event_index);
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function childobj = getEventObj(obj,event_index)
             if(event_index>0 && event_index<=obj.num_events)
                 childobj = obj.cell_of_events{event_index};
@@ -1549,6 +1970,12 @@ classdef CLASS_events_container < handle
             end
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function updateEvent_callback(obj,hObject,~)            
             %update the parameters of this event and such...
             global MARKING;
@@ -1589,6 +2016,12 @@ classdef CLASS_events_container < handle
             end
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function contextmenu_label_export2workspace_callback(obj,hObject,~)
             eventObj = obj.getCurrentChild();
             tmpStruct.label = eventObj.label;
@@ -1607,6 +2040,12 @@ classdef CLASS_events_container < handle
             uiwait(msgbox(sprintf('Event data assigned to workspace variable %s',varName)));
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function contextmenu_label_summaryStats_callback(obj,hObject,~)            
             %             curEvent_index = obj.index; %get(hObject,'userdata');
             obj.summary_stats = obj.getCurrentChild().get_summary_stats(obj.stageStruct);
@@ -1630,6 +2069,12 @@ classdef CLASS_events_container < handle
             set(obj.summary_stats_figure_h,'position',[figure_pos(1:2), extent(3:4)],'visible','on');
         end
         
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
         function contextmenu_label_renameEvent_callback(obj,hObject,~)
             curEvent_index = obj.cur_event_index;
             

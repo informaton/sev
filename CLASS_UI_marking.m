@@ -1871,7 +1871,7 @@ cropFigure2Axes(f,axes1_copy);
                 'xticklabel',obj.getTimestampAtSamplePt(xticks*obj.getSamplesPerEpoch(),'HH:MM'));
 
             ylim = get(obj.axeshandle.timeline,'ylim');
-            events_to_plot = find(EVENT_CONTAINER.events_to_plot);
+            events_to_plot = find(EVENT_CONTAINER.event_indices_to_plot);
             
             num_events = sum(events_to_plot>0);
             
@@ -1948,13 +1948,12 @@ cropFigure2Axes(f,axes1_copy);
         function updateUtilityAxes(obj)
             global CHANNELS_CONTAINER;
             global EVENT_CONTAINER;
-            global PSD;
             handles = guidata(obj.figurehandle.sev);
             cur_radio = get(handles.bgroup_utility,'SelectedObject');
             switch get(cur_radio,'string')
                 case 'PSD'
                     if(~isempty(CHANNELS_CONTAINER))
-                        CHANNELS_CONTAINER.showPSD(PSD,obj.axeshandle.utility);
+                        CHANNELS_CONTAINER.showPSD(obj.SETTINGS.PSD,obj.axeshandle.utility);
                     end
                 case 'ROC'
                     if(EVENT_CONTAINER.roc_axes_needs_update)
@@ -2533,14 +2532,13 @@ cropFigure2Axes(f,axes1_copy);
         end
         
         function plotPSDofSelection_callback(obj,varargin)
-            global CHANNELS_CONTAINER;
-            global PSD;
+            global CHANNELS_CONTAINER;            
             f = figure;
             a = axes('parent',f);
             roi = obj.getSelectedIndices();
             
             if(~isempty(roi))
-                CHANNELS_CONTAINER.showPSD(PSD,a,obj.class_channel_index,roi);
+                CHANNELS_CONTAINER.showPSD(obj.SETTINGS.PSD,a,obj.class_channel_index,roi);
                 try
                     waitforbuttonpress();
                 catch ME
