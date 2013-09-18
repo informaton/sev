@@ -17,7 +17,7 @@
 % History
 % Written by Hyatt Moore IV
 % 9.30.2012
-% modified 4/24/2012 - corrected center here callback; after centering the
+% modified 4/24/2012 - corrected "center here" callback; after centering the
 % epoch would be set and, on occassion, interfere with the desired
 % centering.
 % ======================================================================
@@ -148,8 +148,10 @@ classdef CLASS_UI_marking < handle
             end                
         end
         
+        %>Destructor
         function close(obj)
             obj.toolbarhandle.jCombo = [];
+            obj.saveParameters(); %requires SETTINGS variable
             obj.SETTINGS = [];
         end
         
@@ -196,7 +198,7 @@ classdef CLASS_UI_marking < handle
             obj.restore_state();
         end
         
-        function exit(obj)
+        function saveParameters(obj)
             obj.SETTINGS.saveParametersToFile();
         end
         
