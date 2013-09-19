@@ -1287,7 +1287,7 @@ cropFigure2Axes(f,axes1_copy);
             
             
             %% load EDF folder icon
-            loadedf_img = imread(fullfile(obj.SETTINGS.VIEW.rootpathname,'icons/folder-24x24.png'));
+            loadedf_img = imread(fullfile(obj.SETTINGS.rootpathname,'icons/folder-24x24.png'));
             
             resolution = size(loadedf_img);
             backgroundImg = ones(resolution);
@@ -1305,7 +1305,7 @@ cropFigure2Axes(f,axes1_copy);
             
             %% Toolbox
             % toolbox_img = imread(fullfile(obj.sev.rootpathname,'icons/toolbox-16x16.png'));
-            toolbox_img = imread(fullfile(obj.SETTINGS.VIEW.rootpathname,'icons/toolbox-24x24.png'));
+            toolbox_img = imread(fullfile(obj.SETTINGS.rootpathname,'icons/toolbox-24x24.png'));
             blank_ind = xor(toolbox_img,backgroundImg);
             toolbox_img(blank_ind) = backgroundImg(blank_ind);
             obj.toolbarhandle.toolbox_push = uipushtool(th,'CData',toolbox_img,'separator','on',...
@@ -1315,7 +1315,7 @@ cropFigure2Axes(f,axes1_copy);
             
             %% Filter toolbox
             % filter_img = imread(fullfile(obj.sev.rootpathname,'icons/filter-16x16.png'));
-            filter_img = imread(fullfile(obj.SETTINGS.VIEW.rootpathname,'icons/filter2-24x24.png'));
+            filter_img = imread(fullfile(obj.SETTINGS.rootpathname,'icons/filter2-24x24.png'));
             % blank_ind = xor(filter_img,backgroundImg);
             % filter_img(blank_ind) = backgroundImg(blank_ind);
             
@@ -1325,7 +1325,7 @@ cropFigure2Axes(f,axes1_copy);
             
             
             % compare_img = imread('icons/balance-16x16.png');
-            compare_img = imread(fullfile(obj.SETTINGS.VIEW.rootpathname,'icons/balance-24x24.png'));
+            compare_img = imread(fullfile(obj.SETTINGS.rootpathname,'icons/balance-24x24.png'));
             blank_ind = xor(compare_img,backgroundImg);
             compare_img(blank_ind) = backgroundImg(blank_ind);
             obj.toolbarhandle.eventcomparisons_push = uipushtool(th,'CData',compare_img,'separator','off',...
@@ -1335,7 +1335,7 @@ cropFigure2Axes(f,axes1_copy);
             
             %% General Edit
             
-            general_edit_on_img = imread(fullfile(obj.SETTINGS.VIEW.rootpathname,'icons/hand-24x24.png'));
+            general_edit_on_img = imread(fullfile(obj.SETTINGS.rootpathname,'icons/hand-24x24.png'));
             general_edit_off_img = general_edit_on_img;
             
             resolution = size(general_edit_on_img);
@@ -1359,7 +1359,7 @@ cropFigure2Axes(f,axes1_copy);
             
             %% Marking toolbar icon
             %this icon has a black background by default
-            marking_on_img = imread(fullfile(obj.SETTINGS.VIEW.rootpathname,'icons/pencil-24x24.png'));
+            marking_on_img = imread(fullfile(obj.SETTINGS.rootpathname,'icons/pencil-24x24.png'));
             marking_off_img = marking_on_img;
             
             resolution = size(marking_on_img);
@@ -2602,7 +2602,7 @@ cropFigure2Axes(f,axes1_copy);
         end
         
         function detectMethodStruct = getDetectionMethodsStruct(obj)
-           detectMethodStruct = CLASS_events_container.loadDetectionMethodsInf(fullfile(obj.SETTINGS.VIEW.rootpathname,obj.SETTINGS.VIEW.detection_path),obj.SETTINGS.VIEW.detectionInf_file);
+           detectMethodStruct = CLASS_events_container.loadDetectionMethodsInf(fullfile(obj.SETTINGS.rootpathname,obj.SETTINGS.VIEW.detection_path),obj.SETTINGS.VIEW.detectionInf_file);
         end
         
     end

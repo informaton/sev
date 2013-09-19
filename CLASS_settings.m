@@ -65,6 +65,7 @@ classdef  CLASS_settings < handle
             fclose(fid);            
         end
         
+        % ======================================================================
         %> @brief Parses the file with file identifier fid to find structure
         %> and substructure value pairs.  If pstruct is passed as an input argument
         %> then the file substructure and value pairings will be put into it as new
@@ -75,6 +76,7 @@ classdef  CLASS_settings < handle
         %> @param fid file identifier to parse
         %> @param pstruct (optional)
         %> @retval pstruct return value of tokens2struct call.
+        % ======================================================================
         function pstruct = loadStruct(fid,pstruct)
         %pstruct = loadStruct(fid,{pstruct})
             
@@ -106,6 +108,7 @@ classdef  CLASS_settings < handle
         end
         
         
+        % ======================================================================
         %> @brief helper function for loadStruct
         %> @param pstruct parent struct by which the tok cell will be converted to
         %> @tok cell array - the last cell is the value to be assigned while the
@@ -116,6 +119,7 @@ classdef  CLASS_settings < handle
         %> the tok structure is added as a child to the parent pstruct.
         %> @retval pstruct Input pstruct with any additional tok
         %> children added.
+        % ======================================================================
         function pstruct = tokens2struct(pstruct,tok)
             if(numel(tok)>1 && isvarname(tok{1}{:}))
                 
@@ -184,8 +188,14 @@ classdef  CLASS_settings < handle
             if(exist(full_paramsFile,'file'))
                 paramStruct = obj.loadParametersFromFile(full_paramsFile);
                 fnames = fieldnames(paramStruct);
-                for f=1:numel(fnames)
-                    obj.(fnames{f}) = paramStruct.(fnames{f});
+
+                if(isempty(fnames))
+                    fprintf('\nWarning: Could not load parameters from file %s.  Will use default settings instead.\n\r',full_paramsFile);
+                    obj.setDefaults();
+                else
+                    for f=1:numel(fnames)
+                        obj.(fnames{f}) = paramStruct.(fnames{f});
+                    end
                 end
             else
                 obj.setDefaults();                
@@ -268,7 +278,7 @@ classdef  CLASS_settings < handle
         %> @param filename (optional) name of file to save parameters to.
         % =================================================================
         % -----------------------------------------------------------------
-        function saveParametersToFile(obj,saveStruct,filename)
+        function saveParametersToFile(obj,dataStruct2Save,filename)
             %written by Hyatt Moore IV sometime during his PhD (2010-2011'ish)
             %
             %last modified
@@ -283,9 +293,13 @@ classdef  CLASS_settings < handle
                 if(nargin<2)
                     fnames = obj.fieldNames;
                     for f=1:numel(fnames)
-                        saveStruct.(fnames{f}) = obj.(fnames{f});
+                        dataStruct2Save.(fnames{f}) = obj.(fnames{f});
                     end                    
-                end
+                else 
+                    dataStruct2Save = obj.saveStruct;
+                end                
+            else
+                dataStruct2Save = obj.saveStruct;
             end
             
             fid = fopen(filename,'w');
@@ -296,7 +310,7 @@ classdef  CLASS_settings < handle
             if(fid>0)
                 fprintf(fid,'-Last saved: %s\r\n\r\n',datestr(now)); %want to include the '-' sign to prevent this line from getting loaded in the loadFromFile function (i.e. it breaks the regular expression pattern that is used to load everything else).
                 
-                saveStruct(fid,saveStruct)
+                saveStruct(fid,dataStruct2Save)
                 %could do this the other way also...
                 %                     %saves all of the fields in inputStruct to a file
                 %                     %filename as a .txt file
