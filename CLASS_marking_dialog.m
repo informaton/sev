@@ -1,15 +1,35 @@
-classdef CLASS_marking_dialog < handle
-%run method creates a dialog to access marking parameters.
+%> @file CLASS_marking_dialog.m
+%> @brief CLASS_marking_dialog creates a dialog to access marking parameters.
+% ======================================================================
+%> @brief CLASS_marking_dialog may not be supported.  See
+%CLASS_compareEvents_dialog which has similar documentation in source file.
+%
+%> run method creates a dialog to access marking parameters.
+%> @note Uses global instance of CLASS_UI_marking and should be
+%> updated.
 % 
+% 
+% History
+% Written by: Hyatt Moore, IV (< June, 2013)
+% ======================================================================
+classdef CLASS_marking_dialog < handle
 
-% Hyatt Moore, IV (< June, 2013)
     properties
+        %> handle to the GUI (i.e. figure)
         dialog_handle;
-        event_labels; %cell containing labels that can be used 
-        selected_label; %string containing the specified label
+        %>cell containing labels that can be used 
+        event_labels; 
+        %>string containing the selected label
+        selected_label; 
     end;
     
     methods
+        % =================================================================
+        %> @brief class constructor for CLASS_marking_dialog class
+        %> @retval obj instance of CLASS_marking_dialog class.
+        %> @note uses a global reference to <b>MARKING</b> to obtain event labels, and
+        %> needs updating.
+        % =================================================================
         function obj = CLASS_marking_dialog()
             obj.dialog_handle = [];            
         end;

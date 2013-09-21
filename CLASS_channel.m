@@ -35,7 +35,7 @@ classdef CLASS_channel < handle
         raw_data; 
         %> used to store raw_data that has been filtered
         filter_data;
-        %> @briefarray struct of filter rules that are applied to the raw data
+        %> @brief array struct of filter rules that are applied to the raw data
         %> the filterStruct is obtained from prefilter_dlg and
         %> has the following fields
         %> outputStruct.src_channel_index = [];
@@ -97,6 +97,26 @@ classdef CLASS_channel < handle
         summary_stats_uitable_h; 
     end;
     methods(Static)
+        
+        % ======================================================================
+        %> @brief obtain struct of statistics and characterization from input data vector.
+        %> Very useful for preparing data for description and presentation
+        %in a uitable.
+        %> @param data vector of values to calculate statistics over.
+        %> @retval stats struct of statistics for the input data.  Fieldnames are:
+        %> - table_row_names ({'Data', 'Abs(Data)'})
+        %> - table_data for storing in 'data' field of a uitable (cell with
+        %> stats taken from data as is and from absolute valued data.
+        %> - table_column_names column labels for describing statistics,
+        %which include:
+        %> - <b>median</b>
+        %> - <b>mean</b>
+        %> - <b>avg_power</b> average power
+        %> - <b>rms</b> root mean square
+        %> - <b>variance</b>
+        %> - <b>std</b> standard deviation
+        %> - <b>entropy</b>
+        % =================================================================
         function stats = data2stats(data)
             %ROI is the region of interest
             %stats is a struct with the fields
@@ -139,17 +159,20 @@ classdef CLASS_channel < handle
         end
         
     end
-    methods
+    methods        
+        %> @brief filter channel according to properties of filterStructIn.
+        %> filtered data is stored in obj.filter_data
+        %> @param obj instance of CLASS_channel class.
+        %> @param filterStruct is an array structure with the following fields
+        %>   - .src_channel_index = [];
+        %>   - .src_channel_label = [];
+        %>   - .m_file = [];
+        %>   - .ref_channel_index = [];
+        %>   - .ref_channel_label = {};
+        %>   - .params
+        %> @note side effect is to set draw_filtered boolean variable depending
+        %> on wether filterStruct is empty or not.
         function obj = filter(obj, filterStructIn)
-          %filterStruct is an array structure with the following fields
-          %   .src_channel_index = [];
-          %   .src_channel_label = [];
-          %   .m_file = [];
-          %   .ref_channel_index = [];
-          %   .ref_channel_label = {};
-          %   .params
-          %side effect is to set draw_filtered boolean variable depending
-          %on wether filterStruct is empty or not.
           
           if(isempty(filterStructIn))
               
@@ -226,11 +249,30 @@ classdef CLASS_channel < handle
               end
           end
         end;
+        
+        % =================================================================
+        %> @brief assign class color property.
+        %>
+        %> @param obj instance of CLASS_channel class.
+        %> @param newColor new color to assign, must be of handle property
+        %> <i>color</i> type
+        %> @retval obj instance of CLASS_channel class.
+        % =================================================================
         function obj = setColor(obj,newColor)
             obj.color = newColor;
             set(obj.line_handle,'color',newColor);
             set(obj.text_handle,'color',newColor);
         end
+        
+        % =================================================================
+        %> @brief Add reference of an existing CLASS_events instance.
+        %> Newly added events will be associated and displayed with the
+        %> channel object.
+        %> @param obj instance of CLASS_channel class.
+        %> @param event_index scalar index of the CLASS_event as maintained by an
+        %> instance of CLASS_events_container.
+        %> @retval obj instance of CLASS_channel class.
+        % =================================================================
         function obj = add_event(obj,event_index)
             obj.draw_events = true;  
             if(~any(obj.event_indices_vector==event_index))
@@ -238,10 +280,23 @@ classdef CLASS_channel < handle
             end
         end;
         
+        % =================================================================
+        %> @brief Remove a reference of a CLASS_events instance.
+        %> @param obj instance of CLASS_channel class.
+        %> @param event_index index of the CLASS_event to be removed, as maintained by an
+        %> instance of CLASS_events_container.
+        %> @retval obj instance of CLASS_channel class.
+        % =================================================================
         function obj = remove_event(obj,event_index)
            obj.event_indices_vector(obj.event_indices_vector==event_index)=[]; 
         end
         
+        % =================================================================
+        %> @brief 
+        %> @param obj instance of CLASS_channel class.
+        %> @param 
+        %> @retval obj instance of CLASS_channel class.
+        % =================================================================
         function obj = update_file_events_cell(obj,new_event_from_file_obj)
             if(~isempty(new_event_from_file_obj))
                 if(isempty(obj.file_events_cell.start_stop_matrix))                    
@@ -255,6 +310,12 @@ classdef CLASS_channel < handle
             end;
         end;
         
+        % =================================================================
+        %> @brief 
+        %> @param obj instance of CLASS_channel class.
+        %> @param 
+        %> @retval obj instance of CLASS_channel class.
+        % =================================================================        
         function obj = loadSettings(obj,settings)
             fields = fieldnames(settings);
             for f=1:numel(fields)
@@ -266,6 +327,12 @@ classdef CLASS_channel < handle
             end
         end
         
+        % =================================================================
+        %> @brief 
+        %> @param obj instance of CLASS_channel class.
+        %> @param 
+        %> @retval obj instance of CLASS_channel class.
+        % =================================================================
         function settings = getSettings(obj)
             settings.line_offset = obj.line_offset;
             settings.color = obj.color;
@@ -278,6 +345,12 @@ classdef CLASS_channel < handle
             settings.reference_line_color = obj.reference_line_color;
         end
         
+        % =================================================================
+        %> @brief 
+        %> @param obj instance of CLASS_channel class.
+        %> @param 
+        %> @retval obj instance of CLASS_channel class.
+        % =================================================================
         function data = getData(obj, range_of_interest)
             if(nargin==2 && ~isempty(range_of_interest))                
                 if(obj.show_filtered && ~isempty(obj.filter_data))
@@ -294,24 +367,29 @@ classdef CLASS_channel < handle
             end
         end
         
+        % =================================================================
+        %> @brief Calculates the power spectral density for this instance 
+        %> of CLASS_channel.
+        %> @param obj instance of CLASS_channel class.
+        %> @param PSD_settings PSD settings to use.
+        %> @param optional_sample_range Optional range to calculate the PSD
+        %> over.  Otherwise the entire data set is calculated.  
+        %> @retval S Vector of spectrum values corresponding to frequencies
+        %> at F
+        %> @retval F Vector of frequency values that the spectrum S is
+        %> calculated at.
+        %> @retval nfft Number of fast fourier transform taps used to calculate
+        %> PSD with.
+        % =================================================================
         %calculates the PSD for the entire data set
-        function [S,F,nfft] = calculate_PSD(obj,optional_range,optional_PSD_settings)
-            global PSD;
-            if(nargin<=1)
+        function [S,F,nfft] = calculate_PSD(obj,PSD_settings,optional_sample_range)
+            
+            if(nargin<=2 || isempty(optional_sample_range))
                 psd_range = 1:numel(obj.raw_data);
             else
-            
-                if(isempty(optional_range))
-                    psd_range = 1:numel(obj.raw_data);
-                else
-                    psd_range = optional_range;
-                end
-            end;
-            if(nargin>=3)
-                PSD_settings = optional_PSD_settings;
-            else
-                PSD_settings = PSD;
+                psd_range = optional_sample_range;
             end
+            
             obj.PSD = PSD_settings;
             [obj.PSD.magnitude obj.PSD.x obj.PSD.nfft] = calcPSD(obj.getData(psd_range),obj.samplerate,obj.PSD);
             if(nargout>0)
@@ -326,6 +404,12 @@ classdef CLASS_channel < handle
             
         end
         
+        % =================================================================
+        %> @brief 
+        %> @param obj instance of CLASS_channel class.
+        %> @param 
+        %> @retval obj instance of CLASS_channel class.
+        % =================================================================
          %calculates the power spectrum using MUSIC for the entire data set
         function [S,F,nfft] = calculate_PMUSIC(obj,optional_range,optional_MUSIC_settings)
             global MUSIC;
@@ -357,6 +441,12 @@ classdef CLASS_channel < handle
             end
         end
         
+        % =================================================================
+        %> @brief 
+        %> @param obj instance of CLASS_channel class.
+        %> @param 
+        %> @retval obj instance of CLASS_channel class.
+        % =================================================================
         %only first four parameters are required if not using graphics -
         %i.e. just doing a batch mode processing and want a lite
         %constructor
@@ -418,6 +508,12 @@ classdef CLASS_channel < handle
             end
         end
 
+        % =================================================================
+        %> @brief 
+        %> @param obj instance of CLASS_channel class.
+        %> @param 
+        %> @retval obj instance of CLASS_channel class.
+        % =================================================================
         function obj = setupReferenceLines(obj,contextmenu_ref_line_h)
             obj.reference_line_handles = zeros(2,1);
             obj.reference_text_handles = zeros(2,1);
@@ -434,6 +530,12 @@ classdef CLASS_channel < handle
                 'string',[],'visible','off','handlevisibility','on','interpreter','none','userdata',obj.channel_index);
         end
 
+        % =================================================================
+        %> @brief 
+        %> @param obj instance of CLASS_channel class.
+        %> @param 
+        %> @retval obj instance of CLASS_channel class.
+        % =================================================================
         function setCurrentSamples(obj,current_samples)
             %could do checking here, but do not want the slowdown...
             obj.current_samples = current_samples;
@@ -441,6 +543,12 @@ classdef CLASS_channel < handle
                 obj.draw();
             end
         end
+        % =================================================================
+        %> @brief 
+        %> @param obj instance of CLASS_channel class.
+        %> @param 
+        %> @retval obj instance of CLASS_channel class.
+        % =================================================================
         function obj = setupMainLine(obj,contextmenu_mainline_h)
             set(contextmenu_mainline_h,'userdata',obj.channel_index);  
             obj.line_handle = line('parent',obj.parent_axes,'color',obj.color,'linestyle','-','visible','on',...
@@ -450,6 +558,12 @@ classdef CLASS_channel < handle
         end
             
         
+        % =================================================================
+        %> @brief 
+        %> @param obj instance of CLASS_channel class.
+        %> @param 
+        %> @retval obj instance of CLASS_channel class.
+        % =================================================================
         function line_buttonDownFcn(obj,hObject, eventdata)
             %callback function used by CLASS_channel objects
             global CHANNELS_CONTAINER;
@@ -499,6 +613,12 @@ classdef CLASS_channel < handle
 
         
 
+        % =================================================================
+        %> @brief 
+        %> @param obj instance of CLASS_channel class.
+        %> @param 
+        %> @retval obj instance of CLASS_channel class.
+        % =================================================================
         function obj = setReferenceLineColor(obj,new_color)
             reference_handles = [obj.reference_line_handles;obj.reference_text_handles];            
             if(all(ishandle(reference_handles)))
@@ -506,6 +626,12 @@ classdef CLASS_channel < handle
             end            
         end
         
+        % =================================================================
+        %> @brief 
+        %> @param obj instance of CLASS_channel class.
+        %> @param 
+        %> @retval obj instance of CLASS_channel class.
+        % =================================================================
         function text_buttonDownFcn(obj, hObject,eventdata)
             %enables editing of the current text label            
             %check to make sure we are not a contextmenu
@@ -524,10 +650,22 @@ classdef CLASS_channel < handle
                 end;
             end
         end
+        % =================================================================
+        %> @brief 
+        %> @param obj instance of CLASS_channel class.
+        %> @param 
+        %> @retval obj instance of CLASS_channel class.
+        % =================================================================
         function set_show_filtered(obj,show_boolean)
             obj.show_filtered = show_boolean==1;
             obj.draw();
         end
+        % =================================================================
+        %> @brief 
+        %> @param obj instance of CLASS_channel class.
+        %> @param 
+        %> @retval obj instance of CLASS_channel class.
+        % =================================================================
         function draw_filtered(obj, varargin)            
             obj.show();
             if(~isempty(obj.filter_data))
@@ -556,12 +694,24 @@ classdef CLASS_channel < handle
                 obj.draw_raw(varargin{:});
             end
         end
+        % =================================================================
+        %> @brief 
+        %> @param obj instance of CLASS_channel class.
+        %> @param 
+        %> @retval obj instance of CLASS_channel class.
+        % =================================================================
         function setLineOffset(obj,new_lineoffset)
             obj.line_offset = new_lineoffset;
             obj.repositioning = true;
             obj.draw()
         end
         
+        % =================================================================
+        %> @brief 
+        %> @param obj instance of CLASS_channel class.
+        %> @param 
+        %> @retval obj instance of CLASS_channel class.
+        % =================================================================
         function draw(obj,varargin)
             if(obj.show_filtered)
                 obj.draw_filtered(varargin{:});
@@ -569,6 +719,12 @@ classdef CLASS_channel < handle
                 obj.draw_raw(varargin{:});
             end
         end
+        % =================================================================
+        %> @brief 
+        %> @param obj instance of CLASS_channel class.
+        %> @param 
+        %> @retval obj instance of CLASS_channel class.
+        % =================================================================
         function draw_raw(obj, varargin)
             if(obj.hidden)
                 obj.show();
@@ -596,6 +752,12 @@ classdef CLASS_channel < handle
             end
         end
 
+        % =================================================================
+        %> @brief 
+        %> @param obj instance of CLASS_channel class.
+        %> @param 
+        %> @retval obj instance of CLASS_channel class.
+        % =================================================================
         %show the events associated with this channel
         function draw_attached_events(obj)
             global EVENT_CONTAINER;
@@ -613,6 +775,12 @@ classdef CLASS_channel < handle
             EVENT_CONTAINER.updateCurrentEpochStartX(obj.event_indices_vector,obj.current_samples(1));
         end;
 
+        % =================================================================
+        %> @brief 
+        %> @param obj instance of CLASS_channel class.
+        %> @param 
+        %> @retval obj instance of CLASS_channel class.
+        % =================================================================
         function setReferenceLineOffset(obj,reference_offset)
             if(nargin==2)
                 obj.reference_line_offsets = [1; -1]*reference_offset;
@@ -632,6 +800,12 @@ classdef CLASS_channel < handle
 
         end
         
+        % =================================================================
+        %> @brief 
+        %> @param obj instance of CLASS_channel class.
+        %> @param 
+        %> @retval obj instance of CLASS_channel class.
+        % =================================================================
         function draw_reference_lines(obj)
 %             x = 1:numel(obj.current_samples);
             x = obj.current_samples;
@@ -646,6 +820,12 @@ classdef CLASS_channel < handle
             set(obj.reference_text_handles(2),'position',ref_label_position);
         end
         
+        % =================================================================
+        %> @brief 
+        %> @param obj instance of CLASS_channel class.
+        %> @param 
+        %> @retval obj instance of CLASS_channel class.
+        % =================================================================
         function obj = show(obj,varargin)
             %varargin so we can use this for a callback
             global EVENT_CONTAINER;
@@ -661,6 +841,12 @@ classdef CLASS_channel < handle
                 
         end
         
+        % =================================================================
+        %> @brief 
+        %> @param obj instance of CLASS_channel class.
+        %> @param 
+        %> @retval obj instance of CLASS_channel class.
+        % =================================================================
         function obj = hide(obj)
             global EVENT_CONTAINER;
             obj.hidden = true;
@@ -673,6 +859,12 @@ classdef CLASS_channel < handle
             EVENT_CONTAINER.hide(obj.event_indices_vector);
         end
         
+        % =================================================================
+        %> @brief 
+        %> @param obj instance of CLASS_channel class.
+        %> @param 
+        %> @retval obj instance of CLASS_channel class.
+        % =================================================================
         function savePSD2txt(obj, savefilename,optional_PSD_settings)
             global BATCH_PROCESS;
             global EVENT_CONTAINER;
@@ -698,7 +890,7 @@ classdef CLASS_channel < handle
                     if(nargin<=2)
                         obj.calculate_PSD();
                     else
-                        obj.calculate_PSD([],optional_PSD_settings);                        
+                        obj.calculate_PSD(optional_PSD_settings);  
                     end
                 end;
                 
@@ -813,10 +1005,7 @@ classdef CLASS_channel < handle
                 %     disp(warnmsg);
                 rethrow(ME);
             end;
-            
-            
-        end
-        
+        end        
     end %end methods
     
 end%end class definition

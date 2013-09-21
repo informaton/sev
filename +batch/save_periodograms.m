@@ -1,4 +1,4 @@
-function save_periodograms(channel_ref,filename_out,optional_PSD_settings)
+function save_periodograms(channel_ref,filename_out,PSD_settings)
 % hObject    handle to menu_file_save_psd (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
@@ -31,7 +31,7 @@ try
         if(nargin==2)
             PRIMARY.calculate_PSD();
         else
-            PRIMARY.calculate_PSD([],optional_PSD_settings);
+            PRIMARY.calculate_PSD([],PSD_settings);
         end
     end;
     

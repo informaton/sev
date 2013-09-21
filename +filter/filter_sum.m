@@ -5,7 +5,7 @@ global CHANNELS_CONTAINER;
 if(numel(src_index)<=20)
     filtsig = CHANNELS_CONTAINER.getData(src_index);
 else
-    filtsig = src_index;
+    filtsig = src_index(:); %make a row vector
 end
 
 % this allows direct input of parameters from outside function calls, which
@@ -26,7 +26,7 @@ else
     end
 end
 
-%get root mean square
+%get instantaneous root mean square
 if(params.rms)
    filtsig = abs(filtsig); 
 end

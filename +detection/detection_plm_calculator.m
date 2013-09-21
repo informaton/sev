@@ -37,8 +37,8 @@ else
         params.min_duration_sec = 0.75;
         params.average_power_window_sec = 20;  %calculate average power over consecutive windows of this duration in seconds
         params.merge_within_sec = 2.0;
-        params.use_summer = 0;
-        params.median_removal = 0;        
+        params.use_summer = 1;
+        params.median_removal = 1;        
         plist.saveXMLPlist(pfile,params);
     end
 end
@@ -77,7 +77,7 @@ if(isempty(lm_detectStruct.new_events))
     detectStruct = lm_detectStruct;
 else
     %% remove LMs that occur during Stage 7 and before sleep onset
-    params.stages2exclude = 0;
+    params.stages2exclude = 7;
     
     %I think this is faster ....
     firstNonWake = 1;

@@ -1,18 +1,42 @@
+%> @file CLASS_compareEvents_dialog.m
+%> @brief CLASS_compareEvents_dialog creates a dialog to access marking parameters.
+% ======================================================================
+%> @brief CLASS_compareEvents_dialog provides backbone for creating gui
+%> to select events for comparison within the SEV's single study mode.
+%>
+%> Use run() method to create the dialog to access marking parameters.
+%> @note Uses global instance of CLASS_events_container and should be
+%> updated.
+% History
+% Written by: Hyatt Moore, IV (< June, 2013)
+% ======================================================================
 classdef CLASS_compareEvents_dialog < handle
-%run method creates a dialog to access marking parameters.
-% 
-
-% Hyatt Moore, IV (< June, 2013)
     properties
+        %> handle to the GUI dialog figure created by <b>run</b> method
         dialog_handle;
-        event_labels; %cell containing labels that can be used 
-        bounds_labels; %cell of labels for the bounds that can be chosen with a dropdown widget
-        selected_bounds; %index of the boundary label that was selected
-        selected_events; %index of the event labels that were selected for comparison
-        num_events_to_compare; %how many different events to compare against each other at once (currently, just 2)
+        %>cell containing labels that can be used; obtained from global instance
+        %of CLASS_events_container.
+        event_labels; 
+        %> @brief cell of labels for the bounds that can be chosen with a dropdown
+        %widget; defaults to 'Entire night' and 'Current View'
+        bounds_labels; 
+        %> index of the boundary label that was selected
+        selected_events; 
+        %> index of the event labels that were selected for comparison
+        selected_bounds; 
+        %> @brief how many different events to compare against each other
+        %at once (currently, just 2)
+        num_events_to_compare; 
     end;
     
     methods
+        
+        % =================================================================
+        %> @brief class constructor
+        %> @retval obj instance of CLASS_compareEvents_dialog class.
+        %> @note uses a global reference to <b>EVENT_CONTAINER</b> to obtain event labels, and
+        %> needs updating.
+        % =================================================================
         function obj = CLASS_compareEvents_dialog()
             global EVENT_CONTAINER;
 %             obj.event_labels = {'Create New','HP_20Hz','Ocular Movement'};
@@ -27,7 +51,15 @@ classdef CLASS_compareEvents_dialog < handle
             obj.selected_bounds = 2;
 
         end;
-        
+        % =================================================================
+        %> @brief Starts the GUI to compare events found in the SEV.
+        %> @param obj instance of CLASS_compareEvents_dialog class.
+        %> @param varargin - ?
+        %> @retval selected_event_indices indices of the selected events
+        %(defaults to null)
+        %> @retval selected_bounds selected bounds for comparing events
+        %> across.
+        % =================================================================
         function [selected_event_indices, selected_bounds] = run(obj,varargin)
             selected_event_indices = []; %default to 0
             selected_bounds = [];
