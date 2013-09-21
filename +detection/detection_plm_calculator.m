@@ -77,13 +77,13 @@ if(isempty(lm_detectStruct.new_events))
     detectStruct = lm_detectStruct;
 else
     %% remove LMs that occur during Stage 7 and before sleep onset
-    params.stages2exclude = 7;
+    params.stages2exclude = 0;
     
     %I think this is faster ....
     firstNonWake = 1;
-    while((stageStruct.line(firstNonWake)==7||stageStruct.line(firstNonWake)==0) && firstNonWake<=numel(stageStruct.line))
-        firstNonWake = firstNonWake+1;
-    end
+%     while((stageStruct.line(firstNonWake)==7||stageStruct.line(firstNonWake)==0) && firstNonWake<=numel(stageStruct.line))
+%         firstNonWake = firstNonWake+1;
+%     end
     
     %This is simpler and vectorized, but it actually has three operations that
     %run through the entire MARKING.sev_STAGES.line vector which is not necessary.
