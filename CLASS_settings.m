@@ -11,9 +11,9 @@ classdef  CLASS_settings < handle
 %     (InferiorClasses = {?JavaVisible}) CLASS_settings < handle
     %CLASS_settings < handles
     %  A class for handling global initialization and settings
-    %     a.  Load settings - X
-    %     b.  Save settings - X
-    %     c.  Interface for editing the settings
+    %  - a.  Load settings - X
+    %  - b.  Save settings - X
+    %  - c.  Interface for editing the settings
     
     properties
         %> pathname of SEV working directory - determined at run time.

@@ -24,28 +24,48 @@
 classdef CLASS_UI_marking < handle
 
     properties
-        hg_group; %for the patch handles when editing and dragging
-        channel_label; %label of the currently selected channel
-        class_channel_index; %current index of channel with associated event being marked
-        start_stop_matrix_index; %index of start_stop sample location of the event pointed to by event_index
-        event_label_cell; %holds the labels of the events that can be selected
-        event_label; %name of the current event being marked
-        event_index; %index of the event in the events_container object
-        current_linehandle; %linehandle in SEV currently selected;
+        %> for the patch handles when editing and dragging
+        hg_group; 
+        %> label of the currently selected channel
+        channel_label; 
+        %>current index of channel with associated event being marked
+        class_channel_index; 
+        %>index of start_stop sample location of the event pointed to by event_index
+        start_stop_matrix_index;
+        %>holds the labels of the events that can be selected
+        event_label_cell;
+        %>name of the current event being marked
+        event_label; 
+        %>index of the event in the events_container object
+        event_index; 
+        %>linehandle in SEV currently selected;
+        current_linehandle;
         
-        state_choices_cell; %cell of string choices for the marking state (off, 'marking','general')
-        marking_state; %string of the current selected choice
-        figurehandle; %handle to the figure an instance of this class is associated with
-        axeshandle; %struct with fields
-            %.mainhandle to the main axes an instance of this class is associated with
-            %.timeline; %hypnogram and event axes
-            %utility; %handle the miscellaneous axes in the lower left corner of the SEV
-        texthandle; %struct of handles with fields 
-            %.status; %handle to the text status location of the sev figure where updates can go
-            %.src_filename; %handle to the text box for display of loaded filename
-        contextmenuhandle; %struct of handles for the context menus
-        linehandle; %struct with field
-            %.x_minorgrid which is used for the x grid on the main axes
+        %>cell of string choices for the marking state (off, 'marking','general')
+        state_choices_cell; 
+        %>string of the current selected choice
+        marking_state; 
+        %>handle to the figure an instance of this class is associated with
+        figurehandle;
+        
+        %> @brief struct whose fields are axes handles.  Fields include:
+            %> - @b.mainhandle handle to the main axes an instance of this class is associated with
+            %> - @b.timeline hypnogram and event axes
+            %> - @b.utility handle the miscellaneous axes in the lower left corner of the SEV
+        axeshandle;
+        
+        %> @brief struct of text handles.  Fields are: 
+        %> - .status; %handle to the text status location of the sev figure where updates can go
+        %> - .src_filename; %handle to the text box for display of loaded filename
+        texthandle; 
+        
+        %> struct of handles for the context menus
+        contextmenuhandle; 
+        
+        %> @brief struct with field
+        %> - .x_minorgrid which is used for the x grid on the main axes
+        linehandle;
+         
         toolbarhandle; %handle for the toolbars we add to the SEV
         annotationhandle; %struct for annotation handles
             %- .timeline
