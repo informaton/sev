@@ -63,6 +63,10 @@ classdef CLASS_events_container < handle
                            
         %> folder that contains the detection algorithms and hopefully the detection.inf file
         detection_path; 
+        %>@brief filename containing meta deta for detection algorithms to load
+        %> into SEV - set externally at the moment
+        detection_inf_file; 
+
         %> event group currently selected by the user.... - default is 0; no selection
         cur_event_index; 
         %> where these things will be plotted too.
@@ -90,6 +94,8 @@ classdef CLASS_events_container < handle
         % =================================================================
         function obj = CLASS_events_container(parent_fig,parent_axes, base_samplerate,CHANNELS_CONTAINER, stageStruct)
             
+
+
             if(nargin == 0)
                 parent_fig = [];
                 parent_axes=  [];
@@ -153,8 +159,8 @@ classdef CLASS_events_container < handle
         %> @retval paramStruct 
         % =================================================================        
         function paramStruct = loadDetectionParams(obj,detectorFcn)
-            pfile = fullfile(obj.CHANNELS_CONTAINER.sevDefaults.rootpathname,obj.CHANNELS_CONTAINER.sevDefaults.detection_path,strcat(strrep(detectorFcn,'.m',''),'.plist'));
-            matfile = fullfile(obj.CHANNELS_CONTAINER.sevDefaults.rootpathname,obj.CHANNELS_CONTAINER.sevDefaults.detection_path,strcat(strrep(detectorFcn,'.m',''),'.mat'));
+            pfile = fullfile(obj.detection_path,strcat(strrep(detectorFcn,'.m',''),'.plist'));
+            matfile = fullfile(obj.detection_path,strcat(strrep(detectorFcn,'.m',''),'.mat'));
             paramStruct = [];
             if(exist(pfile,'file'))
                 try

@@ -1140,7 +1140,7 @@ cropFigure2Axes(f,axes1_copy);
             event_toolbox = CLASS_events_toolbox_dialog(); %create an empty object...
             event_toolbox.num_sources = 1;
             event_toolbox.channel_selections = channel_index;
-            event_toolbox.detection_path = obj.SETTINGS.VIEW.detection_path;
+            event_toolbox.detection_path = fullfile(obj.SETTINGS.rootpathname,obj.SETTINGS.VIEW.detection_path);
             event_toolbox.detection_inf_file = obj.SETTINGS.VIEW.detectionInf_file;
             try
                 event_toolbox.run();
@@ -1569,6 +1569,8 @@ cropFigure2Axes(f,axes1_copy);
             CHANNELS_CONTAINER = CLASS_channels_container(obj.figurehandle.sev,obj.axeshandle.main,obj.axeshandle.utility,obj.SETTINGS.VIEW);
             CHANNELS_CONTAINER.loadSettings(obj.SETTINGS.VIEW.channelsettings_file);
             EVENT_CONTAINER = CLASS_events_container(obj.figurehandle.sev,obj.axeshandle.main,obj.SETTINGS.VIEW.samplerate,CHANNELS_CONTAINER);
+            EVENT_CONTAINER.detection_path = obj.SETTINGS.VIEW.detection_path;
+            EVENT_CONTAINER.detection_inf_file = fullfile(obj.SETTINGS.rootpathname,obj.SETTINGS.VIEW.detection_path,obj.SETTINGS.VIEW.detection_inf_file);
             
             disableFigureHandles(obj.figurehandle.sev);
             

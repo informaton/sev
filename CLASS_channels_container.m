@@ -47,8 +47,7 @@ classdef CLASS_channels_container < handle
         %> context menu handles to be used for added children
         mainline_contextmenu_h;
         referenceline_contextmenu_h; 
-        %> file with detection data on it.
-        detection_inf_file;  
+
         default_samplerate;
         %> pointer to the current event_container instance
         EVENT_CONTAINER; 
@@ -65,14 +64,10 @@ classdef CLASS_channels_container < handle
         function obj = CLASS_channels_container(parent_fig,main_axes,psd_axes,sevDefaults)
             
             if(nargin>3)
-                obj.detection_inf_file = fullfile(sevDefaults.detection_path,sevDefaults.detectionInf_file);
                 obj.default_samplerate = sevDefaults.samplerate;  %set this to 0 or -1 if you do not want a common sample rate
-                if(~exist(obj.detection_inf_file,'file'))
-                    obj.detection_inf_file = [];
-                end
+                
             else
                 sevDefaults = [];
-                obj.detection_inf_file = []; 
                 obj.default_samplerate = [];
             end
             
@@ -209,8 +204,8 @@ classdef CLASS_channels_container < handle
            
            max_num_sources = 1;  %maximum number of sources that can be drawn...
            
-           if(~isempty(obj.detection_inf_file) && exist(obj.detection_inf_file,'file'))
-               [mfile, evt_label, num_reqd_indices, unused_param_gui, unused_batch_mode_label] = textread(obj.detection_inf_file,'%s%s%n%s%c','commentstyle','shell');
+           if(~isempty(obj.EVENT_CONTAINER.detection_inf_file) && exist(obj.EVENT_CONTAINER.detection_inf_file,'file'))
+               [mfile, evt_label, num_reqd_indices, unused_param_gui, unused_batch_mode_label] = textread(obj.EVENT_CONTAINER.detection_inf_file,'%s%s%n%s%c','commentstyle','shell');
                event_detector_uimenu = uimenu(uicontextmenu_handle,'Label','Apply Detector','separator','off','tag','event_detector');
                
                for k=1:numel(num_reqd_indices)
@@ -696,7 +691,6 @@ classdef CLASS_channels_container < handle
                detection_struct = CLASS_events_container.loadDetectionMethodsInf(obj.sevDefaults.detection_path);
                %detection_struct has the fields that are contained/gridded in the
                %detection.inf file
-               %
                %
                
                sourceStruct.editor = detection_struct.param_gui{strcmp(detection_mfile,detection_struct.mfile)};
