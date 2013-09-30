@@ -1,9 +1,11 @@
-function detectStruct = detection_psd(signal_data, params, stageStruct)
+function detectStruct = detection_psd(signal_data, params, stageStruct,optional_PSD_settings)
 %> function detectStruct = detection_psd(data_cell, varargin)
 %> Calculates the power spectrum of input channel data.
 
 %
 % written by Hyatt Moore IV, July 28, 2013
+
+global MARKING;
 
 if(nargin<2 || isempty(params))    
     pfile = strcat(mfilename('fullpath'),'.plist');
@@ -36,17 +38,16 @@ end
 
 samplerate = params.samplerate;
 
-global PSD;
 
 if(nargin<4)
-    PSD_settings = PSD;
+    PSD_settings = MARKING.SETTINGS.PSD;
 else
     PSD_settings = optional_PSD_settings;
 end
 
 epoch_len = samplerate*standard_epoch_sec;
 num_epochs = floor(numel(signal_data)/(epoch_len));
-periodograms_per_epoch = floor(standard_epoch_sec/PSD.interval);
+periodograms_per_epoch = floor(standard_epoch_sec/PSD_settings.interval);
 
 %we know the event boundaries in advance, so calculate as such.
 events = [1:epoch_len:num_epochs*epoch_len;epoch_len:epoch_len:(num_epochs)*epoch_len]';
