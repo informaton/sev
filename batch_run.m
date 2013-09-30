@@ -350,7 +350,7 @@ for k=1:numel(synth_indices)
                         synth_channel_structs{k}(p).params = plist.loadXMLPlist(pfile);
                     catch me
                         fprintf(1,'Could not load parameters from %s directly.\n',pfile);
-                        me.stack(1)
+                        showME(me);
                     end
                 elseif(exist(matfile,'file'))
                     try
@@ -358,7 +358,7 @@ for k=1:numel(synth_indices)
                         synth_channel_structs{k}(p).params = matfileStruct.params;
                     catch me
                         fprintf(1,'Could not load parameters from %s directly.\n',matfile);
-                        me.stack(1)
+                        showME(me);
                     end
                 end
             end
@@ -1191,7 +1191,7 @@ assignin('base','files_completed',files_completed);
 try
 %     matlabpool open
 catch me
-     
+   showME(me)  
 end
 %     parfor i = 1:file_count
 
@@ -1517,16 +1517,16 @@ end
             disp([file_list(i).name, ' SKIPPED: The following error was encountered: (' cur_error.message ')']);
             console_warnmsg = cur_error.message;
             file_warnmsg = cur_error.message;
+            showME(me);
             
-            
-            for s = 1:min(numel(cur_error.stack),2)
-                % disp(['<a href="matlab:opentoline(''',file,''',',linenum,')">Open Matlab to this Error</a>']);
-                stack_error = cur_error.stack(s);
-                console_warnmsg = sprintf('%s\r\n\tFILE: %s <a href="matlab:opentoline(''%s'',%s)">LINE: %s</a> FUNCTION: %s', console_warnmsg,stack_error.file,stack_error.file,num2str(stack_error.line),num2str(stack_error.line), stack_error.name);
-                file_warnmsg = sprintf('\t%s\r\n\t\tFILE: %s LINE: %s FUNCTION: %s', file_warnmsg,stack_error.file,num2str(stack_error.line), stack_error.name);
-            end
-            
-            disp(console_warnmsg)
+%             for s = 1:min(numel(cur_error.stack),2)
+%                 % disp(['<a href="matlab:opentoline(''',file,''',',linenum,')">Open Matlab to this Error</a>']);
+%                 stack_error = cur_error.stack(s);
+%                 console_warnmsg = sprintf('%s\r\n\tFILE: %s <a href="matlab:opentoline(''%s'',%s)">LINE: %s</a> FUNCTION: %s', console_warnmsg,stack_error.file,stack_error.file,num2str(stack_error.line),num2str(stack_error.line), stack_error.name);
+%                 file_warnmsg = sprintf('\t%s\r\n\t\tFILE: %s LINE: %s FUNCTION: %s', file_warnmsg,stack_error.file,num2str(stack_error.line), stack_error.name);
+%             end
+%             disp(console_warnmsg)
+
             if(BATCH_PROCESS.output_files.log_checkbox)
                 if(~isempty(fopen(log_fid)))
                     fprintf(log_fid,'%s . . . NOT PROCESSED.  The following error was encountered:\r\n%s\r\n',file_list(i).name,file_warnmsg);
