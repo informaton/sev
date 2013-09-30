@@ -1515,10 +1515,10 @@ end
         catch cur_error
 %             showME(cur_error);
             disp([file_list(i).name, ' SKIPPED: The following error was encountered: (' cur_error.message ')']);
-            console_warnmsg = cur_error.message;
             file_warnmsg = cur_error.message;
-            showME(me);
+            showME(cur_error);
             
+%             console_warnmsg = cur_error.message;           
 %             for s = 1:min(numel(cur_error.stack),2)
 %                 % disp(['<a href="matlab:opentoline(''',file,''',',linenum,')">Open Matlab to this Error</a>']);
 %                 stack_error = cur_error.stack(s);
@@ -1579,7 +1579,7 @@ end
         end
     end
     [log_path,log_filename,log_file_ext] = fileparts(MARKING.SETTINGS.VIEW.parameters_filename);
-    saveParametersToFile(fullfile(BATCH_PROCESS.output_path.current,[log_filename,log_file_ext]));
+    MARKING.SETTINGS.saveParametersToFile([],fullfile(BATCH_PROCESS.output_path.current,[log_filename,log_file_ext]));
     
     %not really necessary, since I am not going to update the handles after
     %this function call in order for everything to go back to what it was

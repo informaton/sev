@@ -158,7 +158,6 @@ classdef CLASS_UI_marking < handle
                 parameters_filename = '_sev.parameters.txt';
             end;
             
-            
             %create/intilize the settings object            
             obj.SETTINGS = CLASS_settings(rootpathname,parameters_filename);
 
@@ -168,7 +167,7 @@ classdef CLASS_UI_marking < handle
             end                
         end
         
-        %>Destructor
+        %> Destructor
         function close(obj)
             obj.toolbarhandle.jCombo = [];
             obj.saveParameters(); %requires SETTINGS variable

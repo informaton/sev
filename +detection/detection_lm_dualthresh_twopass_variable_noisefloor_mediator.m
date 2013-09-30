@@ -175,13 +175,18 @@ if(~isempty(new_events))
         end
         
     end;
+    
+    detectStruct.new_events = new_events;
+    detectStruct.new_data = clean_data;
+    detectStruct.paramStruct = paramStruct;
 
-detectStruct.new_events = new_events;
-detectStruct.new_data = clean_data;
-detectStruct.paramStruct = paramStruct;
-
-
+else
+    detectStruct.new_events = [];
+    detectStruct.new_data = clean_data;
+    detectStruct.paramStruct = [];
 end
+
+
 end
 
 function [variable_threshold_low_uv, variable_threshold_high_uv, clean_data] = getNoisefloor(data, params, samplerate)

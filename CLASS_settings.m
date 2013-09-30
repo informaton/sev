@@ -296,7 +296,8 @@ classdef  CLASS_settings < handle
         %> @param obj instance of CLASS_settings class.
         %> @param saveStruct (optional) structure of parameters and values
         %> to save to the text file identfied by obj property filename or
-        %> the input paramater filename.
+        %> the input paramater filename.  Enter empty (i.e., []) to save
+        %> all available fields
         %> @param filename (optional) name of file to save parameters to.
         % =================================================================
         % -----------------------------------------------------------------
@@ -313,15 +314,15 @@ classdef  CLASS_settings < handle
             if(nargin<3)
                 filename = obj.parameters_filename;
                 if(nargin<2)
-                    fnames = obj.fieldNames;
-                    for f=1:numel(fnames)
-                        dataStruct2Save.(fnames{f}) = obj.(fnames{f});
-                    end                    
-                else 
-                    dataStruct2Save = obj.saveStruct;
+                    dataStruct2Save = [];
                 end                
-            else
-                dataStruct2Save = obj.saveStruct;
+            end
+            
+            if(isempty(dataStruct2Save))
+                fnames = obj.fieldNames;
+                for f=1:numel(fnames)
+                    dataStruct2Save.(fnames{f}) = obj.(fnames{f});               
+                end
             end
             
             fid = fopen(filename,'w');
