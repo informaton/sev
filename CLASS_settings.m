@@ -182,24 +182,46 @@ classdef  CLASS_settings < handle
         function initialize(obj)
             %initialize global variables in SEV....
             obj.fieldNames = {'VIEW','BATCH_PROCESS','PSD','MUSIC'};
+            obj.setDefaults();
             
             full_paramsFile = fullfile(obj.rootpathname,obj.parameters_filename);
             
-            if(exist(full_paramsFile,'file'))
+            if(exist(full_paramsFile,'file'))                
                 paramStruct = obj.loadParametersFromFile(full_paramsFile);
-                fnames = fieldnames(paramStruct);
-
-                if(isempty(fnames))
+                if(~isstruct(paramStruct))
                     fprintf('\nWarning: Could not load parameters from file %s.  Will use default settings instead.\n\r',full_paramsFile);
-                    obj.setDefaults();
+                    
                 else
-                    for f=1:numel(fnames)
-                        obj.(fnames{f}) = paramStruct.(fnames{f});
+                    fnames = fieldnames(paramStruct);
+                    
+                    if(isempty(fnames))
+                        fprintf('\nWarning: Could not load parameters from file %s.  Will use default settings instead.\n\r',full_paramsFile);
+                    else
+                    
+                        for f=1:numel(obj.fieldNames)
+                            cur_field = obj.fieldNames{f};
+                            if(~isfield(paramStruct,cur_field) || ~isstruct(paramStruct.(cur_field)))
+                                fprintf('\nWarning: Could not load parameters from file %s.  Will use default settings instead.\n\r',full_paramsFile);
+                                return;
+                            else
+                                structFnames = fieldnames(obj.(cur_field));
+                                for g= 1:numel(structFnames)
+                                    cur_sub_field = structFnames{g};
+                                    %check if there is a corruption
+                                    if(~isfield(paramStruct.(cur_field),cur_sub_field))
+                                        fprintf('\nSettings file corrupted.  Using default SEV settings\n\n');
+                                        return;
+                                    end                            
+                                end
+                            end
+                        end
+                        
+                        for f=1:numel(fnames)
+                            obj.(fnames{f}) = paramStruct.(fnames{f});
+                        end
                     end
                 end
-            else
-                obj.setDefaults();                
-            end;           
+            end
         end
         
         % -----------------------------------------------------------------
@@ -332,9 +354,11 @@ classdef  CLASS_settings < handle
         %> then object's <i>fieldNames</i> property is used and all
         %> parameter structs are reset to their default values.
         function setDefaults(obj,fieldNames)
+            
             if(nargin<2)
                 fieldNames = obj.fieldNames; %reset all then
             end
+            
             if(~iscell(fieldNames))
                 fieldNames = {fieldNames};
             end
@@ -353,32 +377,27 @@ classdef  CLASS_settings < handle
                         
                         obj.VIEW.channelsettings_file = 'channelsettings.mat'; %used to store the settings for the file
                         obj.VIEW.output_pathname = 'output';
-                        obj.VIEW.detectionInf_file = 'detection.inf';
+                        obj.VIEW.detection_inf_file = 'detection.inf';
                         obj.VIEW.detection_path = '+detection';
                         obj.VIEW.filter_path = '+filter';
-                        obj.VIEW.filterInf_file = 'filter.inf';
-                        obj.VIEW.databaseInf_file = 'database.inf';
+                        obj.VIEW.filter_inf_file = 'filter.inf';
+                        obj.VIEW.database_inf_file = 'database.inf';
                         obj.VIEW.parameters_filename = '_sev.parameters.txt';
-                    case 'MUSIC'
-                        
+                    case 'MUSIC'                        
                         obj.MUSIC.window_length_sec = 2;
                         obj.MUSIC.interval_sec = 2;
                         obj.MUSIC.num_sinusoids = 6;
                         obj.MUSIC.modified = false;
                         obj.MUSIC.freq_min = 0; %display min
-                        obj.MUSIC.freq_max = 30; %display max
-                        
-                    case 'PSD'
-                        
+                        obj.MUSIC.freq_max = 30; %display max                        
+                    case 'PSD'                        
                         obj.PSD.wintype = 'hann';
                         obj.PSD.removemean = 'true';
                         obj.PSD.FFT_window_sec = 2; %length in second over which to calculate the PSD
                         obj.PSD.interval = 2; %how often to take the FFT's
                         obj.PSD.freq_min = 0; %display min
-                        obj.PSD.freq_max = 30; %display max
-                        
+                        obj.PSD.freq_max = 30; %display max                        
                     case 'BATCH_PROCESS'
-
                         obj.BATCH_PROCESS.edf_folder = '.'; %the edf folder to do a batch job on.
                         obj.BATCH_PROCESS.output_path.parent = 'output';
                         obj.BATCH_PROCESS.output_path.roc = 'ROC';

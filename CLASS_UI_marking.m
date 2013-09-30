@@ -632,7 +632,7 @@ cropFigure2Axes(f,axes1_copy);
             
             if(~isempty(selection))
                 %prepare database import fields
-                selection.DB = loadDatabaseStructFromInf(obj.SETTINGS.VIEW.databaseInf_file);
+                selection.DB = loadDatabaseStructFromInf(obj.SETTINGS.VIEW.database_inf_file);
                 DB_fields = fieldnames(selection.DB);
                 for k=1:numel(DB_fields)
                     selection.DB.(DB_fields{k}) = selection.DB.(DB_fields{k}){selection.database_choice};
@@ -728,7 +728,7 @@ cropFigure2Axes(f,axes1_copy);
                 channel_label_str{k} = CHANNELS_CONTAINER.cell_of_channels{k}.EDF_label;
             end
             
-            filter_struct = prefilter_dlg(channel_label_str,CHANNELS_CONTAINER.filterArrayStruct,[],obj.SETTINGS.VIEW.filter_path,obj.SETTINGS.VIEW.filterInf_file,CHANNELS_CONTAINER);
+            filter_struct = prefilter_dlg(channel_label_str,CHANNELS_CONTAINER.filterArrayStruct,[],obj.SETTINGS.VIEW.filter_path,obj.SETTINGS.VIEW.filter_inf_file,CHANNELS_CONTAINER);
             
             %filter_struct has the following fields
             % src_channel_index   (the index of the event_container EDF channel)
@@ -1141,7 +1141,7 @@ cropFigure2Axes(f,axes1_copy);
             event_toolbox.num_sources = 1;
             event_toolbox.channel_selections = channel_index;
             event_toolbox.detection_path = fullfile(obj.SETTINGS.rootpathname,obj.SETTINGS.VIEW.detection_path);
-            event_toolbox.detection_inf_file = obj.SETTINGS.VIEW.detectionInf_file;
+            event_toolbox.detection_inf_file = obj.SETTINGS.VIEW.detection_inf_file;
             try
                 event_toolbox.run();
                 
@@ -1566,12 +1566,18 @@ cropFigure2Axes(f,axes1_copy);
             %time use or when loading a new file or recovering from an error
             global CHANNELS_CONTAINER;
             global EVENT_CONTAINER;
-            CHANNELS_CONTAINER = CLASS_channels_container(obj.figurehandle.sev,obj.axeshandle.main,obj.axeshandle.utility,obj.SETTINGS.VIEW);
-            CHANNELS_CONTAINER.loadSettings(obj.SETTINGS.VIEW.channelsettings_file);
-            EVENT_CONTAINER = CLASS_events_container(obj.figurehandle.sev,obj.axeshandle.main,obj.SETTINGS.VIEW.samplerate,CHANNELS_CONTAINER);
+            full_detection_inf_filename = fullfile(obj.SETTINGS.rootpathname,obj.SETTINGS.VIEW.detection_path,obj.SETTINGS.VIEW.detection_inf_file);
+            EVENT_CONTAINER = CLASS_events_container(obj.figurehandle.sev,obj.axeshandle.main,obj.SETTINGS.VIEW.samplerate);
             EVENT_CONTAINER.detection_path = obj.SETTINGS.VIEW.detection_path;
-            EVENT_CONTAINER.detection_inf_file = fullfile(obj.SETTINGS.rootpathname,obj.SETTINGS.VIEW.detection_path,obj.SETTINGS.VIEW.detection_inf_file);
+            EVENT_CONTAINER.detection_inf_file = full_detection_inf_filename;
             
+            sevDefaults = obj.SETTINGS.VIEW;
+            sevDefaults.detection_inf_filename = full_detection_inf_filename;
+            
+            CHANNELS_CONTAINER = CLASS_channels_container(obj.figurehandle.sev,obj.axeshandle.main,obj.axeshandle.utility,sevDefaults);
+            CHANNELS_CONTAINER.loadSettings(obj.SETTINGS.VIEW.channelsettings_file);
+            
+            EVENT_CONTAINER.CHANNELS_CONTAINER = CHANNELS_CONTAINER;
             disableFigureHandles(obj.figurehandle.sev);
             
             set(0,'showhiddenhandles','on');
@@ -2624,7 +2630,7 @@ cropFigure2Axes(f,axes1_copy);
         end
         
         function detectMethodStruct = getDetectionMethodsStruct(obj)
-           detectMethodStruct = CLASS_events_container.loadDetectionMethodsInf(fullfile(obj.SETTINGS.rootpathname,obj.SETTINGS.VIEW.detection_path),obj.SETTINGS.VIEW.detectionInf_file);
+           detectMethodStruct = CLASS_events_container.loadDetectionMethodsInf(fullfile(obj.SETTINGS.rootpathname,obj.SETTINGS.VIEW.detection_path),obj.SETTINGS.VIEW.detection_inf_file);
         end
         
     end

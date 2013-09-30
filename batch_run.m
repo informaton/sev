@@ -1263,7 +1263,8 @@ end
                     studyInfo.standard_epoch_sec = parBATCH_PROCESS.standard_epoch_sec;
                     
                     %PROCESS ARTIFACTS
-                    batch_ARTIFACT_CONTAINER = CLASS_events_container([],[],parBATCH_PROCESS.base_samplerate,batch_CHANNELS_CONTAINER,batch_STAGES); %this global variable may be checked in output functions and
+                    batch_ARTIFACT_CONTAINER = CLASS_events_container([],[],parBATCH_PROCESS.base_samplerate,batch_STAGES); %this global variable may be checked in output functions and
+                    batch_ARTIFACT_CONTAINER.CHANNELS_CONTAINER = batch_CHANNELS_CONTAINER;
                     artifact_filenames = fullfile(full_artifacts_path,[parBATCH_PROCESS.output_files.artifacts_filename,cur_filename(1:end-4)]);
                         
                     %this requires initialization
@@ -1322,11 +1323,9 @@ end
                     
                     %PROCESS THE EVENTS
                     if(numel(event_settings)>0)
-                        
-                        batch_EVENT_CONTAINER = CLASS_events_container([],[],parBATCH_PROCESS.base_samplerate,batch_CHANNELS_CONTAINER,batch_STAGES);
+                        batch_EVENT_CONTAINER = CLASS_events_container([],[],parBATCH_PROCESS.base_samplerate,batch_STAGES);
+                        batch_EVENT_CONTAINER.CHANNELS_CONTAINER = batch_CHANNELS_CONTAINER;
                         event_filenames = fullfile(full_events_path,[parBATCH_PROCESS.output_files.events_filename,cur_filename(1:end-4)]);
-                        
-                  
                         
                         for k = 1:numel(event_settings)
                             function_name = event_settings{k}.method_function;

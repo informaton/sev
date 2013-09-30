@@ -89,31 +89,32 @@ classdef CLASS_events_container < handle
         % =================================================================
         %> @brief Constructor
         %> @param obj instance of CLASS_events_container class.
-        %> @param 
+        %> @param handle to the SEV gui
+        %> @param handle to the parent axes to show events on (child of
+        %> figure handle        
+        %> @param base_samplerate Base sample rate for showing events (e.g.
+        %> 100)
+        %> @param stageStruct Struct of staging values loaded by SEV
         %> @retval obj instance of CLASS_events_container class.
         % =================================================================
-        function obj = CLASS_events_container(parent_fig,parent_axes, base_samplerate,CHANNELS_CONTAINER, stageStruct)
+        function obj = CLASS_events_container(parent_fig,parent_axes, base_samplerate, stageStruct)
             
+            obj.CHANNELS_CONTAINER = [];
 
 
             if(nargin == 0)
                 parent_fig = [];
                 parent_axes=  [];
                 base_samplerate = [];
-                CHANNELS_CONTAINER = [];
                 stageStruct = [];
             end
-            if(nargin<5)
+            if(nargin<4)
                 stageStruct = [];
-                if(nargin<4)
-                    CHANNELS_CONTAINER = [];
-                    if(nargin<3)
-                        base_samplerate = [];
-                    end
-                end
+                if(nargin<3)
+                    base_samplerate = [];
+                end                
             end
             obj.stageStruct = stageStruct;
-            obj.CHANNELS_CONTAINER = CHANNELS_CONTAINER;
             obj.event_indices_to_plot = [];
             obj.cell_of_events = {};
             obj.num_events = 0;

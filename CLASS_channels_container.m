@@ -56,10 +56,13 @@ classdef CLASS_channels_container < handle
     end
     methods        
         % =================================================================
-        %> @brief 
-        %> @param obj instance of CLASS_channel class.
-        %> @param 
-        %> @retval obj instance of CLASS_channel class.
+        %> @brief CLASS_channels_container constructor.
+        %> @param obj instance of CLASS_channels_container class.
+        %> @param parent_fig Handle to SEV figure
+        %> @param main_axes Handle to SEV axes where channels are displayed
+        %> @param psd_axes Handle to SEV axes where PSD is displayed
+        %> @param sevDefaults Structure of SEV settings
+        %> @retval obj instance of CLASS_channels_container class.
         % =================================================================
         function obj = CLASS_channels_container(parent_fig,main_axes,psd_axes,sevDefaults)
             
@@ -204,8 +207,8 @@ classdef CLASS_channels_container < handle
            
            max_num_sources = 1;  %maximum number of sources that can be drawn...
            
-           if(~isempty(obj.EVENT_CONTAINER.detection_inf_file) && exist(obj.EVENT_CONTAINER.detection_inf_file,'file'))
-               [mfile, evt_label, num_reqd_indices, unused_param_gui, unused_batch_mode_label] = textread(obj.EVENT_CONTAINER.detection_inf_file,'%s%s%n%s%c','commentstyle','shell');
+           if(~isfield(obj.sevDefaults,'detection_inf_file') && exist(obj.sevDefaults.detection_inf_file,'file'))
+               [mfile, evt_label, num_reqd_indices, unused_param_gui, unused_batch_mode_label] = textread(obj.sevDefaults.detection_inf_file,'%s%s%n%s%c','commentstyle','shell');
                event_detector_uimenu = uimenu(uicontextmenu_handle,'Label','Apply Detector','separator','off','tag','event_detector');
                
                for k=1:numel(num_reqd_indices)
