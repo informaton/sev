@@ -76,9 +76,9 @@ else
     
     if(isfield(MARKING.SETTINGS.BATCH_PROCESS,'edf_folder'))
         if(~isdir(MARKING.SETTINGS.BATCH_PROCESS.edf_folder) || strcmp(MARKING.SETTINGS.BATCH_PROCESS.edf_folder,'.'))
-            MARKING.SETTINGS.BATCH_PROCESS = pwd;
+            MARKING.SETTINGS.BATCH_PROCESS.edf_folder = pwd;
         end;
-        set(handles.edit_edf_directory,'string',DEFAULTS.edf_folder);
+        set(handles.edit_edf_directory,'string',MARKING.SETTINGS.BATCH_PROCESS.edf_folder);
     else
         set(handles.edit_edf_directory,'string',pwd);
     end
@@ -310,7 +310,7 @@ function push_run_Callback(hObject, eventdata, handles)
 global GUI_TEMPLATE;
 global MARKING;
 
-DEFAULTS = MARKING.SETTINGS.VIEW; 
+
 
 
 BATCH_PROCESS = handles.user.BATCH_PROCESS;
@@ -343,8 +343,8 @@ for k=1:numel(synth_indices)
         %wavelet denoising
         for p=1:numel(synth_channel_structs{k})
             if(isempty(synth_channel_structs{k}(p).params))
-                pfile = fullfile(DEFAULTS.rootpathname,DEFAULTS.filter_path,strcat(synth_channel_structs{k}(p).m_file,'.plist'));
-                matfile = fullfile(DEFAULTS.rootpathname,DEFAULTS.filter_path,strcat(synth_channel_structs{k}(p).m_file,'.mat'));
+                pfile = fullfile(MARKING.SETTINGS.rootpathname,MARKING.SETTINGS.VIEW.filter_path,strcat(synth_channel_structs{k}(p).m_file,'.plist'));
+                matfile = fullfile(MARKING.SETTINGS.rootpathname,MARKING.SETTINGS.VIEW.filter_path,strcat(synth_channel_structs{k}(p).m_file,'.mat'));
                 if(exist(pfile,'file'))
                     try
                         synth_channel_structs{k}(p).params = plist.loadXMLPlist(pfile);
@@ -444,8 +444,8 @@ end
 
 BATCH_PROCESS.MUSIC_settings = MUSIC_settings;
 
-BATCH_PROCESS.standard_epoch_sec = DEFAULTS.standard_epoch_sec;
-BATCH_PROCESS.base_samplerate = DEFAULTS.samplerate;
+BATCH_PROCESS.standard_epoch_sec = MARKING.SETTINGS.VIEW.standard_epoch_sec;
+BATCH_PROCESS.base_samplerate = MARKING.SETTINGS.VIEW.samplerate;
 
 %The following snippet was an alternative, but I found it easier to keep
 %the same cell of structures format as the events and artifact settings
@@ -841,7 +841,7 @@ global MARKING;
 %why does this need to be persistent?  
 persistent log_fid; 
 
-DEFAULTS = MARKING.SETTINGS.VIEW;
+
 
 % BATCH_PROCESS.output_path =
 %        parent: 'output'
@@ -868,7 +868,6 @@ if(pathname)
     
     MARKING.STATE.batch_process_running = true;
     
-%     output_path = DEFAULTS.output_pathname;
     
     %reference sev.m - sev_OpeningFcn (line ~192)
     BATCH_PROCESS.output_path.current = fullfile(pathname, BATCH_PROCESS.output_path.parent);
@@ -1579,7 +1578,7 @@ end
             fclose(log_fid);
         end
     end
-    [log_path,log_filename,log_file_ext] = fileparts(DEFAULTS.parameters_filename);
+    [log_path,log_filename,log_file_ext] = fileparts(MARKING.SETTINGS.VIEW.parameters_filename);
     saveParametersToFile(fullfile(BATCH_PROCESS.output_path.current,[log_filename,log_file_ext]));
     
     %not really necessary, since I am not going to update the handles after
