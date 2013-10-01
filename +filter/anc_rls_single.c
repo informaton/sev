@@ -25,7 +25,7 @@ void mexFunction(int nlhs, mxArray *plhs[],
     double rHprod; // r'*H product
   
     
-    double *sig1,*noise1, *e,*Mptr; //s = signal+noise, n1 = noise ref 1, n2 = noise ref 2 (if applicable), e = cleaned signal
+    double *sig1,*noise1, *e; //s = signal+noise, n1 = noise ref 1, n2 = noise ref 2 (if applicable), e = cleaned signal
     double    lambda;// %forgetting factor; He. found values between 0.995 and 1.0 to produce similarly good result
     double sigma;
     double e_n;
@@ -60,21 +60,18 @@ void mexFunction(int nlhs, mxArray *plhs[],
     
     vector_size =  num_references*M;//(nrhs-1)*M;
     //http://publications.gbdirect.co.uk/c_book/chapter6/initialization.html
+    
+    //initialize memory
+
     Rinv = (double **)malloc(vector_size*sizeof(double*));
     Result = (double **)malloc(vector_size*sizeof(double*));
     RinvTmp= (double **)malloc(vector_size*sizeof(double*));
-
-    //initialize memory
-    for(i=0;i<vector_size;i++){
-        for(j=0;j<vector_size;j++){
-        }
-    }
 
     H = (double*) malloc(vector_size*sizeof(double)); //%contains weights of both filters (hv and hh = horizontal and vertical)
     K = (double*) malloc(vector_size*sizeof(double));
     Knumer= (double*) malloc(vector_size*sizeof(double)); //values necessary here...
     
-    printf("Vector size = %i\nSigma = %0.3f\tLambda = %0.3f\n",vector_size,sigma,lambda);
+    //    printf("Vector size = %i\nSigma = %0.3f\tLambda = %0.3f\n",vector_size,sigma,lambda);
     for(i=0;i<vector_size;i++){
         Rinv[i] = (double*) malloc(vector_size*sizeof(double));
         Result[i] = (double*) malloc(vector_size*sizeof(double));
@@ -101,7 +98,7 @@ void mexFunction(int nlhs, mxArray *plhs[],
 //    signalArray = mxDuplicateArray(prhs[0]);
 //    noiseArray = mxDuplicateArray(prhs[1]);
     
-//This was the old way of doing it, but needed to change so that I wasn't dealing with pass
+    //This was the old way of doing it, but needed to change so that I wasn't dealing with pass
     //by reference bugs from changing the data here
     sig1 = mxGetPr(prhs[0]);
     noise1 = mxGetPr(prhs[1]);
@@ -156,17 +153,22 @@ void mexFunction(int nlhs, mxArray *plhs[],
         e[n+(M-1)] = sig1[n+(M-1)]-rHprod;
         
     }
+
+    //free up allocated memory
+    for(i=0;i<vector_size;i++){
+        free(Rinv[i]);
+        free(Result[i]);
+        free(RinvTmp[i]);        
+    }
     
+    // the following creates problems, so leave commented for now
+    //    free(Rinv);
+    //    free(Result);
+    //    free(RinvTmp);
     
-//      r = noise(n-M+1:n);  //vector of size M
-//     K = (Rinv*r)/(lambda+r'*Rinv*r);  // MxM*Mx1 / (1xM*MxM*Mx1)
-//             e_n = sig(n)-r'*H;
-//             H = H+K*e_n;
-//      Rinv = lambda_inv*Rinv-lambda_inv*K*r'*Rinv;
-//             e(n) = sig(n)-r'*H;
-//  }
-    
-    
+    free(H);
+    free(K);
+    free(Knumer);
 }
 
 

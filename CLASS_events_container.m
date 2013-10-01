@@ -1074,7 +1074,7 @@ classdef CLASS_events_container < handle
             gui_ind = find(strcmp(childobj.label,detection_struct.evt_label));
             if(~isempty(gui_ind))
                 sourceStruct.channel_indices = childobj.class_channel_index;
-                sourceStruct.algorithm = [MARKING.sev.detection_path(2:end),'.',detection_struct.param_gui{gui_ind}.mfile];
+                sourceStruct.algorithm = [MARKING.SETTINGS.VIEW.detection_path(2:end),'.',detection_struct.param_gui{gui_ind}.mfile];
                 sourceStruct.editor = detection_struct.param_gui{gui_ind};
             else
                 sourceStruct = [];
@@ -1685,14 +1685,14 @@ classdef CLASS_events_container < handle
             %as unique filename to save the corresponding events to.  The
             %events are stored in .mat format 
             if(nargin<2)
-                suggested_filename = fullfile(localMARKING.sev.src_event_pathname,['evt.',localMARKING.sev.src_edf_filename(1:end-4)]);
+                suggested_filename = fullfile(localMARKING.SETTINGS.VIEW.src_event_pathname,['evt.',localMARKING.SETTINGS.VIEW.src_edf_filename(1:end-4)]);
                 [event_filename, event_path] = uiputfile('*.*', 'Save Events to .mat format',suggested_filename);
                 if isequal(event_filename,0) || isequal(event_path,0)
                     disp('User pressed cancel');
                     filename = [];
                 else
                     filename = fullfile(event_path,event_filename);
-                    localMARKING.sev.src_event_pathname = event_path;
+                    localMARKING.SETTINGS.VIEW.src_event_pathname = event_path;
                 end
             
             end
@@ -1814,10 +1814,10 @@ classdef CLASS_events_container < handle
                         
                         if(any(event2save))
                             filterspec = {'*.txt','Text (*.txt)';'*.mat','MAT_files (*.mat)'};
-                            [~,evt_filename,~] = fileparts(MARKING.sev.src_edf_filename);
-                            [evt_filename, evt_pathname, filterspec_index] = uiputfile(filterspec,'Screenshot name',fullfile(MARKING.sev.src_event_pathname,evt_filename));
+                            [~,evt_filename,~] = fileparts(MARKING.SETTINGS.VIEW.src_edf_filename);
+                            [evt_filename, evt_pathname, filterspec_index] = uiputfile(filterspec,'Screenshot name',fullfile(MARKING.SETTINGS.VIEW.src_event_pathname,evt_filename));
                             if(~isequal(evt_filename,0) && ~isequal(evt_pathname,0))
-                                MARKING.sev.src_event_pathname = evt_pathname;
+                                MARKING.SETTINGS.VIEW.src_event_pathname = evt_pathname;
                                 
                                 evt_filename = fullfile(evt_pathname,evt_filename(1:end-4));
                                 
@@ -1995,7 +1995,7 @@ classdef CLASS_events_container < handle
                 %function
                 if(strcmp(source.editor,'plist_editor_dlg'))
                     %                 event_label = EVENT_CONTAINER.cell_of_events{userdata.event_index}.label;
-                    sev_detection_path = fullfile(MARKING.sev.rootpathname,MARKING.sev.detection_path);
+                    sev_detection_path = fullfile(MARKING.SETTINGS.rootpathname,MARKING.SETTINGS.VIEW.detection_path);
                     updated_params = feval(source.editor,source.algorithm,sev_detection_path,source.pStruct);
                 else
                     if(~isempty(source.editor) && ~strcmpi(source.editor,'none'))
@@ -3101,9 +3101,6 @@ classdef CLASS_events_container < handle
         
         function import_evtFile2db(dbStruct,edf_sta_path,evt_path,samplerate)
             %import the events into a database structure
-            %             global MARKING;
-            %             MARKING.sev.standard_epoch_sec = 30;
-            %             MARKING.sev.samplerate = 100;
             
             EvtFiles = getFilenames(evt_path,strcat('evt.*.txt'));
             patstudy = strrep(strrep(EvtFiles,'SSC_',''),'evt.','');
