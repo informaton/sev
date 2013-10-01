@@ -12,7 +12,18 @@ void mexFunction(int nlhs, mxArray *plhs[],
 //see following example for reference
     //edit([matlabroot '/extern/examples/mex/mexget.c']);
 //   mxArray *signalArray, noiseArray;
+
+    double sigma_inv;
+    double lambda_inv;
     
+    //http://publications.gbdirect.co.uk/c_book/chapter6/initialization.html
+    double **Rinv, **Result,**RinvTmp;//eye(2*M)/sigma;   %Rinv is the [R(n-1)]^-1
+    double *H; //%contains weights of both filters (hv and hh = horizontal and vertical)
+    double *K;
+    double Kdenom; //denominator scalar and numerator vector which hold the
+    double *Knumer; //values necessary here...
+    double rHprod; // r'*H product
+  
     
     double *sig1,*noise1, *e,*Mptr; //s = signal+noise, n1 = noise ref 1, n2 = noise ref 2 (if applicable), e = cleaned signal
     double    lambda;// %forgetting factor; He. found values between 0.995 and 1.0 to produce similarly good result
@@ -44,19 +55,31 @@ void mexFunction(int nlhs, mxArray *plhs[],
         lambda = 0.995;
 //     printf("num references=%i\tM=%i\tSigma=%0.3f\tLambda=%0.3f\n",num_references,M,sigma,lambda);
     
-    double sigma_inv = 1/sigma;
-    double lambda_inv = 1/lambda;
+    sigma_inv = 1/sigma;
+    lambda_inv = 1/lambda;
     
     vector_size =  num_references*M;//(nrhs-1)*M;
     //http://publications.gbdirect.co.uk/c_book/chapter6/initialization.html
-    double Rinv[vector_size][vector_size], Result[vector_size][vector_size],RinvTmp[vector_size][vector_size];//eye(2*M)/sigma;   %Rinv is the [R(n-1)]^-1
-    double H[vector_size]; //%contains weights of both filters (hv and hh = horizontal and vertical)
-    double K[vector_size];
-    double Kdenom; //denominator scalar and numerator vector which hold the
-    double Knumer[vector_size]; //values necessary here...
-    double rHprod; // r'*H product
+    Rinv = (double **)malloc(vector_size*sizeof(double*));
+    Result = (double **)malloc(vector_size*sizeof(double*));
+    RinvTmp= (double **)malloc(vector_size*sizeof(double*));
+
+    //initialize memory
+    for(i=0;i<vector_size;i++){
+        for(j=0;j<vector_size;j++){
+        }
+    }
+
+    H = (double*) malloc(vector_size*sizeof(double)); //%contains weights of both filters (hv and hh = horizontal and vertical)
+    K = (double*) malloc(vector_size*sizeof(double));
+    Knumer= (double*) malloc(vector_size*sizeof(double)); //values necessary here...
+    
     printf("Vector size = %i\nSigma = %0.3f\tLambda = %0.3f\n",vector_size,sigma,lambda);
     for(i=0;i<vector_size;i++){
+        Rinv[i] = (double*) malloc(vector_size*sizeof(double));
+        Result[i] = (double*) malloc(vector_size*sizeof(double));
+        RinvTmp[i] = (double*) malloc(vector_size*sizeof(double));
+        
         for(j=0;j<vector_size;j++){
             Rinv[i][j]=0;
         }
