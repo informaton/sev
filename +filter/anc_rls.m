@@ -57,7 +57,9 @@ if(ncols>1)
     ref = cell(1,ncols);
 
     %put this for multiple channels;
+    
     for cols=1:ncols
+        
 %         ref{cols} = CHANNELS_CONTAINER.getData(ref_indices(cols));
         ref{cols} = filter.nlfilter_delay(ref_indices(:,cols), params);
         
@@ -65,13 +67,23 @@ if(ncols>1)
     disp([ref{1}(1:4),ref{2}(1:4)]);
     e = filter.anc_rls_multiple(sig,cell2mat(ref),params.order,params.sigma,params.lambda);
 else
+    
 %     if(ncols<nrows)
 %         ref_indices = ref_indices';
 %     end
 
     
 %     ref = CHANNELS_CONTAINER.getData(ref_indices);
-    ref = filter.nlfilter_delay(ref_indices, params);    
+    ref = filter.nlfilter_delay(ref_indices, params);
+    
+    %debugging
+    %     debugging = false;
+    %     if(debugging)
+    % %         cd +filter;mex anc_rls_single.c; cd ..;
+    %         e = filter.anc_rls_single(sig(1:100),ref(1:100),params.order,params.sigma,params.lambda);disp(e(1:10)');
+    %
+    %     end
+    
     e = filter.anc_rls_single(sig,ref,params.order,params.sigma,params.lambda);  
     
     %run it again - some problem here that is not understood

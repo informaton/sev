@@ -38,48 +38,55 @@ void mexFunction(int nlhs, mxArray *plhs[],
     
     if(nrhs>num_references+1){
         M = (int)mxGetScalar(prhs[num_references+1]);
+        //printf("M is now %u\n",M);
     }
     else{
         M = 4;
         
     }
     
-    if(nrhs>num_references+2)
+    if(nrhs>num_references+2){
         sigma = (double)mxGetScalar(prhs[num_references+2]);
-    else
+        //printf("sigma is now %0.4f\n",sigma);
+    }
+    else{
         sigma = 0.01;
-    if(nrhs>num_references+3)
+    }
+    if(nrhs>num_references+3){
         lambda = (double)mxGetScalar(prhs[num_references+3]);
-//         lambda = mxGetPr(prhs[num_references+3])[0];
-    else
+        //         lambda = mxGetPr(prhs[num_references+3])[0];
+        //printf("lambda is now %0.3f\n",lambda);
+    }
+    else{
         lambda = 0.995;
+    }
 //     printf("num references=%i\tM=%i\tSigma=%0.3f\tLambda=%0.3f\n",num_references,M,sigma,lambda);
     
     sigma_inv = 1/sigma;
     lambda_inv = 1/lambda;
     
     vector_size =  num_references*M;//(nrhs-1)*M;
+    //printf("vector size = %u\n",vector_size);
     //http://publications.gbdirect.co.uk/c_book/chapter6/initialization.html
     
     //initialize memory
 
-    Rinv = (double **)malloc(vector_size*sizeof(double*));
-    Result = (double **)malloc(vector_size*sizeof(double*));
-    RinvTmp= (double **)malloc(vector_size*sizeof(double*));
+    Rinv = (double**) calloc(vector_size,sizeof(double*));    
+    Result = (double**) calloc(vector_size,sizeof(double*));
+    RinvTmp= (double**) calloc(vector_size,sizeof(double*));
 
-    H = (double*) malloc(vector_size*sizeof(double)); //%contains weights of both filters (hv and hh = horizontal and vertical)
-    K = (double*) malloc(vector_size*sizeof(double));
-    Knumer= (double*) malloc(vector_size*sizeof(double)); //values necessary here...
+    if(Rinv=='\0' || Result=='\0' || RinvTmp=='\0'){
+        printf("Memory not allocated - Failed!\n");
+    }
+    H = (double*) calloc(vector_size, sizeof(double)); //%contains weights of both filters (hv and hh = horizontal and vertical)
+    K = (double*) calloc(vector_size, sizeof(double));
+    Knumer= (double*) calloc(vector_size, sizeof(double)); //values necessary here...
     
     //    printf("Vector size = %i\nSigma = %0.3f\tLambda = %0.3f\n",vector_size,sigma,lambda);
     for(i=0;i<vector_size;i++){
-        Rinv[i] = (double*) malloc(vector_size*sizeof(double));
-        Result[i] = (double*) malloc(vector_size*sizeof(double));
-        RinvTmp[i] = (double*) malloc(vector_size*sizeof(double));
-        
-        for(j=0;j<vector_size;j++){
-            Rinv[i][j]=0;
-        }
+        Rinv[i] = (double*) calloc(vector_size, sizeof(double)); //all initialized to 0 bits
+        Result[i] = (double*) calloc(vector_size, sizeof(double));
+        RinvTmp[i] = (double*) calloc(vector_size, sizeof(double));
         Rinv[i][i]=sigma_inv;
         H[i] = 0;
     }
@@ -94,6 +101,7 @@ void mexFunction(int nlhs, mxArray *plhs[],
     /* Create a pointer to the output data */
     e = mxGetPr(plhs[0]);
     
+    
     /* Retrieve the input data */
 //    signalArray = mxDuplicateArray(prhs[0]);
 //    noiseArray = mxDuplicateArray(prhs[1]);
@@ -101,15 +109,9 @@ void mexFunction(int nlhs, mxArray *plhs[],
     //This was the old way of doing it, but needed to change so that I wasn't dealing with pass
     //by reference bugs from changing the data here
     sig1 = mxGetPr(prhs[0]);
-    noise1 = mxGetPr(prhs[1]);
+    noise1 = mxGetPr(prhs[1]);    
     
-    
-    /* Put data in the output array */
-//  for (j = 0; j < rows*cols; j++) {
-//      e[j] = 2 * n[j];
-//  }
-    
-    for (n=0; n<rows*cols-(M-1);n++){  // Rinv is nrhs*M x nrls*M
+    for (n=0; n<(rows*cols)-(M-1);n++){  // Rinv is nrhs*M x nrls*M
         Kdenom = 0;
         rHprod = 0;
         for(row = 0; row<vector_size;row++){
@@ -122,6 +124,11 @@ void mexFunction(int nlhs, mxArray *plhs[],
         }
         Kdenom = Kdenom+lambda;
         e_n = sig1[n+(M-1)]-rHprod;
+        
+        
+     //   if(n<10){
+      //      printf("e_n = %0.4f\tKdenom=%0.4f\n",e_n,Kdenom);
+     //   }
         rHprod = 0;
         for(row = 0; row<vector_size;row++){
             K[row] = Knumer[row]/Kdenom;
@@ -137,6 +144,16 @@ void mexFunction(int nlhs, mxArray *plhs[],
                     RinvTmp[row][col]=-lambda_inv*K[row]*noise1[col+n];
                 }
             }
+            
+           // if(n<10){
+                /*printf("%0.4f\t",K[row]);
+                for(col = 0; col<vector_size;col++){
+                    printf("\t%0.4f",RinvTmp[row][col]);                    
+                }
+                printf("\n");*/
+         //   }
+            
+            
             for(col = 0; col<vector_size;col++){
                 Result[row][col]=0;
                 for(col2 = 0; col2<vector_size;col2++){
@@ -145,14 +162,21 @@ void mexFunction(int nlhs, mxArray *plhs[],
             }
             
         }
+        
         for(row = 0; row<vector_size;row++){
             for(col = 0; col<vector_size;col++){
                 Rinv[row][col] = Result[row][col];
             }
         }
+        
         e[n+(M-1)] = sig1[n+(M-1)]-rHprod;
         
+/*        if(n<=10){
+            printf("e[%u] = sig1[%u] - %0.4f\t=%0.4f\t=%0.4f -%0.4f\n",n+(M-1),n+(M-1),rHprod, e[n+(M-1)], sig1[n+(M-1)],-rHprod);
+        }
+ */
     }
+    //printf("\n");
 
     //free up allocated memory
     for(i=0;i<vector_size;i++){
