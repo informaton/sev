@@ -160,7 +160,12 @@ PSD.FFT_window_sec = handles.user.winlen;
 
 PSD.interval = handles.user.fftint;
 
-PSD.channel_ind = handles.user.channel_ind;
+if(~isfield(handles.user,'channel_ind'))
+    PSD.channel_ind = 0;
+else    
+    PSD.channel_ind = handles.user.channel_ind;
+end
+    
 PSD.freq_min = handles.user.freq_min;
 PSD.freq_max = handles.user.freq_max;
 
