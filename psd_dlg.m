@@ -78,6 +78,7 @@ if(isa(CHANNELS_CONTAINER,'CLASS_channels_container')&& CHANNELS_CONTAINER.num_c
     channel_labels = CHANNELS_CONTAINER.get_labels();
     if(~isempty(CHANNELS_CONTAINER.current_spectrum_channel_index) && CHANNELS_CONTAINER.current_spectrum_channel_index~=0)
         handles.user.channel_ind = CHANNELS_CONTAINER.current_spectrum_channel_index;
+        channel_list_value = handles.user.channel_ind;
     end
 else
     channel_labels = 'No Channels Loaded';

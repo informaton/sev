@@ -334,7 +334,7 @@ classdef CLASS_UI_marking < handle
         function updateSettings_PSD_callback(obj,varargin)
             global CHANNELS_CONTAINER;
             wasModified = obj.SETTINGS.update_callback('PSD');
-            if(~isempty(CHANNELS_CONTAINER) && wasModified && (isfield(CHANNELS_CONTAINER,'current_psd_channel_index'))) 
+            if(~isempty(CHANNELS_CONTAINER) && wasModified) 
                     CHANNELS_CONTAINER.current_spectrum_channel_index = obj.SETTINGS.PSD.channel_ind;
                     CHANNELS_CONTAINER.showPSD(obj.SETTINGS.PSD);
             end
@@ -343,7 +343,7 @@ classdef CLASS_UI_marking < handle
         function updateSettings_MUSIC_callback(obj,varargin)
             global CHANNELS_CONTAINER;
             wasModified = obj.SETTINGS.update_callback('MUSIC');
-            if(~isempty(CHANNELS_CONTAINER) && wasModified && (isfield(CHANNELS_CONTAINER,'current_psd_channel_index')))
+            if(~isempty(CHANNELS_CONTAINER) && wasModified)
                 CHANNELS_CONTAINER.current_spectrum_channel_index = obj.SETTINGS.MUSIC.channel_ind;
                 CHANNELS_CONTAINER.showMUSIC(obj.SETTINGS.MUSIC);
             end
@@ -417,9 +417,6 @@ classdef CLASS_UI_marking < handle
             set(handles.menu_settings_defaults,'callback',{@obj.updateSettings_callback,'DEFAULTS'});
             set(handles.menu_settings_saveChannelConfig,'callback',@obj.menu_settings_defaults_callback);
             set(handles.menu_settings_saveChannelConfig,'callback',@obj.menu_settings_saveChannelConfig_callback);
-            
-            
-            
 
             %batch mode
             set(handles.menu_batch_run,'callback',@obj.menu_batch_run_callback);
