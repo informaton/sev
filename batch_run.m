@@ -1460,20 +1460,20 @@ end
 % %                         save_art_stats_Callback(hObject, eventdata, handles);
 %                           batch.saveArtifactandStageStatistics();
 %                     end;
-                    for k = 1:numel(BATCH_PROCESS.PSD_settings)
-                        channel_label = BATCH_PROCESS.PSD_settings{k}.channel_labels{:};
-                        channel_index = BATCH_PROCESS.PSD_settings{k}.channel_indices;
+                    for k = 1:numel(parBATCH_PROCESS.PSD_settings)
+                        channel_label = parBATCH_PROCESS.PSD_settings{k}.channel_labels{:};
+                        channel_index = parBATCH_PROCESS.PSD_settings{k}.channel_indices;
                         filename_out = fullfile(full_psd_path,[cur_filename(1:end-3), channel_label,'.', BATCH_PROCESS.output_files.psd_filename]);
                         
-                        batch.save_periodograms(channel_index,filename_out,BATCH_PROCESS.PSD_settings{k});
+                        batch.save_periodograms(channel_index,filename_out,parBATCH_PROCESS.PSD_settings{k});
                     end;
 
-                    for k = 1:numel(BATCH_PROCESS.MUSIC_settings)
-                        channel_label = BATCH_PROCESS.MUSIC_settings{k}.channel_labels{:};
-                        channel_index = BATCH_PROCESS.MUSIC_settings{k}.channel_indices;
+                    for k = 1:numel(parBATCH_PROCESS.MUSIC_settings)
+                        channel_label = parBATCH_PROCESS.MUSIC_settings{k}.channel_labels{:};
+                        channel_index = parBATCH_PROCESS.MUSIC_settings{k}.channel_indices;
                         filename_out = fullfile(full_music_path,[cur_filename(1:end-3), channel_label,'.', BATCH_PROCESS.output_files.music_filename]);
                         
-                        batch.save_pmusic(channel_index,filename_out,BATCH_PROCESS.MUSIC_settings{k});
+                        batch.save_pmusic(channel_index,filename_out,parBATCH_PROCESS.MUSIC_settings{k});
                     end;
                     
                     %save the files to disk

@@ -16,7 +16,6 @@ function detectStruct = detection_artifact_hp_20hz(data,varargin)
 %detection method need to be displayed/plotted for
 %understanding
 
-
 % this allows direct input of parameters from outside function calls, which
 %can be particularly useful in the batch job mode
 if(nargin>=2 && ~isempty(varargin{1}))
@@ -63,6 +62,8 @@ hp_20Hz_rms_short = filter.nlfilter_quickrms(hp_20Hz_data,shortparams);
 %with repeat file loads and not resetting these values...
 hp_20Hz_crossings = thresholdcrossings(hp_20Hz_rms_short,hp_20Hz_rms_long*params.scale_factor);
 buffer_samples = params.additional_buffer_sec*samplerate;  %tack on extra buffer to the edges.
+
+
 detectStruct.new_data = hp_20Hz_data;
 detectStruct.new_events = CLASS_events.buffer_then_merge_nearby_events(hp_20Hz_crossings,samplerate,buffer_samples,numel(data));
 detectStruct.paramStruct = [];

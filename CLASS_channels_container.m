@@ -518,7 +518,8 @@ classdef CLASS_channels_container < handle
        % =================================================================
        %> @brief
        %> @param obj instance of CLASS_channel class.
-       %> @param
+       %> @param hObject gui handle object
+       %> @param eventdata unused
        %> @retval obj instance of CLASS_channel class.
        % =================================================================
        function setReferenceLineColor(obj,channel_indices,new_colors)
@@ -540,7 +541,8 @@ classdef CLASS_channels_container < handle
        % =================================================================
        %> @brief
        %> @param obj instance of CLASS_channel class.
-       %> @param
+       %> @param hObject gui handle object
+       %> @param eventdata unused
        %> @retval obj instance of CLASS_channel class.
        % =================================================================
        function obj = setColor(obj,channel_index,c)
@@ -550,7 +552,8 @@ classdef CLASS_channels_container < handle
        % =================================================================
        %> @brief
        %> @param obj instance of CLASS_channel class.
-       %> @param
+       %> @param hObject gui handle object
+       %> @param eventdata unused
        %> @retval obj instance of CLASS_channel class.
        % =================================================================
        function colorOut = getColor(obj,channel_index)
@@ -560,7 +563,8 @@ classdef CLASS_channels_container < handle
        % =================================================================
        %> @brief
        %> @param obj instance of CLASS_channel class.
-       %> @param
+       %> @param hObject gui handle object
+       %> @param eventdata unused
        %> @retval obj instance of CLASS_channel class.
        % =================================================================
        function obj = loadSettings(obj, settingsFilename)
@@ -573,7 +577,8 @@ classdef CLASS_channels_container < handle
        % =================================================================
        %> @brief
        %> @param obj instance of CLASS_channel class.
-       %> @param
+       %> @param hObject gui handle object
+       %> @param eventdata unused
        %> @retval obj instance of CLASS_channel class.
        % =================================================================
        function contextmenu_line_move_callback(obj,hObject,eventdata)
@@ -589,7 +594,8 @@ classdef CLASS_channels_container < handle
        % =================================================================
        %> @brief
        %> @param obj instance of CLASS_channel class.
-       %> @param
+       %> @param hObject gui handle object
+       %> @param eventdata unused
        %> @retval obj instance of CLASS_channel class.
        % =================================================================
        function contextmenu_line_default_callback(obj,hObject,eventdata)
@@ -606,7 +612,8 @@ classdef CLASS_channels_container < handle
        % =================================================================
        %> @brief
        %> @param obj instance of CLASS_channel class.
-       %> @param
+       %> @param hObject gui handle object
+       %> @param eventdata unused
        %> @retval obj instance of CLASS_channel class.
        % =================================================================
        function contextmenu_line_show_filtered_callback(obj,hObject,eventdata)
@@ -629,19 +636,22 @@ classdef CLASS_channels_container < handle
        % =================================================================
        %> @brief
        %> @param obj instance of CLASS_channel class.
-       %> @param
+       %> @param hObject handle of the gui object
+       %> @param eventdata unused
        %> @retval obj instance of CLASS_channel class.
        % =================================================================
-       function contextmenu_line_show_psd_callback(obj,hObject,eventdata)
+       function contextmenu_line_show_psd_callback(obj,hObject,eventdata) 
+           global MARKING;
            obj.current_spectrum_channel_index = obj.current_channel_index;
-           obj.showPSD();
+           obj.showPSD(MARKING.SETTINGS.PSD);
            set(gco,'selected','off');
        end
        
        % =================================================================
        %> @brief
        %> @param obj instance of CLASS_channel class.
-       %> @param
+       %> @param hObject handle of the gui object
+       %> @param eventdata unused
        %> @retval obj instance of CLASS_channel class.
        % =================================================================
        function contextmenu_line_show_music_callback(obj,hObject,eventdata)
@@ -653,7 +663,8 @@ classdef CLASS_channels_container < handle
        % =================================================================
        %> @brief
        %> @param obj instance of CLASS_channel class.
-       %> @param
+       %> @param hObject handle of the gui object
+       %> @param eventdata unused
        %> @retval obj instance of CLASS_channel class.
        % =================================================================
        function contextmenu_line_color_callback(obj,hObject,eventdata)
@@ -670,7 +681,8 @@ classdef CLASS_channels_container < handle
        % =================================================================
        %> @brief
        %> @param obj instance of CLASS_channel class.
-       %> @param
+       %> @param hObject gui handle object
+       %> @param eventdata unused
        %> @retval obj instance of CLASS_channel class.
        % =================================================================
        function contextmenu_event_detector_callback(obj,hObject,eventdata,detection_mfile)
@@ -717,7 +729,8 @@ classdef CLASS_channels_container < handle
        % =================================================================
        %> @brief
        %> @param obj instance of CLASS_channel class.
-       %> @param
+       %> @param hObject gui handle object
+       %> @param eventdata unused
        %> @retval obj instance of CLASS_channel class.
        % =================================================================
        function contextmenu_line_show_epoch_stats_callback(obj,hobject,eventdata)
@@ -744,7 +757,6 @@ classdef CLASS_channels_container < handle
        % =================================================================
        %> @brief
        %> @param obj instance of CLASS_channel class.
-       %> @param
        %> @retval obj instance of CLASS_channel class.
        % =================================================================
        function childobj = getCurrentChild(obj)
@@ -757,7 +769,7 @@ classdef CLASS_channels_container < handle
        % =================================================================
        %> @brief
        %> @param obj instance of CLASS_channel class.
-       %> @param
+       %> @param indices
        %> @retval obj instance of CLASS_channel class.
        % =================================================================
        function obj = setChannelSettings(obj,indices)
