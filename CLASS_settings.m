@@ -229,8 +229,7 @@ classdef  CLASS_settings < handle
         %> @brief Activates GUI for editing single study mode settings
         %> (<b>VIEW</b>,<b>PSD</b>,<b>MUSIC</b>)
         %>
-        %> @param obj instance of CLASS_settings.
-        
+        %> @param obj instance of CLASS_settings.        
         %> @retval wasModified a boolean value; true if any changes were
         %> made to the settings in the GUI and false otherwise.
         % =================================================================
@@ -246,12 +245,7 @@ classdef  CLASS_settings < handle
                         wasModified = true;
                     end;                
                 case 'MUSIC'
-                    newMUSIC = psd_dlg(obj.MUSIC);
-                    if(newMUSI.modified)
-                        newMUSIC = rmfield(newMUSIC,'modified');
-                        obj.MUSIC = newMUSIC;
-                        wasModified = true;
-                    end;
+                    wasModified = obj.defaultsEditor('MUSIC');
                 case 'CLASSIFIER'
                     plist_editor_dlg();
                 case 'BATCH_PROCESS'
@@ -269,9 +263,17 @@ classdef  CLASS_settings < handle
         %> @retval wasModified a boolean value; true if any changes were
         %> made to the settings in the GUI and false otherwise.
         % =================================================================
-        function wasModified = defaultsEditor(obj)
+        function wasModified = defaultsEditor(obj,optional_fieldName)
             tmp_obj = obj.copy();
-            lite_fieldNames = {'VIEW','PSD','MUSIC'}; %these are only one structure deep
+            if(nargin<2)
+                lite_fieldNames = {'VIEW','PSD','MUSIC'}; %these are only one structure deep
+            else
+                lite_fieldNames = optional_fieldName;
+                if(~iscell(lite_fieldNames))
+                    lite_fieldNames = {lite_fieldNames};
+                end
+            end
+            
             tmp_obj.fieldNames = lite_fieldNames;
             tmp_obj = pair_value_dlg(tmp_obj);
             if(~isempty(tmp_obj))
@@ -388,7 +390,6 @@ classdef  CLASS_settings < handle
                         obj.MUSIC.window_length_sec = 2;
                         obj.MUSIC.interval_sec = 2;
                         obj.MUSIC.num_sinusoids = 6;
-                        obj.MUSIC.modified = false;
                         obj.MUSIC.freq_min = 0; %display min
                         obj.MUSIC.freq_max = 30; %display max                        
                     case 'PSD'                        

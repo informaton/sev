@@ -61,7 +61,13 @@ handles.user.edit_prefix = 'edit_value_';
 %varargin{1} is an object of CLASS_settings
 if(numel(varargin)>0)
     handles.user.settings_obj = varargin{1};
-        
+    
+    %in the case that there is only one structure being presented.
+%     if(~isfield(handles.user.settings_obj,'fieldNames'))
+%         handles.user.settings_obj.fieldNames = 'Settings';
+%     end
+%     
+
     %make the view
     handles = initializeView(handles);
     guidata(hObject,handles);
@@ -89,6 +95,7 @@ function handles = initializeView(handles)
 handles.tabgroup = uitabgroup('v0','parent',handles.panel_tabs);
 % set(handles.tabgroup,'callback',{@tabgroup_callback,guidata(gcbo)});
 maxRecords = 0;
+
 numTabs = numel(handles.user.settings_obj.fieldNames);
 handles.tabs = zeros(numTabs,1);
 

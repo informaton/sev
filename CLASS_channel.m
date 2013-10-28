@@ -407,35 +407,29 @@ classdef CLASS_channel < handle
         % =================================================================
         %> @brief 
         %> @param obj instance of CLASS_channel class.
-        %> @param 
+        %> @param MUSIC_settings - struct with settings for MUSIC
+        %> calculation
+        %> @param optinal_sample_range - optional vector of indices to 
+        %> calculate MUSIC of.
         %> @retval obj instance of CLASS_channel class.
         % =================================================================
          %calculates the power spectrum using MUSIC for the entire data set
-        function [S,F,nfft] = calculate_PMUSIC(obj,optional_range,optional_MUSIC_settings)
-            global MUSIC;
-            if(nargin<=1)
-                MUSIC_range = 1:numel(obj.raw_data);
+        function [S,F,nfft] = calculate_PMUSIC(obj,MUSIC_settings,optional_sample_range)
+           
+            if(nargin<=2 || isempty(optional_sample_range))
+                music_range = 1:numel(obj.raw_data);
             else
-            
-                if(isempty(optional_range))
-                    MUSIC_range = 1:numel(obj.raw_data);
-                else
-                    MUSIC_range = optional_range;
-                end
-            end;
-            if(nargin<=3)
-                MUSIC_settings = optional_MUSIC_settings;
-            else
-                MUSIC_settings = MUSIC;
+                music_range = optional_sample_range;
             end
+            
             obj.MUSIC = MUSIC_settings;
-            [obj.MUSIC.magnitudes obj.MUSIC.freq_vec obj.MUSIC.nfft] = calcPMUSIC(obj.getData(MUSIC_range),obj.samplerate,obj.MUSIC);
+            [obj.MUSIC.magnitudes obj.MUSIC.freq_vec obj.MUSIC.nfft] = calcPMUSIC(obj.getData(music_range),obj.samplerate,obj.MUSIC);
             if(nargout>0)
-                S = obj.PSD.magnitude;
+                S = obj.MUSIC.magnitudes;
                 if(nargout>1)
-                    F = obj.PSD.x;
+                    F = obj.MUSIC.freq_vec;
                     if(nargout>2)
-                        nfft = obj.PSD.nfft;
+                        nfft = obj.MUSIC.nfft;
                     end
                 end
             end

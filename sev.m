@@ -32,7 +32,7 @@ function varargout = sev(varargin)
 % loadSTAGES(stages_filename,num_epochs)
 % Edit the above text to modify the response to help sev
 
-% Last Modified by GUIDE v2.5 14-Oct-2013 17:59:30
+% Last Modified by GUIDE v2.5 28-Oct-2013 11:33:49
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 0;
@@ -333,4 +333,3 @@ function menu_help_restart_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 sev_restart();
-

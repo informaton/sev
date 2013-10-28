@@ -1979,6 +1979,10 @@ cropFigure2Axes(f,axes1_copy);
                     if(~isempty(CHANNELS_CONTAINER))
                         CHANNELS_CONTAINER.showPSD(obj.SETTINGS.PSD,obj.axeshandle.utility);
                     end
+                case 'MUSIC'
+                    if(~isempty(CHANNELS_CONTAINER))
+                        CHANNELS_CONTAINER.showMUSIC(obj.SETTINGS.MUSIC,obj.axeshandle.utility);
+                    end
                 case 'ROC'
                     if(EVENT_CONTAINER.roc_axes_needs_update)
                         if(~isempty(EVENT_CONTAINER.roc_truth_ind)&&~isempty(EVENT_CONTAINER.roc_estimate_ind))

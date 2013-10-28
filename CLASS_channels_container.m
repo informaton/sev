@@ -453,26 +453,23 @@ classdef CLASS_channels_container < handle
        %> @retval obj instance of CLASS_channel class.
        % =================================================================
        function showMUSIC(obj,spectrum_settings,axes_h, channel_index, sample_indices)
-           global MUSIC;
-           if(nargin<2)
-               spectrum_settings = MUSIC;
-           end
-           if(nargin<=2)
-               axes_h = obj.psd_axes;
-           end
-           if(nargin <4)
-               channel_index = obj.current_spectrum_channel_index;
-           end
            if(nargin <5)
                sample_indices = obj.current_samples;
+               if(nargin <4)
+                   channel_index = obj.current_spectrum_channel_index;
+                   if(nargin<3)
+                       axes_h = obj.psd_axes;
+                   end
+               end
            end
-           
+
            if(channel_index>0 && channel_index<=obj.num_channels) %just show this for one channel then...
                channelObj = obj.getChannel(channel_index);
-               [S F] = channelObj.calculate_PMUSIC(sample_indices,spectrum_settings);
+               [S F] = channelObj.calculate_PMUSIC(spectrum_settings,sample_indices);
                
                %just look at a subset right now...
                freq_range = F<=spectrum_settings.freq_max & F>=spectrum_settings.freq_min;
+               cla(axes_h);
                line('parent',axes_h,'xdata',F(freq_range),'ydata',S(freq_range));
                set(axes_h,'xlim',[spectrum_settings.freq_min,spectrum_settings.freq_max])
            end;
@@ -510,7 +507,8 @@ classdef CLASS_channels_container < handle
                F = F(freq_range);
                S = S(:,freq_range);
                S(:,1) = 0; %don't show the mean here b/c it can hold negative values for us (-dc offset), which makes it less intelligible due to matlab's auto scaling.
-               bar(axes_h,F,sum(S,1)/size(S,1));
+               cla(axes_h);
+               bar(axes_h,F,sum(S,1)/size(S,1));               
                set(axes_h,'xlim',[spectrum_settings.freq_min,spectrum_settings.freq_max])
            end;
        end
@@ -655,10 +653,10 @@ classdef CLASS_channels_container < handle
        %> @retval obj instance of CLASS_channel class.
        % =================================================================
        function contextmenu_line_show_music_callback(obj,hObject,eventdata)
+           global MARKING;
            obj.current_spectrum_channel_index = obj.current_channel_index;
-           obj.showMUSIC();
-           set(gco,'selected','off');
-           
+           obj.showMUSIC(MARKING.SETTINGS.MUSIC);
+           set(gco,'selected','off');           
        end
        % =================================================================
        %> @brief
