@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>filter_order</key>
+	<real>100.000000</real>
+	<key>low_pass_hz</key>
+	<real>14.000000</real>
+	<key>moving_window_sec</key>
+	<real>0.200000</real>
+	<key>threshold_uv</key>
+	<real>70.000000</real>
+	<key>merge_within_sec</key>
+	<real>0.050000</real>
+</dict>
+</plist>

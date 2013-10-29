@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>threshold_high_uv</key>
+	<real>100.000000</real>
+	<key>threshold_low_uv</key>
+	<real>20.000000</real>
+	<key>merge_within_sec</key>
+	<real>0.010000</real>
+	<key>min_dur_sec</key>
+	<real>0.100000</real>
+	<key>use_summer</key>
+	<real>1.000000</real>
+</dict>
+</plist>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>low_pass_filter_order</key>
+	<real>100.000000</real>
+	<key>low_pass_filter_freq_hz</key>
+	<real>8.000000</real>
+	<key>smooth_filter_order</key>
+	<real>7.000000</real>
+	<key>rule_1_thresh_slope</key>
+	<real>5.000000</real>
+	<key>rule_2_thresh_ampl_uv</key>
+	<real>35.000000</real>
+	<key>rule_mf2_thresh_ampl_uv</key>
+	<real>20.000000</real>
+	<key>merge_within_sec</key>
+	<real>0.050000</real>
+</dict>
+</plist>
