@@ -13,6 +13,7 @@ filter_diff filter_diff 0 plist_editor_dlg FilterDiff
 filter_differentiator filter_differentiator 0 plist_editor_dlg FilterDifferentiator
 filter_gauss filter_gaussian 0 plist_editor_dlg FilterGaussian
 filter_ma filter_ma 0 plist_editor_dlg FilterMA
+filter_qma filter_qma 0 plist_editor_dlg FilterQMA
 filter_scale filter_scale 0 plist_editor_dlg FilterScale
 filter_sum filter_sum 0 plist_editor_dlg FilterSum
 filter_modulate_channel modulate_channel 1 none ModulateChannel
