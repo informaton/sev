@@ -101,9 +101,9 @@ secondDeriv = filter.filter_differentiator(firstDeriv,differentiator_params);
 % secondDeriv =[0; diff(firstDeriv)]/dx;
 
 
-maxPeaks = findpeaks(secondDeriv);
+maxPeaks = sev_findpeaks(secondDeriv);
 
-minPeaks = findpeaks(-secondDeriv);
+minPeaks = sev_findpeaks(-secondDeriv);
 
 n = min(numel(maxPeaks),numel(minPeaks));
 
@@ -115,7 +115,7 @@ end
 
 min_max_peaks = sortrows(min_max_peaks);
 
-% crucialPoints = findpeaks(abs(secondDeriv));
+% crucialPoints = sev_findpeaks(abs(secondDeriv));
 % min_max_peaks = [crucialPoints(1:end-1),crucialPoints(2:end)];
 
 thresh_dur = params.thresh_dur_sec*samplerate;

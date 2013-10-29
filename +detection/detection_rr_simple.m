@@ -69,7 +69,7 @@ num_epochs = ceil(numel(avgdata)/epoch_len);
 
 % thresh = zeros(num_epochs,1);
 epoch_range = 1:epoch_len;
-% avgpeaks = findpeaks(avgdata);
+% avgpeaks = sev_findpeaks(avgdata);
 evt_i = zeros(size(avgdata));
 i = 1;
 for k=1:num_epochs-1

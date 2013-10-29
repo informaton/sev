@@ -78,7 +78,7 @@ absData = abs(data);
 decision_ind = find([0; [(d(1:end-1)./d(2:end)<=0);0] | ((absData(2:end)>params.rule_mf2_thresh_ampl_uv) & (absData(1:end-1)<params.rule_mf2_thresh_ampl_uv))]);
 
 %this also works, but not as elegant
-% p = sort([findpeaks(x)-1,findpeaks(-x)-1]); 
+% p = sort([sev_findpeaks(x)-1,sev_findpeaks(-x)-1]); 
 
 
 %% 3. apply rules to decision points
