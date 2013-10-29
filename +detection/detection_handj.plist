@@ -2,9 +2,11 @@
 <!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>order</key>
-	<real>20.000000</real>
-	<key>rms</key>
-	<real>0.000000</real>
+	<key>threshold1</key>
+	<real>10.500000</real>
+	<key>feature2</key>
+	<real>15.000000</real>
+	<key>feature3</key>
+	<real>0.450000</real>
 </dict>
 </plist>

@@ -1,4 +1,5 @@
 #MATLAB_filename   Label Number_of_channels_required Dialog_name Batch_mode_score
+detection_handj  handj 1 plist_editor_dlg handj
 detection_arousal  arousal 2 plist_editor_dlg arousal
 detection_artifact_hp_20hz  artifact_high_frequency_noise 1 plist_editor_dlg Muscle_artifact
 detection_artifact_electrode_pop artifact_electrode_pop 1 plist_editor_dlg Pop_artifact

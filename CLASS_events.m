@@ -908,7 +908,6 @@ classdef CLASS_events < handle
                     studyStruct = MARKING.sev;
                     studyStruct.startDateTime = MARKING.startDateTime;
                     studyStruct.STAGES = MARKING.sev_STAGES;
-
                 end
                 
                 t0 = studyStruct.startDateTime;
@@ -944,7 +943,8 @@ classdef CLASS_events < handle
                 start_times = datestr(start_times,'HH:MM:SS.FFF');
                 
                 
-                start_epochs = sample2epoch(starts,studyStruct.standard_epoch_sec,obj.samplerate);
+%                 start_epochs = sample2epoch(starts,studyStruct.standard_epoch_sec,obj.samplerate);
+                start_epochs = sample2epoch(starts,30,obj.samplerate);
                 start_stages = STAGES.line(start_epochs);
                 start_cycle = STAGES.cycles(start_epochs);
                 

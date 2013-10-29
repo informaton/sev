@@ -2970,7 +2970,14 @@ classdef CLASS_events_container < handle
         
         
         
-        
+            %this function requires the use of loadSCOfile.m and is useful
+            %for batch processing...
+            % Usage:
+            % exportSCOtoEvt() prompts user for .SCO directory and evt output directory
+            % exportSCOtoEvt(sco_pathname) sco_pathname is the .SCO file containing
+            %    directory.  User is prompted for evt output directory
+            % exportSCOtoEvt(sco_pathname, evt_pathname) evt_pathname is the directory
+            %    where evt files are exported to.
         function convertSCOtoEvt(sco_pathname, evt_pathname)
             %this function requires the use of loadSCOfile.m and is useful
             %for batch processing...
