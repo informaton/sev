@@ -855,7 +855,7 @@ persistent log_fid;
 %found in the current directory
 
 if(pathname)
-    DEFAULTS.batch_folder = pathname;
+    MARKING.SETTINGS.BATCH_PROCESS.edf_folder = pathname;
     
 %     file_list = dir([fullfile(path, '*.EDF');fullfile(path, '*.edf')]);
     %pc's do not have a problem with case; unfortunately the other side
@@ -871,11 +871,6 @@ if(pathname)
     
     %reference sev.m - sev_OpeningFcn (line ~192)
     BATCH_PROCESS.output_path.current = fullfile(pathname, BATCH_PROCESS.output_path.parent);
-%     BATCH_PROCESS.roc_path = 'ROC';
-%     BATCH_PROCESS.psd_path = 'PSD';
-%     BATCH_PROCESS.events_path = 'events';
-%     BATCH_PROCESS.artifacts_path = 'artifacts';
-%     BATCH_PROCESS.images_path = 'images';
 
     % waitHandle = waitbar(0,'Initializing batch processing job','name','Batch Processing Statistics','resize','on','createcancelbtn',{@cancel_batch_Callback});
     user_cancelled = false;
@@ -1131,6 +1126,9 @@ if(pathname)
                 end
             end
             event_settings{k}.numConfigurations = numConfigurations;
+            if(~BATCH_PROCESS.database.save2DB)
+                event_settings{k}.configID = 1:numConfigurations;
+            end
             event_settings{k}.params = pStructArray;
             
         end
@@ -1139,7 +1137,7 @@ if(pathname)
         %separate file, with an id for each cconfiguration setup that can
         %be used to determine which file output is for which configuration
         if(~isempty(paramStruct))
-            batch.saveDetectorConfigLegend(full_events_path,method_label,paramStruct);
+            batch.saveDetectorConfigLegend(full_events_path,method_label,event_settings{k}.params);
         end
     end
     
