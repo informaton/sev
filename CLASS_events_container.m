@@ -77,7 +77,8 @@ classdef CLASS_events_container < handle
         children_contextmenu_patch_h;
         %> contextmenu handle to attach to event labels
         children_contextmenu_label_h; 
-        %> vector containing indices of the events that should be plotted.
+        %> vector containing indices of the events that should be plotted
+        %> on the time line axes.
         event_indices_to_plot; 
         %> POINTER (I hope) to an instance object of CLASS_channels_container
         CHANNELS_CONTAINER; 
@@ -654,10 +655,11 @@ classdef CLASS_events_container < handle
         end
         
         % =================================================================
-        %> @brief
+        %> @brief calls CLASS_event's member function draw() for objects at
+        %> event_indices
         %> @param obj instance of CLASS_events_container class.
-        %> @param
-        %> @retval 
+        %> @param event_indices vector of event indices to draw
+        %> @retval object of class CLASS_events_container
         % =================================================================
         function draw_events(obj,event_indices)
             for k=1:numel(event_indices)
@@ -741,21 +743,21 @@ classdef CLASS_events_container < handle
         end
         
         % =================================================================
-        %> @brief
+        %> @brief appends the event to the last event cell
+        %> check that the event_data is not empty
         %> @param obj instance of CLASS_events_container class.
-        %> @param
-        %> @retval 
+        %> @param parent_index is the index into the CHANNELS_CONTAINER
+        %> that the event is associated with
+        %> @param sourceStruct contains the fields
+        %>  .indices = parent indices of the channels that the event was
+        %>  derived from - as passed to the algorithm
+        %>  .algorithm = algorithm name that the event was derived from
+        %> @param paramStruct struct of parameters used in deriving the
+        %> event (if any)
+        %> @retval obj instance of CLASS_events_container
         % =================================================================
         function obj = addEvent(obj,event_data, event_label,parent_index,sourceStruct,paramStruct)
-            %appends the event to the last event cell
-            %check that the event_data is not empty
-            %parent_index is the index into the CHANNELS_CONTAINER
-            %that the event is associated with
-            %sourceStruct contains the fields
-            % .indices = parent indices of the channels that the event was
-            % derived from - as passed to the algorithm
-            % .algorithm = algorithm name that the event was derived from
-
+            
             if(~isempty(event_data) && all(event_data(:))) %not empty and non-zero indices
                 try
                     obj.num_events = obj.num_events+1;
@@ -909,10 +911,10 @@ classdef CLASS_events_container < handle
         end
         
         % =================================================================
-        %> @brief
+        %> @brief SEV helpfer function to draw events at index event_index
         %> @param obj instance of CLASS_events_container class.
-        %> @param
-        %> @retval 
+        %> @param event_index index of the event to be drawn
+        %> @retval object of CLASS_events_container
         % =================================================================
         function set_Channel_drawEvents(obj,event_index)
             %draw the events on the main psg axes            
@@ -1082,24 +1084,23 @@ classdef CLASS_events_container < handle
         end
             
         % =================================================================
-        %> @brief
+        %> @brief updateEvent in SEV; adds or modifies existing event
         %> @param obj instance of CLASS_events_container class.
-        %> @param
-        %> @retval 
+        %> @param event_data is a start_stop matrix of events
+        %> @param event_label is the label associated with the events listed in
+        %> event_data
+        %> @param class_channel_index refers to the CHANNELS_CONTAINER index that
+        %> is associated with this event event_index is the index at which
+        %> the event was placed/added in the container's cell (i.e. this obj).  
+        %> @param sourceStruct contains the fields
+        %>  .indices = parent indices of the channels that the event was
+        %>     derived from - as passed to the algorithm
+        %>  .algorithm = algorithm name that the event was derived from
+        %> @param paramstruct Struct containing any parameter settings
+        %> associated with the event (i.e. if it was derived in SEV)
+        %> @retval event_index The obj/container's index where the event is stored
         % =================================================================
         function event_index = updateEvent(obj,event_data,event_label,class_channel_index,sourceStruct,paramStruct)
-        %event_data is a start_stop matrix of events
-        %event_label is the label associated with the events listed in
-        %event_data
-        %class_channel_index refers to the CHANNELS_CONTAINER index that
-        %is associated with this event...
-        %event_index is the index at which the event was placed/added in
-        %the container's cell (i.e. this obj).  
-        %sourceStruct contains the fields
-        % .indices = parent indices of the channels that the event was
-        % derived from - as passed to the algorithm
-        % .algorithm = algorithm name that the event was derived from        
-        
             event_index = obj.eventExists(event_label,class_channel_index);
             if(event_index)
                 obj.replaceEvent(event_data, event_index, paramStruct,sourceStruct);
@@ -1120,6 +1121,8 @@ classdef CLASS_events_container < handle
                 obj.roc_axes_needs_update = true;
             end
             if(event_index>0)
+                %  An equivalent call?
+                %  obj.set_Channel_drawEvents(obj,event_index)
                 obj.cur_event_index = event_index;
                 obj.summary_stats_axes_needs_update = true;
                 obj.event_indices_to_plot(event_index) = true;                
@@ -1478,13 +1481,13 @@ classdef CLASS_events_container < handle
         end
                 
         % =================================================================
-        %> @brief
+        %> @brief loadEventsFromSCOFile loads events contained in a WSC
+        %> formatted .SCO file        
         %> @param obj instance of CLASS_events_container class.
-        %> @param
-        %> @retval 
+        %> @param filename The name of the .SCO file
+        %> @retval obj instance of CLASS_events_container class
         % =================================================================
         function obj = loadEventsFromSCOFile(obj,filename)
-            %load events from .SCO file, which came with .EDF from WSC data
             
             %SCO is a struct with the fields
             % .epoch - the epoch that the scored event occured in
@@ -1516,6 +1519,7 @@ classdef CLASS_events_container < handle
                        cur_event = SCO.start_stop_matrix(event_indices(k)==indJ,:);
                        cur_evt_label = event_labels{k};
                        obj.updateEvent(cur_event, cur_evt_label, class_channel_index,sourceStruct,paramStruct);  
+                       obj.set_Channel_drawEvents(obj.current_event_index);
                    end
                end
             end           
@@ -1523,12 +1527,13 @@ classdef CLASS_events_container < handle
         
         
         % =================================================================
-        %> @brief
+        %> @brief Load .evt stored events into SEV
         %> @param obj instance of CLASS_events_container class.
-        %> @param
-        %> @retval 
+        %> @param filename name of the .evt file to load events from
+        %> @param optional_batch_processing_flag (defaults to false)
+        %> @retval cur_event a SEV event structure derived from data in the
+        %> .evt file
         % =================================================================
-%         function obj = loadSingleEventsFromMatFile(obj,filename,optional_batch_process_running)
         function cur_event = loadEvtFile(obj,filename,optional_batch_process_running)
             %see evtTxt2evtStruct(filename) for external file calling            
             if(nargin<3)
@@ -1572,7 +1577,6 @@ classdef CLASS_events_container < handle
                             class_channel_index = listdlg('PromptString','Select Channel to Assign Events to',...
                                 'ListString',channel_names,'name','Channel Selector',...
                                 'SelectionMode','single');
-                            class_channel_index = find(class_channel_index);
                         end
                     end
                 end
@@ -1590,6 +1594,9 @@ classdef CLASS_events_container < handle
                     event_index = obj.updateEvent(cur_event.events, cur_event.label, class_channel_index,sourceStruct,paramStruct);
                     if(isfield(cur_event,'range'))
                         obj.cell_of_events{event_index}.roc_comparison_range = cur_event.range;
+                    end
+                    if(~optional_batch_process_running)
+                        obj.set_Channel_drawEvents(event_index);
                     end
                 else
                     fprintf(1,'unhandled file load in %s',mfilename('fullpath'));
@@ -1924,14 +1931,14 @@ classdef CLASS_events_container < handle
         end
         
         % =================================================================
-        %> @brief
+        %> @brief refresh the event object at index event_index by rerunning
+        %> the detection method, likely helpful when the channel changes due to filtering
         %> @param obj instance of CLASS_events_container class.
-        %> @param
-        %> @retval 
+        %> @param event_index index into the container of the event to be
+        %> visually refreshed in SEV
+        %> @retval obj instance of CLASS_events_container class
         % =================================================================
         function refresh(obj, event_index)
-            %rerun the detection method, likely called when the channel
-            %changes due to filtering
             childObj = obj.getEventObj(event_index);
             if(~isempty(childObj) && ~isempty(childObj.source.channel_indices)) %empty for external events that are loaded
                 detectStruct = childObj.rerun(obj.detection_path);

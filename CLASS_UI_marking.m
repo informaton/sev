@@ -561,20 +561,24 @@ cropFigure2Axes(f,axes1_copy);
             if(filename~=0)
                 obj.SETTINGS.VIEW.src_event_pathname = pathname;
                 EVENT_CONTAINER.loadEventsFromSCOFile(fullfile(pathname,filename));
+                EVENT_CONTAINER.draw_events(); %events_to_plot(event_index) = 1;                
                 obj.refreshAxes();
             end;
             
         end
         
         % --------------------------------------------------------------------
+        % =================================================================
+        %> @brief update the SEV with a range of events that were previously saved
+        %> using the save to .mat menu item.
+        %> @param obj instance of CLASS_events class.
+        %> @param hObject handle to menu_file_load_evt_file_callback (see GCBO)
+        %> @param eventdata  reserved - to be defined in a future version
+        %> of MATLAB           
+        %> @retval obj instance of CLASS_events class.
+        % =================================================================
         function menu_file_load_evt_file_callback(obj,hObject, eventdata)
-            % Purpose: update the SEV with a range of events that were previously saved
-            % using the save to .mat menu item.
-            % hObject    handle to menu_file_load_events_container (see GCBO)
-            % eventdata  reserved - to be defined in a future version of MATLAB
-            % handles    structure with handles and user data (see GUIDATA)
-            global EVENT_CONTAINER;
-            
+            global EVENT_CONTAINER;            
             suggested_filename = fullfile(['evt.',obj.SETTINGS.VIEW.src_edf_filename(1:end-4),'.*']);
             suggested_pathname = obj.SETTINGS.VIEW.src_event_pathname;
             suggested_file = getFilenames(suggested_pathname,suggested_filename);
@@ -588,29 +592,33 @@ cropFigure2Axes(f,axes1_copy);
                 suggestion);
             if(filename~=0)
                 obj.SETTINGS.VIEW.src_event_pathname = pathname;
-
                 EVENT_CONTAINER.loadEvtFile(fullfile(pathname,filename));
+                EVENT_CONTAINER.draw_events(obj.event_index); %events_to_plot(event_index) = 1;
                 obj.refreshAxes();
             end;
         end
         
-        % --------------------------------------------------------------------
+        % =================================================================
+        %> @brief update the SEV with a range of events that were previously saved
+        %> using the save to .mat menu item.
+        %> @param obj instance of CLASS_events class.
+        %> @param hObject    handle to menu_file_load_events_container_callback (see GCBO)
+        %> @param eventdata  reserved - to be defined in a future version
+        %> of MATLAB           
+        %> @retval obj instance of CLASS_events class.
+        % =================================================================
         function menu_file_load_events_container_callback(obj,hObject, eventdata)
-            % hObject    handle to menu_file_load_events_container (see GCBO)
-            % eventdata  reserved - to be defined in a future version of MATLAB
-            % handles    structure with handles and user data (see GUIDATA)
             global EVENT_CONTAINER;            
-            
-            
             [filename,pathname]=uigetfile({'*.MAT;*.mat','Matlab format'},'Event File Finder',...
                 obj.SETTINGS.VIEW.src_event_pathname);
             if(filename~=0)
                 EVENT_CONTAINER.loadEventsContainerFromFile(fullfile(pathname,filename));
                 obj.SETTINGS.VIEW.src_event_pathname = pathname;
+                EVENT_CONTAINER.draw_events(obj.event_index); %events_to_plot(event_index) = 1;
+                obj.refreshAxes();
                 obj.refreshAxes();
             end;
-        end
-        
+        end        
         
         % --------------------------------------------------------------------
         function menu_file_import_evt_database_callback(obj,hObject, eventdata)
@@ -1766,9 +1774,11 @@ cropFigure2Axes(f,axes1_copy);
                 
                 fields = fieldnames(obj.epoch_resolution);
                 num_choices = 0;
+                
                 for f=1:numel(fields)
                     num_choices = num_choices+numel(obj.epoch_resolution.(fields{f}));
                 end
+                
                 epoch_selection.units = '';
                 epoch_selection.value_sec = [];
                 epoch_selection.stage = [];
@@ -1823,11 +1833,8 @@ cropFigure2Axes(f,axes1_copy);
             obj.updateMainAxes();
             
             obj.updateTimelineAxes();
-            
             %more of an initializeAxes type thing...
-            
             obj.updateUtilityAxes();
-            
             obj.showReady();
             set(handles.text_status,'string','');
         end
