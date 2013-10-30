@@ -1256,8 +1256,7 @@ end
                     %batch processing - that is, it must exist for batch
                     %processing to continue/work
                     batch_STAGES = loadSTAGES(stages_filename,studyInfo.num_epochs);
-                    studyInfo.STAGES = batch_STAGES;
-                    studyInfo.standard_epoch_sec = parBATCH_PROCESS.standard_epoch_sec;
+                    batch_STAGES.startDateTime = studyInfo.startDateTime;
                     
                     %PROCESS ARTIFACTS
                     batch_ARTIFACT_CONTAINER = CLASS_events_container([],[],parBATCH_PROCESS.base_samplerate,batch_STAGES); %this global variable may be checked in output functions and
@@ -1307,13 +1306,13 @@ end
                             
                         end
                         if(BATCH_PROCESS.output_files.save2mat)
-                            batch_ARTIFACT_CONTAINER.save2mat(artifact_filenames,studyInfo);
+                            batch_ARTIFACT_CONTAINER.save2mat(artifact_filenames);
                         end
                         if(BATCH_PROCESS.database.save2DB)
                             batch_ARTIFACT_CONTAINER.save2DB(artifact_filenames);
                         end
                         if(BATCH_PROCESS.output_files.save2txt)
-                            batch_ARTIFACT_CONTAINER.save2txt(artifact_filenames,studyInfo);
+                            batch_ARTIFACT_CONTAINER.save2txt(artifact_filenames);
                         end
                     end
 
@@ -1434,13 +1433,13 @@ end
                         end
                         
                         if(BATCH_PROCESS.output_files.save2mat)
-                            batch_EVENT_CONTAINER.save2mat(event_filenames,studyInfo);
+                            batch_EVENT_CONTAINER.save2mat(event_filenames);
                         end
                         if(BATCH_PROCESS.database.save2DB)                            
                             batch_EVENT_CONTAINER.save2DB(DBstruct,cur_filename(1:end-4)); %database_struct contains fileds 'name','user','password' for interacting with a mysql database
                         end
                         if(BATCH_PROCESS.output_files.save2txt)
-                            batch_EVENT_CONTAINER.save2txt(event_filenames,studyInfo);
+                            batch_EVENT_CONTAINER.save2txt(event_filenames);
                         end
                         
                     end

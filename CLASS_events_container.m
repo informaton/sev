@@ -1678,13 +1678,8 @@ classdef CLASS_events_container < handle
         %> @param
         %> @retval 
         % =================================================================
-        function save2mat(obj,filename, markingObj)            
+        function save2mat(obj,filename)            
             global MARKING;
-            if(nargin<3)
-                localMARKING = markingObj;
-            else
-                localMARKING = MARKING;
-            end
             
             %save2mat(filename) saves all events using the filename
             %given.  If filename is a cell, then it must be of the same
@@ -1692,22 +1687,21 @@ classdef CLASS_events_container < handle
             %as unique filename to save the corresponding events to.  The
             %events are stored in .mat format 
             if(nargin<2)
-                suggested_filename = fullfile(localMARKING.SETTINGS.VIEW.src_event_pathname,['evt.',localMARKING.SETTINGS.VIEW.src_edf_filename(1:end-4)]);
+                suggested_filename = fullfile(MARKING.SETTINGS.VIEW.src_event_pathname,['evt.',MARKING.SETTINGS.VIEW.src_edf_filename(1:end-4)]);
                 [event_filename, event_path] = uiputfile('*.*', 'Save Events to .mat format',suggested_filename);
                 if isequal(event_filename,0) || isequal(event_path,0)
                     disp('User pressed cancel');
                     filename = [];
                 else
                     filename = fullfile(event_path,event_filename);
-                    localMARKING.SETTINGS.VIEW.src_event_pathname = event_path;
-                end
-            
+                    MARKING.SETTINGS.VIEW.src_event_pathname = event_path;
+                end            
             end
+            
             if(~isempty(filename))
                 for k =1:obj.num_events
-                    obj.cell_of_events{k}.save2mat(filename);
-                end
-                
+                    obj.cell_of_events{k}.save2mat(filename,obj.stageStruct);
+                end                
             end
         end
         
@@ -1717,7 +1711,7 @@ classdef CLASS_events_container < handle
         %> @param
         %> @retval 
         % =================================================================
-        function save2txt(obj,varargin)
+        function save2txt(obj,optional_filename)
             %save2text() opens a dialog where the user can select which
             %events they want to save and enter a filename to save the
             %events to.
@@ -1726,15 +1720,10 @@ classdef CLASS_events_container < handle
             %length as the number of events, and each cell element is used
             %as unique filename to save the corresponding events to.            
             global MARKING;
-            if(numel(varargin)>0)
-                filename = varargin{1};
-                if(numel(varargin)>1)
-                    studyStruct = varargin{2};
-                else
-                    studyStruct = [];
-                end
+            if(nargin>1 && ~isempty(optional_filename))
+                filename = optional_filename;
                 for k =1:obj.num_events                    
-                    obj.cell_of_events{k}.save2text(filename,studyStruct);
+                    obj.cell_of_events{k}.save2text(filename,obj.stageStruct);
                 end
             else
                 if(obj.num_events<1)
@@ -1830,9 +1819,9 @@ classdef CLASS_events_container < handle
                                 
                                 for k =1:numel(event2save)
                                     if(filterspec_index==1)
-                                        obj.cell_of_events{event2save(k)}.save2text(evt_filename);
+                                        obj.cell_of_events{event2save(k)}.save2text(evt_filename,obj.stageStruct);
                                     elseif(filterspec_index==2)
-                                        obj.cell_of_events{event2save(k)}.save2mat(evt_filename);
+                                        obj.cell_of_events{event2save(k)}.save2mat(evt_filename,obj.stageStruct);
                                     end
                                 end
                             end

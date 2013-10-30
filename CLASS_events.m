@@ -842,15 +842,15 @@ classdef CLASS_events < handle
             
             %subtract 1 below, since the 1st sample technically starts at
             %           %t0 and thus the first sample in matlab would otherwise be listed as 1/fs seconds after t0
-%             start_offset_sec = (starts-1)/obj.samplerate; %add the seconds here
+            %             start_offset_sec = (starts-1)/obj.samplerate; %add the seconds here
             
-%             start_times = datenum([zeros(numel(start_offset_sec),numel(t0)-1),start_offset_sec(:)])+datenum(t0);
-%             start_times = datestr(start_times,'HH:MM:SS.FFF');
+            %             start_times = datenum([zeros(numel(start_offset_sec),numel(t0)-1),start_offset_sec(:)])+datenum(t0);
+            %             start_times = datestr(start_times,'HH:MM:SS.FFF');
             
             
             start_epochs = sample2epoch(starts,stagesStruct.standard_epoch_sec,obj.samplerate);
-            start_stages = stagesStruct_STAGES.line(start_epochs);
-            start_cycle = stagesStruct_STAGES.cycles(start_epochs);
+            start_stages = stagesStruct.line(start_epochs);
+            start_cycle = stagesStruct.cycles(start_epochs);
             
             duration = (event_start_stop(:,2)-event_start_stop(:,1))/obj.samplerate;
             %             y = [obj.start_stop_matrix, duration(:)];
@@ -891,43 +891,25 @@ classdef CLASS_events < handle
         %> @param
         %> @retval obj instance of CLASS_events class.
         % =================================================================
-        function save2text(obj,filename,studyStruct)
+        function save2text(obj,filename,stageStruct)
             %this function requires filename to meet OS file naming requirements
             %or it will crash - it appends to the file if filename already
             %exists, otherwise a new one is created.  The file is closed at            
             %the end of this function call
             %filename is the file to save the data to
-            %studyStruct is a struct with the following fields
+            %stageStruct is a struct with the following fields
             %    .startDateTime
             %    .standard_epoch_sec
-            global MARKING;
+            %    .line
+            %    .cycle
             
             if(~isempty(obj.start_stop_matrix))
                 
-                if(nargin<3 || isempty(studyStruct))
-                    studyStruct = MARKING.sev;
-                    studyStruct.startDateTime = MARKING.startDateTime;
-                    studyStruct.STAGES = MARKING.sev_STAGES;
-                end
-                
-                t0 = studyStruct.startDateTime;
-                STAGES = studyStruct.STAGES;
+                t0 = stageStruct.startDateTime;
                 
                 event_start_stop = obj.start_stop_matrix;
-%                 if(obj.batch_mode_label ~= '_')
-%                     if(iscell(obj.batch_mode_label))
-%                         filename = [filename,'.',char(obj.batch_mode_label),'.',num2str(obj.configID),'.txt'];
-%                     else
-%                         filename = [filename,'.',obj.batch_mode_label,'.',num2str(obj.configID),'.txt'];
-%                     end
-%                 else
-%                     filename = [filename,'.txt'];
-%                 end
                 filename = [filename,'.',obj.label,'.',num2str(obj.configID),'.txt'];
                 fid = fopen(filename,'w');
-                
-                %             hdr = {['#Event Label  = ',obj.label],...
-                %                 ['#EDF Channel Label(number) = ',obj.channel_name,' (',num2str(obj.channel_number),')']};
                 hdr = {obj.label,...
                     [obj.channel_name,' (',num2str(obj.channel_number),')']};
                 fprintf(fid,'#Event Label =\t%s\r\n#EDF Channel Label(number) = \t%s\r\n',hdr{1},hdr{2});
@@ -945,8 +927,8 @@ classdef CLASS_events < handle
                 
 %                 start_epochs = sample2epoch(starts,studyStruct.standard_epoch_sec,obj.samplerate);
                 start_epochs = sample2epoch(starts,30,obj.samplerate);
-                start_stages = STAGES.line(start_epochs);
-                start_cycle = STAGES.cycles(start_epochs);
+                start_stages = stageStruct.line(start_epochs);
+                start_cycle = stageStruct.cycles(start_epochs);
                 
                 duration = (event_start_stop(:,2)-event_start_stop(:,1)+1)/obj.samplerate;
                 %             y = [obj.start_stop_matrix, duration(:)];
@@ -967,11 +949,6 @@ classdef CLASS_events < handle
                 end
                 
                 fprintf(fid,'\r\n');
-                
-                
-                %the older way of doing this...
-                %             fclose(fid);
-                %             save(filename,'y','-ascii','-tabs','-append');
                 
                 
                 %t0 is a date vector

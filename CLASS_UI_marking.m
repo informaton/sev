@@ -1461,7 +1461,8 @@ cropFigure2Axes(f,axes1_copy);
         
         function loadSTAGES(obj,stages_filename,num_epochs)
             global EVENT_CONTAINER;
-            obj.sev_STAGES = loadSTAGES(stages_filename,num_epochs);            
+            obj.sev_STAGES = loadSTAGES(stages_filename,num_epochs);
+            obj.sev_STAGES.startDateTime = obj.startDateTime;
             obj.sev_adjusted_STAGES = obj.sev_STAGES;            
             EVENT_CONTAINER.setStageStruct(obj.sev_STAGES);
         end
