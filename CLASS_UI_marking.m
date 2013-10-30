@@ -663,11 +663,9 @@ cropFigure2Axes(f,axes1_copy);
 
         % --------------------------------------------------------------------
         function menu_file_export_psd2txt_callback(obj,hObject, eventdata, handles)
-            global CHANNELS_CONTAINER;
-            
+            global CHANNELS_CONTAINER;            
             CHANNELS_CONTAINER.savePSD2txt(obj.SETTINGS.VIEW.src_edf_filename);
-        end
-        
+        end        
         
         % --------------------------------------------------------------------
         function menu_file_export_events_container_callback(obj,hObject, eventdata)
@@ -694,8 +692,7 @@ cropFigure2Axes(f,axes1_copy);
         function menu_file_export_events2mat_callback(obj,hObject, eventdata)
             % hObject    handle to menu_file_export_events2mat (see GCBO)
             % eventdata  reserved - to be defined in a future version of MATLAB
-            % handles    structure with handles and user data (see GUIDATA)
-            
+            % handles    structure with handles and user data (see GUIDATA)            
             global EVENT_CONTAINER;
             EVENT_CONTAINER.save2mat();
             
@@ -704,8 +701,7 @@ cropFigure2Axes(f,axes1_copy);
         function menu_file_export_fft2txt_callback(obj,hObject, eventdata)
             % hObject    handle to menu_file_export_fft2txt (see GCBO)
             % eventdata  reserved - to be defined in a future version of MATLAB
-            % handles    structure with handles and user data (see GUIDATA)
-            
+            % handles    structure with handles and user data (see GUIDATA)            
             disp 'This function was moved to another file';
         end
         

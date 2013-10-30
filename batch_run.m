@@ -1359,14 +1359,9 @@ end
                                     if(event_settings{k}.save2img)
                                         %put these images in their own subdirectory based on
                                         %patients identifier
-                                        % event_images_path = full_events_images_path;
-                                        % event_images_path = fullfile(full_events_images_path,cur_filename(1:end-4));
                                         event_images_path = fullfile(full_events_images_path,event_settings{k}.method_label);
                                         
-                                        %this is now handled earlier
-                                        %if(~isdir(event_images_path))
-                                        %    mkdir(event_images_path);
-                                        %end
+
                                         img_filename_prefix = [cur_filename(1:end-4),'_',event_settings{k}.method_label];
                                         full_img_filename_prefix = fullfile(event_images_path,img_filename_prefix);
                                         batch_EVENT_CONTAINER.save2images(k,full_img_filename_prefix,image_settings);                                        

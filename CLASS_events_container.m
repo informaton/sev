@@ -1242,23 +1242,34 @@ classdef CLASS_events_container < handle
         end
         
         % =================================================================
-        %> @brief
+        %> @brief save2image - save pictures of the channel data at the
+        %> specified event;s start and stop locations
         %> @param obj instance of CLASS_events_container class.
-        %> @param
-        %> @retval 
+        %> @param event_index index of the event object to use
+        %> @param full_filename_prefix - name of the file to save data to
+        %> sans the extension (e.g. .png, .jpg).
+        %> @retval obj object of CLASS_events_container 
         % =================================================================
         function save2images(obj,event_index,full_filename_prefix,settings)
            %this method saves the event data, located in event_object at
            %event_index to disk.
            %optional_cap_limit will put a cap on how many images can be
-           %saved to disk per event 
+           %saved to disk per event
            
            if(nargin<=3)
                settings.format = 'PNG';
                settings.limit_count = 0;
                settings.buffer_sec = 0.5;
-           end           
-           obj.cell_of_events{event_index}.save2images(full_filename_prefix,settings);            
+           end
+
+           settings.standard_epoch_sec = obj.stageStruct.standard_epoch_sec;
+
+           cur_EVENT = obj.getEventObj(event_index);
+           channel_index = cur_EVENT.source.channel_indices(1);
+           channel_data = obj.CHANNELS_CONTAINER.getData(channel_index);
+           channel_name = obj.CHANNELS_CONTAINER.getChannelName(channel_index);
+           full_filename_prefix = strcat(full_filename_prefix,'_',channel_name);
+           cur_EVENT.save2images(full_filename_prefix,channel_data,settings);
         end
         
         % =================================================================

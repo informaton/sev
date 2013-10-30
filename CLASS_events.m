@@ -617,27 +617,37 @@ classdef CLASS_events < handle
         end;
         
         % =================================================================
-        %> @brief
+        %> @brief save2images saves the identified sections of a passed
+        %> signal as .jpg or .png formatted images
         %> @param obj instance of CLASS_events class.
-        %> @param
+        %> @param full_filename Name of file to save the image as.
+        %> @param cur_CHANNELS_CONTINAER A CLASS_channels_container object
+        %> This is used to pull out the channel object which the events are associated with
+        %> in order to get the signal data.
+        %> and where the data is taken to capture as an image
+        %> @param settings A struct with the following fields for
+        %> adjusting the image capturing
+        %> .format  = The image format (e.g. {'PNG' or 'JPEG'})
+        %> .limit_count = maximum number of pictures to take; 0 {default}
+        %> .buffer_sec = how much buffer to include on each side of the
+        %event limits for saving as a picture (default = 0.5)
+        %> .standard_epoch_sec = duration of an epoch in seconds (default =
+        %> 30 seconds)
         %> @retval obj instance of CLASS_events class.
         % =================================================================
-        function obj = save2images(obj,full_filename_prefix,settings)
+        function obj = save2images(obj,full_filename_prefix,signal_data,settings)
             %this method saves the events to individual files
-            global CHANNELS_CONTAINER;
             
-            cur_channel = CHANNELS_CONTAINER.cell_of_channels{obj.source.channel_indices(1)};
-            if(nargin<=2)
+            if(nargin<=3)
                settings.format = 'PNG';
                settings.limit_count = 0;
                settings.buffer_sec = 0.5;
                settings.standard_epoch_sec = 30;
             end
 
-
             buffer_samples = floor(obj.samplerate*settings.buffer_sec);
             range_start = max(obj.start_stop_matrix(:,1)-buffer_samples,1);
-            range_end = min(obj.start_stop_matrix(:,2)+buffer_samples,numel(cur_channel.raw_data));
+            range_end = min(obj.start_stop_matrix(:,2)+buffer_samples,numel(signal_data));
 
             epoch_start = sample2epoch(range_start,settings.standard_epoch_sec,obj.samplerate);
             
@@ -679,13 +689,13 @@ classdef CLASS_events < handle
             end
 
             for k = 1:numPics
-                filename = sprintf('%s_%s_%u_epoch%u.%s',full_filename_prefix,cur_channel.title,k,epoch_start(k),settings.format);
+                filename = sprintf('%s_%u_epoch%u.%s',full_filename_prefix,k,epoch_start(k),settings.format);
 %                print_filename = sprintf('%s_%s_%u_epoch%u_print.%s',full_filename_prefix,cur_channel.title,k,epoch_start(k),settings.format);
                 x = range_start(k):range_end(k);
                 try
                     l_h = line('parent',a);
                     set(a,'xtick',range_start(k):x_tick_delta:range_end(k),'xlim',[range_start(k),range_end(k)]);
-                    set(l_h,'ydata',cur_channel.raw_data(x),'xdata',x);  
+                    set(l_h,'ydata',signal_data(x),'xdata',x);  
                     set(tmp_fig,'position',[0 0 range_end(k)-range_start(k)+1 height*2]);
                     
 %                     print(tmp_fig,['-d',lower(settings.format)],'-r1',filename); %r0 is screen resolution; r50 is 50 dpi

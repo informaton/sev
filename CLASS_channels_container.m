@@ -1303,9 +1303,11 @@ classdef CLASS_channels_container < handle
        end
        
        % =================================================================
-       %> @brief
+       %> @brief getCurrentData returns the data for the current samples
+       %(e.g. the epoch shown)
        %> @param obj instance of CLASS_channel class.
-       %> @param
+       %> @param channel_index - the index of the channel to retrieve data
+       %> from
        %> @retval obj instance of CLASS_channel class.
        % =================================================================
        function data = getCurrentData(obj, channel_index)
@@ -1314,9 +1316,11 @@ classdef CLASS_channels_container < handle
        end
        
        % =================================================================
-       %> @brief
+       %> @brief getData - returns the signal data for the specified
+       %> channel
        %> @param obj instance of CLASS_channel class.
-       %> @param
+       %> @param channel_index - index of the channel to get data from
+       %> @param optional_range - a range to pull data from if desired
        %> @retval obj instance of CLASS_channel class.
        % =================================================================
        function data = getData(obj, channel_index, optional_range)
@@ -1340,9 +1344,10 @@ classdef CLASS_channels_container < handle
            
        end
        % =================================================================
-       %> @brief
+       %> @brief getSamplerate returns the sample rate of specfied channel
        %> @param obj instance of CLASS_channel class.
-       %> @param
+       %> @param channel_index index of the channel to get sample rate
+       %> from.
        %> @retval obj instance of CLASS_channel class.
        % =================================================================
        function samplerate = getSamplerate(obj, channel_index)
@@ -1542,10 +1547,10 @@ classdef CLASS_channels_container < handle
        end
        
        % =================================================================
-       %> @brief
+       %> @brief getChannelName - return the name/label of a channel
        %> @param obj instance of CLASS_channel class.
-       %> @param
-       %> @retval obj instance of CLASS_channel class.
+       %> @param channel_index index of the channel to get name of
+       %> @retval channelName - string of the channel name
        % =================================================================
        function channelName = getChannelName(obj, channel_index)
            %get the name of a single, selected channel at channel_index
@@ -1557,10 +1562,9 @@ classdef CLASS_channels_container < handle
        end
        
        % =================================================================
-       %> @brief
+       %> @brief getChannelNames return names of all channels
        %> @param obj instance of CLASS_channel class.
-       %> @param
-       %> @retval obj instance of CLASS_channel class.
+       %> @retval cell_of_names = cell of channel names
        % =================================================================
        function cell_of_names = getChannelNames(obj)
            %get a cell of the channel names avaialable;
@@ -1569,10 +1573,9 @@ classdef CLASS_channels_container < handle
        end
        
        % =================================================================
-       %> @brief
+       %> @brief get_labels same as getChannelNames
        %> @param obj instance of CLASS_channel class.
-       %> @param
-       %> @retval obj instance of CLASS_channel class.
+       %> @retval cell_of_names = a cell of channel names as strings
        % =================================================================
        function cell_of_names = get_labels(obj)
            cell_of_names = cell(obj.num_channels,1);
