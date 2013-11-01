@@ -855,7 +855,7 @@ persistent log_fid;
 %found in the current directory
 
 if(pathname)
-    DEFAULTS.batch_folder = pathname;
+    MARKING.SETTINGS.BATCH_PROCESS.edf_folder = pathname;
     
 %     file_list = dir([fullfile(path, '*.EDF');fullfile(path, '*.edf')]);
     %pc's do not have a problem with case; unfortunately the other side
@@ -870,12 +870,7 @@ if(pathname)
     
     
     %reference sev.m - sev_OpeningFcn (line ~192)
-    BATCH_PROCESS.output_path.current = fullfile(pathname, BATCH_PROCESS.output_path.parent);
-%     BATCH_PROCESS.roc_path = 'ROC';
-%     BATCH_PROCESS.psd_path = 'PSD';
-%     BATCH_PROCESS.events_path = 'events';
-%     BATCH_PROCESS.artifacts_path = 'artifacts';
-%     BATCH_PROCESS.images_path = 'images';
+    BATCH_PROCESS.output_path.current = fullfile(BATCH_PROCESS.output_path.parent);
 
     % waitHandle = waitbar(0,'Initializing batch processing job','name','Batch Processing Statistics','resize','on','createcancelbtn',{@cancel_batch_Callback});
     user_cancelled = false;
@@ -1131,6 +1126,9 @@ if(pathname)
                 end
             end
             event_settings{k}.numConfigurations = numConfigurations;
+            if(~BATCH_PROCESS.database.save2DB)
+                event_settings{k}.configID = 1:numConfigurations;
+            end
             event_settings{k}.params = pStructArray;
             
         end
@@ -1139,7 +1137,7 @@ if(pathname)
         %separate file, with an id for each cconfiguration setup that can
         %be used to determine which file output is for which configuration
         if(~isempty(paramStruct))
-            batch.saveDetectorConfigLegend(full_events_path,method_label,paramStruct);
+            batch.saveDetectorConfigLegend(full_events_path,method_label,event_settings{k}.params);
         end
     end
     
@@ -1460,20 +1458,20 @@ end
 % %                         save_art_stats_Callback(hObject, eventdata, handles);
 %                           batch.saveArtifactandStageStatistics();
 %                     end;
-                    for k = 1:numel(BATCH_PROCESS.PSD_settings)
-                        channel_label = BATCH_PROCESS.PSD_settings{k}.channel_labels{:};
-                        channel_index = BATCH_PROCESS.PSD_settings{k}.channel_indices;
+                    for k = 1:numel(parBATCH_PROCESS.PSD_settings)
+                        channel_label = parBATCH_PROCESS.PSD_settings{k}.channel_labels{:};
+                        channel_index = parBATCH_PROCESS.PSD_settings{k}.channel_indices;
                         filename_out = fullfile(full_psd_path,[cur_filename(1:end-3), channel_label,'.', BATCH_PROCESS.output_files.psd_filename]);
                         
-                        batch.save_periodograms(channel_index,filename_out,BATCH_PROCESS.PSD_settings{k});
+                        batch.save_periodograms(channel_index,filename_out,parBATCH_PROCESS.PSD_settings{k});
                     end;
 
-                    for k = 1:numel(BATCH_PROCESS.MUSIC_settings)
-                        channel_label = BATCH_PROCESS.MUSIC_settings{k}.channel_labels{:};
-                        channel_index = BATCH_PROCESS.MUSIC_settings{k}.channel_indices;
+                    for k = 1:numel(parBATCH_PROCESS.MUSIC_settings)
+                        channel_label = parBATCH_PROCESS.MUSIC_settings{k}.channel_labels{:};
+                        channel_index = parBATCH_PROCESS.MUSIC_settings{k}.channel_indices;
                         filename_out = fullfile(full_music_path,[cur_filename(1:end-3), channel_label,'.', BATCH_PROCESS.output_files.music_filename]);
                         
-                        batch.save_pmusic(channel_index,filename_out,BATCH_PROCESS.MUSIC_settings{k});
+                        batch.save_pmusic(channel_index,filename_out,parBATCH_PROCESS.MUSIC_settings{k});
                     end;
                     
                     %save the files to disk
