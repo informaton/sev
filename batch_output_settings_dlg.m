@@ -23,7 +23,7 @@ function varargout = batch_output_settings_dlg(varargin)
 
 % Edit the above text to modify the response to help batch_output_settings_dlg
 
-% Last Modified by GUIDE v2.5 30-Oct-2013 11:47:34
+% Last Modified by GUIDE v2.5 04-Nov-2013 12:21:58
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -152,7 +152,7 @@ else
     set(handles.check_images_limit_cap,'Value',1); %automatically cap it at 100 images per directory
 
     %directories
-    set(handles.edit_path_parent,'string','output');
+    set(handles.edit_path_parent,'string',fullfile(fileparts(mfilename('fullpath')),'output'));
     set(handles.edit_path_power,'string','PSD');
     set(handles.edit_path_events,'string','events');
     set(handles.edit_path_artifacts,'string','artifacts');
@@ -726,24 +726,13 @@ else
     set(handles.edit_img_buffer_sec,'enable','off');
 end;
 
-
-% --- Executes on button press in text5.
-function text5_Callback(hObject, eventdata, handles)
-% hObject    handle to text5 (see GCBO)
+% --- Executes on button press in push_root.
+function push_root_Callback(hObject, eventdata, handles)
+% hObject    handle to push_root (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-global MARKING;
 path = get(handles.edit_path_parent,'string');
-%if(~exist(path,'file'))
-%    path = MARKING.SETTINGS.BATCH_PROCESS.edf_folder;
-%end;
 pathname = uigetdir(path,'Select the directory you wish to output to');
-
-%if(isempty(pathname)||(isnumeric(pathname)&&pathname==0))
-%    pathname = path;
-%else
-    %fprintf ('You did not enter a pathname');
-    %MARKING.SETTINGS.BATCH_PROCESS.edf_folder = pathname; %update for the next time..
-%end;
-
-set(handles.edit_path_parent,'string',pathname);
+if(isdir(char(pathname)))
+    set(handles.edit_path_parent,'string',pathname);
+end

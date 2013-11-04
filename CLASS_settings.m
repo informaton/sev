@@ -379,7 +379,15 @@ classdef  CLASS_settings < handle
                         obj.VIEW.screenshot_path = obj.rootpathname; %initial directory to look in for EDF files to load
                         
                         obj.VIEW.channelsettings_file = 'channelsettings.mat'; %used to store the settings for the file
-                        obj.VIEW.output_pathname = 'output';
+                        obj.VIEW.output_pathname = fullfile(fileparts(mfilename('fullpath')),'output');
+                        if(~isdir(obj.VIEW.output_pathname))
+                            try
+                                mkdir(obj.VIEW.output_pathname);
+                            catch me
+                                showME(me);
+                                obj.VIEW.output_pathname = fileparts(mfilename('fullpath'));
+                            end;
+                        end
                         obj.VIEW.detection_inf_file = 'detection.inf';
                         obj.VIEW.detection_path = '+detection';
                         obj.VIEW.filter_path = '+filter';
