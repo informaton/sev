@@ -23,7 +23,7 @@ function varargout = batch_output_settings_dlg(varargin)
 
 % Edit the above text to modify the response to help batch_output_settings_dlg
 
-% Last Modified by GUIDE v2.5 09-Jul-2012 14:38:41
+% Last Modified by GUIDE v2.5 30-Oct-2013 11:47:34
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -725,3 +725,25 @@ if(get(handles.check_img_buffer,'Value'))
 else
     set(handles.edit_img_buffer_sec,'enable','off');
 end;
+
+
+% --- Executes on button press in text5.
+function text5_Callback(hObject, eventdata, handles)
+% hObject    handle to text5 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+global MARKING;
+path = get(handles.edit_path_parent,'string');
+%if(~exist(path,'file'))
+%    path = MARKING.SETTINGS.BATCH_PROCESS.edf_folder;
+%end;
+pathname = uigetdir(path,'Select the directory you wish to output to');
+
+%if(isempty(pathname)||(isnumeric(pathname)&&pathname==0))
+%    pathname = path;
+%else
+    %fprintf ('You did not enter a pathname');
+    %MARKING.SETTINGS.BATCH_PROCESS.edf_folder = pathname; %update for the next time..
+%end;
+
+set(handles.edit_path_parent,'string',pathname);

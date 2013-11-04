@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>scalar</key>
-	<real>1.000000</real>
+	<real>0.001000</real>
 	<key>make_absolute</key>
 	<real>0.000000</real>
 </dict>

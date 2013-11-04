@@ -870,7 +870,7 @@ if(pathname)
     
     
     %reference sev.m - sev_OpeningFcn (line ~192)
-    BATCH_PROCESS.output_path.current = fullfile(pathname, BATCH_PROCESS.output_path.parent);
+    BATCH_PROCESS.output_path.current = fullfile(BATCH_PROCESS.output_path.parent);
 
     % waitHandle = waitbar(0,'Initializing batch processing job','name','Batch Processing Statistics','resize','on','createcancelbtn',{@cancel_batch_Callback});
     user_cancelled = false;
