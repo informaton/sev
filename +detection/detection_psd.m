@@ -1,8 +1,13 @@
+%> @file
+%> @brief Calculates the power spectrum of input channel data.
+%======================================================================
+%> @brief Calculates the power spectrum of input channel data
+%> @param signal_data
+%> @param params
+%> @param stageStruct events optional_PSD_settings events = something; else
+%> @param PSD_settings <i>optional</i>
+%> @retval detectStruct a structure of things
 function detectStruct = detection_psd(signal_data, params, stageStruct,optional_PSD_settings)
-%> function detectStruct = detection_psd(data_cell, varargin)
-%> Calculates the power spectrum of input channel data.
-
-%
 % written by Hyatt Moore IV, July 28, 2013
 
 global MARKING;
@@ -50,7 +55,7 @@ num_epochs = floor(numel(signal_data)/(epoch_len));
 periodograms_per_epoch = floor(standard_epoch_sec/PSD_settings.interval);
 
 %we know the event boundaries in advance, so calculate as such.
-events = [1:epoch_len:num_epochs*epoch_len;epoch_len:epoch_len:(num_epochs)*epoch_len]';
+eventMatrix = [1:epoch_len:num_epochs*epoch_len;epoch_len:epoch_len:(num_epochs)*epoch_len]';
 
 % E = 1:num_epochs;
 % S = stageStruct.line(E);
@@ -92,7 +97,7 @@ end
 toc
 % coefficients = mean(reshape(coefficients,paramStruct.epoch_window_sec/paramStruct.block_len_sec,[],1))'; %make it a row vector
                           
-detectStruct.new_events = events;
+detectStruct.new_events = eventMatrix;
 % 
 % lp_params.order=paramStruct.samplerate;
 % lp_params.freq_hz = 1;
@@ -100,3 +105,5 @@ detectStruct.new_events = events;
 % detectStruct.new_data = filter.fir_lp(new_data,lp_params)*100; %show as a smooth percentage...
 detectStruct.new_data = new_data; %show as a smooth percentage...
 detectStruct.paramStruct = paramStruct;
+
+end

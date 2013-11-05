@@ -1,4 +1,23 @@
-function detectStruct = detection_artifact_flat_line(data,varargin)
+%> @file
+%> @brief Detects sections of data that have <i>flat lined</i>.
+%======================================================================
+%> @brief Determines flat lined section of input data.
+%> @param data Signal data as a column vector.  
+%> @param params A structure for variable parameters passed in
+%> with following fields
+%> @li @c win_length_sec Window duration to calculate power from
+%> @li @c win_interval_sec Interval in seconds to estimate power from
+%> @li @c min_power Scalar value representing minimum power level allowed before flat line detection.
+%>
+%> @param stageStruct Not used; can be empty (i.e. []).
+%> @retval detectStruct a structure with following fields
+%> @li @c .new_data Empty in this case (i.e. []).
+%> @li @c .new_events A two column matrix of start stop sample points of
+%> the consecutively ordered detections (i.e. per row).
+%> @li @c .paramStruct Empty value returned (i.e. []).
+%> @note global MARKING is used here for PSD settings @e removemean and
+%> @e wintype.
+function detectStruct = detection_artifact_flat_line(data,params,stageStruct)
 %channel_index is the index of the CLASS in the CLASS_channel_containerCell
 %global variable that will be processed for artifact.
 %looks for occurrences of flat lining in the signal associated with channel
@@ -6,12 +25,9 @@ function detectStruct = detection_artifact_flat_line(data,varargin)
 %detectStruct.new_events will be a matrix of start stop points of flat line detections
 %in terms of the sample index withing the raw data associated with
 %channel_index
-global PSD;
 
-% global CHANNEL_INDICES;
-if(nargin>=2 && ~isempty(varargin{1}))
-    params = varargin{1};
-else
+global MARKING;
+if(nargin<2 || isempty(params))
     
     pfile =  strcat(mfilename('fullpath'),'.plist');
     
@@ -32,10 +48,10 @@ end
 win_length_sec = params.win_length_sec;
 win_interval_sec = params.win_interval_sec;
 
-PSD_settings.removemean = PSD.removemean;
+PSD_settings.removemean = MARKING.SETTINGS.PSD.removemean;
 PSD_settings.interval = win_interval_sec;
 PSD_settings.FFT_window_sec=win_length_sec;
-PSD_settings.wintype = PSD.wintype;
+PSD_settings.wintype = MARKING.SETTINGS.PSD.wintype;
 
 psd_all = calcPSD(data,params.samplerate,PSD_settings);
 

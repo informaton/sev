@@ -1,28 +1,37 @@
+%> @file
+%> @brief Detects sections of data that have <i>flat lined</i> with loss of Oxygen saturation.
+%======================================================================
+%> @brief looks for occurrences of flat lining in the first input signal
+%> withe additional requirement that the oxygen saturation (second input signal) is lost.
+%> This detection method will search for indices when the saO2 channel is
+%> below a set threshold (0.1 here)
+%> A second pass is then conducted to determine if the primary channel is
+%> below a given power threshold during this time.
+%> if both criteria are met, then first pass saO2 channel detection is
+%> registered as an event, otherwise it is not.
+%> @param channel_data_cell A two element cell containing the signal data as column vectors.  
+%> @param params A structure for variable parameters passed in
+%> with following fields
+%> @li @c win_length_sec Window duration to calculate power from
+%> @li @c win_interval_sec Interval in seconds to estimate power from
+%> @li @c min_power Scalar value representing minimum power level allowed before flat line detection.
+%> @saO2_min_pct Scalar value representing the minimum oxygen saturation as
+%> a percent.
+%>
+%> @param stageStruct Not used; can be empty (i.e. []).
+%> @retval detectStruct a structure with following fields
+%> @li @c .new_data Data from first signal (i.e. channel_data_cell{1}).
+%> @li @c .new_events A two column matrix of start stop sample points of
+%> the consecutively ordered detections (i.e. per row).
+%> @li @c .paramStruct Empty value returned (i.e. []).
+%> @note global MARKING is used here for PSD settings @e removemean and
+%> @e wintype.
 function detectStruct = detection_artifact_flat_line_with_sao2(channel_data_cell,varargin)
-%channel_index is the index of the CLASS in the CLASS_channel_containerCell
-%global variable that will be processed for artifact.
-%looks for occurrences of flat lining in the signal associated with channel
-%index.  detectStruct.new_data will be returned as empty in this case.  
-%detectStruct.new_events will be a matrix of start stop points of flat line detections
-%in terms of the sample index withing the raw data associated with
-%channel_index
-%
-%This detection method will search for indices when the saO2 channel is
-%below a set threshold (0.1 here)
-%A second pass is then conducted to determine if the primary channel is
-%below a given power threshold during this time.
-%if both criteria are met, then first pass saO2 channel detection is
-%registered as an event, otherwise it is not.
 
 %written Hyatt Moore IV
 % modified: added varargin parameter
-global PSD;
-
-
-if(nargin>=2 && ~isempty(varargin{1}))
-    params = varargin{1};
-else
-    
+global MARKING;
+if(nargin<2 || isempty(params))
     pfile =  strcat(mfilename('fullpath'),'.plist');
     
     if(exist(pfile,'file'))
@@ -38,9 +47,6 @@ else
     end
 end
 
-
-% global CHANNEL_INDICES;
-% channel_obj = CHANNELS_CONTAINER.cell_of_channels{channel_indices(1)};
 src_data = channel_data_cell{1};
 samplerate = params.samplerate;
 saO2_data = channel_data_cell{2};
@@ -52,10 +58,10 @@ second_pass_detections =  true(num_detections,1);
 win_length_sec = params.win_length_sec;
 win_interval_sec = params.win_interval_sec;
 
-PSD_settings.removemean = PSD.removemean;
+PSD_settings.removemean = MARKING.SETTINGS.PSD.removemean;
 PSD_settings.interval = win_interval_sec;
 PSD_settings.FFT_window_sec=win_length_sec;
-PSD_settings.wintype = PSD.wintype;
+PSD_settings.wintype = MARKING.SETTINGS.PSD.wintype;
 
 for k=1:num_detections
     psd_all = calcPSD(src_data(saO2_detections(k,1):saO2_detections(k,2)),...

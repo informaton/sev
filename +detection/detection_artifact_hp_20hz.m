@@ -1,26 +1,31 @@
-function detectStruct = detection_artifact_hp_20hz(data,varargin)
+%> @file
+%> @brief EEG detection of high frequency noise.
+%======================================================================
+%> @brief Determines high frequency noise in input signal (e.g. EEG).
+%> @param data Signal data vector.  
+%> @param params A structure for variable parameters passed in
+%> with following fields
+%> @li @c scale_factor
+%> @li @c rms_short_sec Window duration in seconds to estimate local activity.
+%> @li @c rms_long_min Window duration in seconds to estimate background
+%> activity
+%> @li @c additional_buffer_sec Addiotional buffer in seconds to increase the onset and offset of detected events by.
+%> @li @c merge_within_sec Window duration that consecutive events are merged within.
+%>
+%> @param stageStruct Not used; can be empty (i.e. []).
+%> @retval detectStruct a structure with following fields
+%> @li @c .new_data Data after high pass filtering at 20 Hz.
+%> @li @c .new_events A two column matrix of start stop sample points of
+%electrode pop detections, ordered consecutively by occurrence
+%> @li @c .paramStruct Empty value returned (i.e. []).
+function detectStruct = detection_artifact_hp_20hz(data,params,stageStruct)
 % Author Hyatt Moore IV
 % modified 3/1/2013 - remove global references and use varargin
 
-% channel = CHANNELS_CONTAINER.cell_of_channels{channel_index};
-
-%updates the artifacts - called from updatePlot or in batch processing modes, and typically revolves
-%around a flag being set
-%CLASS_index is the index of the CLASS in the CLASS_channel_containerCell
-%global variable that will be processed for artifact.
-%parameters = (ARTIFACT_DLG,[data])
-%if data is included it will be used as the data to high
-%pass filter, and the delay compensated result will be stored
-%in the objects data parameter - this is good when the
-%object is being used as an event and the results of this
-%detection method need to be displayed/plotted for
-%understanding
 
 % this allows direct input of parameters from outside function calls, which
 %can be particularly useful in the batch job mode
-if(nargin>=2 && ~isempty(varargin{1}))
-    params = varargin{1};
-else
+if(nargin<2 || isempty(params))
     
     pfile = strcat(mfilename('fullpath'),'.plist');
     

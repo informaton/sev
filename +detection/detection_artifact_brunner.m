@@ -1,20 +1,37 @@
-function detectStruct = detection_artifact_brunner(data,varargin)
-% Based on the 1996 paper by Brunner titled, "Muscle artifacts in the sleep
-% EEG: automated detection and effect on all-night EEG power spectra"
-% The method using a moving median filter with adaptive thresholds as
-% determined by the surrounding time windows of different lengths.  The
-% paper settled on a threshold of 4 times the median value for a surround 3
-% minute window.  Three minutes was picked in this case because epochs were
-% scored in 60 second blocks for the study done in 1996.  
+%> @file
+%> @brief EEG artifact detector based on the 1996 paper by Brunner titled, "Muscle artifacts in the sleep
+%> EEG: automated detection and effect on all-night EEG power spectra"
+%======================================================================
+%> @brief Determines sections of artifact using Brunner method.
+%> The method using a moving median filter with adaptive thresholds as
+%> determined by the surrounding time windows of different lengths.  The
+%> paper settled on a threshold of 4 times the median value for a surround 3
+%> minute window.  Three minutes was picked in this case because epochs were
+%> scored in 60 second blocks for the study done in 1996.  
+%> @param data Signal data vector.  
+%> @param params A structure for variable parameters passed in
+%> with following fields
+%> @li @c long_window_sec Window duration in seconds to estimate background
+%> power from
+%> @li @c short_window_sec Window duration in seconds to estimate local
+%> power from
+%> @li @c threshold_scale Detection threshold scalar value applied to power level obtained from long_window_sec
+%> that the local power obtained from short_window_sec must exceed to detect an artifact.
+%>
+%> @param stageStruct Not used; can be empty (i.e. []).
+%> @retval detectStruct a structure with following fields
+%> @li @c .new_data Empty in this case (i.e. []).
+%> @li @c .new_events A two column matrix of start stop sample points of
+%> the consecutively ordered detections (i.e. per row).
+%> @li @c .paramStruct Empty value returned (i.e. []).
+function detectStruct = detection_artifact_brunner(data,params,stageStruct)
 
 % Implemented by  Hyat Moore IV
 % modified 3/1/2013 - remove global references and use varargin
 
 % this allows direct input of parameters from outside function calls, which
 %can be particularly useful in the batch job mode
-if(nargin>=2 && ~isempty(varargin{1}))
-    params = varargin{1};
-else
+if(nargin<2 || isempty(params))
     
     pfile = strcat(mfilename('fullpath'),'.plist');
     
@@ -64,3 +81,4 @@ new_evt_ind = (new_evt_ind-1)*params.short_window_sec*samplerate+1;
 detectStruct.new_events = [new_evt_ind(:), new_evt_ind(:)+params.short_window_sec*samplerate-1];
 detectStruct.new_data = data;
 detectStruct.paramStruct = [];
+end

@@ -1,20 +1,27 @@
-function detectStruct = detection_artifact_electrode_pop(data,varargin)
-%channel_index is the index of the CLASS in the CLASS_channel_containerCell
-%global variable that will be processed for artifact.
-%looks for occurrences of flat lining in the signal associated with channel
-%index.  detectStruct.new_data will be returned as empty in this case.  
-%detectStruct.new_events will be a matrix of start stop points of flat line detections
-%in terms of the sample index withing the raw data associated with
-%channel_index
+%> @file
+%> @brief Detect electrode pop in input signal.
+%======================================================================
+%> @brief Method looks for occurrences of electrode pop in the signal provided.
+%> @param data Signal data vector.  
+%> @param params A structure for variable parameters passed in
+%> with following fields
+%> @li @c win_length_sec
+%> @li @c win_interval_sec
+%>
+%> @param stageStruct Not used; can be empty (i.e. []).
+%> @retval detectStruct a structure with following fields
+%> @li @c .new_data An empty value in this case.
+%> @li @c .new_events A two column matrix of start stop sample points of
+%electrode pop detections, ordered consecutively by occurrence
+%> @li @c .paramStruct Empty value returned (i.e. []).
+function detectStruct = detection_artifact_electrode_pop(data,params,stageStruct)
 
 % Author Hyatt Moore IV
 % modified 3/1/2013 - remove global references and use varargin
 
 % this allows direct input of parameters from outside function calls, which
 %can be particularly useful in the batch job mode
-if(nargin>=2 && ~isempty(varargin{1}))
-    params = varargin{1};
-else
+if(nargin<2 && isempty(params))
     
     pfile =  strcat(mfilename('fullpath'),'.plist');
     
