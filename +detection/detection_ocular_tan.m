@@ -1,13 +1,34 @@
-function detectStruct = detection_ocular_tan(data,varargin)
-%detect eye movements from an EOG channel based on Xin Tan et al method as
-%proposed in their 2001 paper: "A simple method for computer 
-%quantification of stage REM eye movement potentials"
+%> @file
+%> @brief Eye movement detector based on based on Xin Tan et al method as
+%> proposed in their 2001 paper: "A simple method for computer 
+%> quantification of stage REM eye movement potentials"
+%======================================================================
+%> @brief Detect eye movements from an EOG channel based on Xin Tan et al method as
+%> proposed in their 2001 paper: "A simple method for computer 
+%> quantification of stage REM eye movement potentials"
+%> @note Majority of Spectral power for eye movements was between 0.3-2Hz
+%> Over 50% of the spectrum was between 0.3-1Hz; 
+%> this study was done with 10 men, 6 women (~22 years old)
 %
+%> @param data Sampled EOG signal as a column vector.  
+%> @param params A structure for variable parameters passed in
+%> with following fields  {default}
+%> @li @c params.win_length_sec Window length in seconds to calculate power over {2}
+%> @li @c params.win_interval_sec Separation in seconds between consecutive power calculations {2}
+%> @li @c params.threshold  Percent of power the band of interest must exceed {0.6} 
+%> @note %the paper Paper showed that power in the band of interest
+%> represented 65% of the total spectrum's power.
+%> @li @c params.merge_within_sec  Duration to merge consecutive events within {0.1}
 %
-%
-% 	Majority of Spectral power for eye movements was between 0.3-2Hz
-% 	Over 50% of the spectrum was between 0.3-1Hz; 
-%  this study was done with 10 men, 6 women (~22 years old)
+%> @param stageStruct Not used; can be empty (i.e. []).
+%> @retval detectStruct a structure with following fields
+%> @li @c new_data Duplicate of input data.
+%> @li @c new_events A two column matrix of three start stop sample points of
+%> the consecutively ordered detections (i.e. per row).
+%> @li @c paramStruct Structure with following field(s) which are vectors
+%> with the same numer of elements as rows of @c new_events.
+%> @li @c paramStruct.pct_of_power The percent of power represented by the band of interest.
+function detectStruct = detection_ocular_tan(data,params, stageStruct)
 %
 % updated on November 30, 2011: changed calcPSD output argument to one
 % variable to correspond to change of calcPSD function.
@@ -20,9 +41,7 @@ function detectStruct = detection_ocular_tan(data,varargin)
 
 % this allows direct input of parameters from outside function calls, which
 %can be particularly useful in the batch job mode
-if(nargin>=2 && ~isempty(varargin{1}))
-    params = varargin{1};
-else
+if(nargin<2 || isempty(params))
     
     pfile = strcat(mfilename('fullpath'),'.plist');
     

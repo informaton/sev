@@ -1,12 +1,28 @@
-function detectStruct = detection_artifact_power(data,varargin)
+%> @file
+%> @brief Detects excessive power in an upper frequency range.
+%======================================================================
+%> @brief Detects portions of data where the upper frequency range exceeds
+%> a minimum power threshold.
+%> @param data Signal data as a column vector.  
+%> @param params A structure for variable parameters passed in
+%> with following fields
+%> @li @c block_len_sec Calculate average power over consecutive windows of this duration in seconds
+%> @li @c min_freq_hz Minimum frequency to begin power calculation from
+%> @note Upper frequency is determined by nyquist rate (i.e. half sample rate).
+%> @li @c merge_within_blocks Number of consecutive blocks to merge detections within.
+%> @li @c power_threshold Threshold to exceed (uV) for artifact detection.
+%>
+%> @param stageStruct Not used; can be empty (i.e. []).
+%> @retval detectStruct a structure with following fields
+%> @li @c new_data Copy of input data.
+%> @li @c new_events A two column matrix of three start stop sample points of
+%> the consecutively ordered detections (i.e. one per row).
+%> @li @c paramStruct Unused.
+function detectStruct = detection_artifact_power(data,params,stageStruct)
 % Author Hyatt Moore IV
 % created 4/19/2013
 
-% this allows direct input of parameters from outside function calls, which
-%can be particularly useful in the batch job mode
-if(nargin>=2 && ~isempty(varargin{1}))
-    params = varargin{1};
-else
+if(nargin<2 || isempty(params))
     
     pfile = strcat(mfilename('fullpath'),'.plist');
     
@@ -22,6 +38,7 @@ else
         plist.saveXMLPlist(pfile,params);
     end
 end
+
 PSD_settings.FFT_window_sec = params.block_len_sec;
 PSD_settings.interval = params.block_len_sec; %repeat every block, no overlapping
 PSD_settings.wintype = 'hamming';

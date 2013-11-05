@@ -1,25 +1,38 @@
-function detectStruct = detection_ocular_shw(data,varargin)
-%detect eye movements from an EOG channel for Steven H. Woodward's dataset
-%which uses an HEOG and VEOG montage setup over the left eye (closer to
-%F3).
-%Method is adapted from QRS detection algorithm from 1985 paper,
-%"Real-Time QRS Detection Algorithm" by Jiapu Pan and
-%Willis Tompkins which was originally implemented in assembly language this
-%algorithm uses a single ECG lead, bandpass filtering (originally cascade
-%of high and low-pass filters), derivative filtering, squaring, moving
-%integration, and multiple thresholding and adaptation.
+%> @file
+%> @brief Slope based eye movement detector designed for Woodward EOG
+%> montage.
+%======================================================================
+%> @brief Detect eye movements from an EOG channel for Steven H. Woodward's dataset
+%> which uses an HEOG and VEOG montage setup over the left eye (closer to
+%>F3).  The method is adapted from QRS detection algorithm from 1985 paper,
+%> "Real-Time QRS Detection Algorithm" by Jiapu Pan and
+%> Willis Tompkins which was originally implemented in assembly language this
+%> algorithm uses a single ECG lead, bandpass filtering (originally cascade
+%> of high and low-pass filters), derivative filtering, squaring, moving
+%> integration, and multiple thresholding and adaptation.
+%> @note: This method is lite, and only uses the final, integrated signal as
+%> opposed to the original paper which used more and did further processing
+%> which I found to be unnecessary here.
+%> @note: Ideally, the signal should have F3 adaptively filtered out and then be
+%> lowpass filtered at 8 Hz to remove noise and finally something must be
+%> done to remove breathing artifact
 %
-% This method is lite, and only uses the final, integrated signal as
-% opposed to the original paper which used more and did further processing
-% which I found to be unnecessary here.
+%> @param data EOG signal as a column vector.  
+%> @param params A structure for variable parameters passed in
+%> with following fields  {default}
+%> @li @c params.filter_order  Low pass filter order  {10}
+%> @li @c params.low_pass_hz  Low pass filter frequency cutoff in Hz {14}
+%> @li @c params.moving_window_sec Duration to integrate over {0.15}
+%> @li @c params.thresh_uv Amplitude threshold in uV {70}
+%> @li @c params.merge_within_sec Duration to merge consecutive events within {0.05}
 %
-% source_indices(1) = VEOG
-% source_indices(2) = HEOG
-%
-% Ideally, the signal should have F3 adaptively filtered out and then be
-% lowpass filtered at 8 Hz to remove noise and finally something must be
-% done to remove breathing artifact
-%
+%> @param stageStruct Not used; can be empty (i.e. []).
+%> @retval detectStruct a structure with following fields
+%> @li @c new_data Duplicate of input data.
+%> @li @c new_events A two column matrix of three start stop sample points of
+%> the consecutively ordered detections (i.e. per row).
+%> @li @c paramStruct Not used (i.e. [])
+function detectStruct = detection_ocular_shw(data,params,stageStruct)
 % Author Hyatt Moore IV
 % Date: 5/10/2012
 % modified: 3/1/2013 - updates for channel_cell_data and varargin vice
@@ -28,9 +41,8 @@ function detectStruct = detection_ocular_shw(data,varargin)
 
 %this allows direct input of parameters from outside function calls, which
 %can be particularly useful in the batch job mode
-if(nargin>=2 && ~isempty(varargin{1}))
-    params = varargin{1};
-else
+
+if(nargin<2 || isempty(params))
     pfile = strcat(mfilename('fullpath'),'.plist');
     
     if(exist(pfile,'file'))

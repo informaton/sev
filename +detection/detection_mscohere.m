@@ -1,5 +1,33 @@
-function detectStruct = detection_mscohere(data_cell, varargin)
-%function detectStruct = detection_mscohere(data_cell, varargin)
+%> @file
+%> @brief Measures the magnitude square coherency between two input channels
+%> The method internally calls MATLAB's mscohere function on individual blocks.
+%======================================================================
+%> @brief Calculates the magnitude squared coherency between two input channels
+%> over consecutive epochs of standard duration (e.g. 30 s).  
+%> @param data_cell Two element cell of equal lengthed psg 
+%> vectors representing the channels to compare.
+%> @param params A structure for variable parameters passed in
+%> with following field
+%> @li @c block_len_sec Duration of block in seconds to calculate power specrum from.
+%> @param stageStruct Structure for stage information with following fields
+%> @li @c standard_epoch_sec The duration of scored epochs in seconds (e.g.
+%> 30)
+%
+%> @retval detectStruct a structure with following fields
+%> @li @c new_data Copy of input data.
+%> @li @c new_events A two column matrix of three start stop sample points of
+%> the consecutively ordered detections (i.e. one per row).
+%> @li @c paramStruct Structure with following fields which are each
+%> vectors with the same number of elements as rows of new_events.  Each
+%> field contains a measure of data in the range of the corrensponding
+%> detection.
+%> @li @c paramStruct.delta Delta band coherency [0.5, 4) Hz
+%> @li @c paramStruct.theta Theta band coherency [4, 8) Hz
+%> @li @c paramStruct.alpha Alpha band coherency [8, 12) Hz
+%> @li @c paramStruct.sigma Sigma band coherency [12, 16) Hz
+%> @li @c paramStruct.beta Beta band coherency [16, 30) Hz
+%> @li @c paramStruct.gamma Gamma band coherency [30, Sample rate /2) Hz%
+function detectStruct = detection_mscohere(data_cell, params, stageStruct)
 % measures the magnitude square coherency between two input channels
 % contained in data_cell (a two element cell of equal lengthed psg 
 % vectors representing the channels to compare.  Method internally calls
@@ -10,9 +38,8 @@ function detectStruct = detection_mscohere(data_cell, varargin)
 % July 22, 2013 - Updated to call mean instead of sum to keep normalized
 % values across different size frequency bands.
 
-if(nargin>=2 && ~isempty(varargin{1}))
-    params = varargin{1};
-else    
+
+if(nargin<2 || isempty(params)) 
     pfile = strcat(mfilename('fullpath'),'.plist');
 
     if(exist(pfile,'file'))
@@ -21,14 +48,12 @@ else
     else
         %make it and save it for the future
         params.block_len_sec = 6;
-%        params.epoch_window_sec = 30; %the range to calculate the crosscorrelation over
-%         params.cov_threshold = 0.4;
         plist.saveXMLPlist(pfile,params);
     end
 end
 
-if(nargin==3 && ~isempty(varargin{2}))
-    standard_epoch_sec = varargin{2}.standard_epoch_sec;
+if(nargin==3 && ~isempty(stageStruct))
+    standard_epoch_sec = stageStruct.standard_epoch_sec;
 else
     standard_epoch_sec = 30;
 end
@@ -36,20 +61,14 @@ end
 src_data = data_cell{1};
 ref_data = data_cell{2};
 samplerate = params.samplerate;
-% block_len = params.block_len_sec*samplerate;
-% range_len = block_len-1;
 
-% filtsig = zeros(size(src_data));
 filtsig = src_data;
 
 epoch_len = samplerate*standard_epoch_sec;
 num_epochs = floor(numel(filtsig)/(epoch_len));
 
 %we know the event boundaries in advance, so calculate as such.
-events = [1:epoch_len:num_epochs*epoch_len;epoch_len:epoch_len:(num_epochs)*epoch_len]';
-
-%numBlocks = floor(numel(src_data)/block_len);
-
+new_events = [1:epoch_len:num_epochs*epoch_len;epoch_len:epoch_len:(num_epochs)*epoch_len]';
 
 paramStruct.delta = zeros(num_epochs,1);
 paramStruct.theta = zeros(num_epochs,1);
@@ -98,11 +117,6 @@ end
 % coefficients = mean(reshape(coefficients,paramStruct.epoch_window_sec/paramStruct.block_len_sec,[],1))'; %make it a row vector
                           
 
-detectStruct.new_events = events;
-% 
-% lp_params.order=paramStruct.samplerate;
-% lp_params.freq_hz = 1;
-% lp_params.samplerate = paramStruct.samplerate;
-% detectStruct.new_data = filter.fir_lp(new_data,lp_params)*100; %show as a smooth percentage...
+detectStruct.new_events = new_events;
 detectStruct.new_data = new_data*100; %show as a smooth percentage...
 detectStruct.paramStruct = paramStruct;

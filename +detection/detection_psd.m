@@ -1,12 +1,33 @@
 %> @file
 %> @brief Calculates the power spectrum of input channel data.
 %======================================================================
-%> @brief Calculates the power spectrum of input channel data
+%> @brief Calculates the power spectrum of input channel data over the
+%> standard epoch duration (e.g. 30 s)
 %> @param signal_data
-%> @param params
-%> @param stageStruct events optional_PSD_settings events = something; else
+%> @param params A structure for variable parameters passed in
+%> with following field
+%> @li @c block_len_sec Duration of block in seconds to calculate power specrum from.
+%> @param stageStruct Structure for stage information with following fields
+%> @li @c standard_epoch_sec Epoch duration in seconds (e.g. 30)
+%
 %> @param PSD_settings <i>optional</i>
-%> @retval detectStruct a structure of things
+%> @retval detectStruct a structure with following fields
+%> @li @c new_data Copy of input data.
+%> @li @c new_events A two column matrix of three start stop sample points of
+%> the consecutively ordered detections (i.e. one per row).
+%> @li @c paramStruct Structure with following fields which are each
+%> vectors with the same number of elements as rows of new_events.  Each
+%> field contains a measure of data in the range of the corrensponding
+%> detection.
+%> @li @c paramStruct.delta Delta band power [0.5, 4) Hz
+%> @li @c paramStruct.theta Theta band power [4, 8) Hz
+%> @li @c paramStruct.alpha Alpha band power [8, 12) Hz
+%> @li @c paramStruct.sigma Sigma band power [12, 16) Hz
+%> @li @c paramStruct.beta Beta band power [16, 30) Hz
+%> @li @c paramStruct.gamma Gamma band power [30, Sample rate /2) Hz
+%
+%> @note global MARKING is used here for PSD settings @e removemean and
+%> @e wintype.
 function detectStruct = detection_psd(signal_data, params, stageStruct,optional_PSD_settings)
 % written by Hyatt Moore IV, July 28, 2013
 
@@ -22,15 +43,6 @@ if(nargin<2 || isempty(params))
         %make it and save it for the future
         params.block_len_sec = 6;
         %        params.epoch_window_sec = 30; %the range to calculate the crosscorrelation over
-        
-        % new_data = zeros(numel(src_data),1);
-        % window_name = @hamming;
-        %
-        % nyquist_interval = 'onesided';
-        % nfft = params.samplerate*params.block_len_sec;
-        % window_vec = window_name(nfft);
-        % noverlap = nfft/2;
-
         plist.saveXMLPlist(pfile,params);
     end
 end

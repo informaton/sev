@@ -1,34 +1,59 @@
-function detectStruct = detection_ocular_gopal(data,varargin)
-%detect eye movements from an EOG channel based on I.S. Gopal and G.G.
-%Haddad's method as proposed in "Automatic detection of eye movements in
-%REM sleep using the electrooculogram".  The algorithm uses two rules,
-%along with modifications that classify eye movement wave forms (EMW) based
-%on two rules that are applied to decision points.  The decision points are
-%found at local maxima and minima and the rules check slope and amplitude
-%thresholds for classification as EMW or not.  
+%> @file
+%> @brief Eye movement detector based on I.S. Gopal and G.G.
+%> Haddad's method proposed in "Automatic detection of eye movements in
+%> REM sleep using the electrooculogram".  
+%======================================================================
+%> @brief Detects eye movements from an EOG channel based on I.S. Gopal and G.G.
+%> Haddad's method as proposed in "Automatic detection of eye movements in
+%> REM sleep using the electrooculogram".  The algorithm uses two rules,
+%> along with modifications that classify eye movement wave forms (EMW) based
+%> on two rules that are applied to decision points.  The decision points are
+%> found at local maxima and minima and the rules check slope and amplitude
+%> thresholds for classification as EMW or not.  
+%>
+%> @li Step 1: low pass filter to smooth the data - butterworth in paper
+%> @li Step 2: obtain decision points from local maxima, minimia, and
+%> modification of rule 1
+%> @li Step 1:  Smooth the data with an averaging filter (MA) - 7 taps
+%> @li Step 2:  identify points A and B as as consecutive min/max second
+%> derivaitave peaks
+%> @li Step 3:  If diff of A and B > threshold for amplitude, duration, and slope
+%> then it is an EM
 %
-% Step 1: low pass filter to smooth the data - butterworth in paper
-% Step 2: obtain decision points from local maxima, minimia, and
-% modification of rule 1
-
-%Step 1:  Smooth the data with an averaging filter (MA) - 7 taps
-%Step 2:  identify points A and B as as consecutive min/max second
-%derivaitave peaks
-%Step 3:  If diff of A and B > threshold for amplitude, duration, and slope
-%then it is an EM
+%> @note threshold criteria determined empirically by the authors of this paper as:
+%> @note Amplitude > 30 mV
+%> @note duration > 0.5 second
+%> @note slope > 0.5 mV/second  (data is typically in uV here, so make it
+%> uV)
 %
-%threshold criteria determined empirically by the authors of this paper as:
-%Amplitude > 30 mV
-%duration > 0.5 second
-%slope > 0.5 mV/second  %data is typically in uV here, so make it 
+%> @param data Sampled EOG signal as a column vector.  
+%> @param params A structure for variable parameters passed in
+%> with following fields  {default}
+%> @li @c params.low_pass_filter_order Low pass filter order  {100}
+%> @li @c params.low_pass_filter_freq_hz  Low pass filter frequency cutoff in Hz {8}
+%> @li @c params.smooth_filter_order Smoothing filter order {7}
+%> @li @c params.rule_1_thresh_slope Slope threshold {0.5}
+%> @li @c params.rule_2_thresh_ampl_uv Amplitude threshold in uV {30}
+%> @li @c params.rule_mf2_thresh_ampl_uv  Amplitude threshold in uV for rule 2 modification {10}
+%> @li @c params.merge_within_sec Duration to merge consecutive events within {0.05}
+%>
+%> @param stageStruct Not used; can be empty (i.e. []).
+%> @retval detectStruct a structure with following fields
+%> @li @c new_data Duplicate of input data.
+%> @li @c new_events A two column matrix of three start stop sample points of
+%> the consecutively ordered detections (i.e. per row).
+%> @li @c paramStruct Structure with following field(s) which are vectors
+%> with the same numer of elements as rows of @c new_events.
+%> @li @c paramStruct.duration_sec Duration of detected eye movements in
+%> seconds.
+function detectStruct = detection_ocular_gopal(data,params,stageStruct)
 
 %
 % Implemented by  Hyat Moore IV
 %modified 3/1/2013 - remove global references and use varargin
 
-if(nargin>=2 && ~isempty(varargin{1}))
-    params = varargin{1};
-else
+if(nargin<2 || isempty(params))
+   
     pfile = strcat(mfilename('fullpath'),'.plist');
     
     if(exist(pfile,'file'))

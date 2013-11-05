@@ -1,29 +1,51 @@
-function detectStruct = detection_ocular_takahashi(data,varargin)
-%detect eye movements from an EOG channel based on K. Takahashi's method as
-%proposed in their paper:" Precise Measurement of Individual Rapid Eye
-%Movement in REM Sleep of Humans"
+%> @file
+%> @brief Eye movement detector based on based on K. Takahashi et. al's method as
+%> proposed in their paper:" Precise Measurement of Individual Rapid Eye
+%> Movement in REM Sleep of Humans"
+%======================================================================
+%> @brief Detect eye movements from an EOG channel based on K. Takahashi's method as
+%> proposed in their paper:" Precise Measurement of Individual Rapid Eye
+%> Movement in REM Sleep of Humans"
+%> Algorithm works as follows:
+%> @li Step 1:  Smooth the data with an averaging filter (MA) - 7 taps
+%> @li Step 2:  identify points A and B as as consecutive min/max second
+%> derivaitave peaks
+%> @li Step 3:  If diff of A and B > threshold for amplitude, duration, and slope
+%> then it is an EM
+%>
+%> @note threshold criteria determined empirically by the authors of this paper as:
+%> Amplitude > 30 mV
+%> duration > 0.5 second
+%> slope > 248.3 uV/second
 %
-%Step 1:  Smooth the data with an averaging filter (MA) - 7 taps
-%Step 2:  identify points A and B as as consecutive min/max second
-%derivaitave peaks
-%Step 3:  If diff of A and B > threshold for amplitude, duration, and slope
-%then it is an EM
+%> @param data Sampled EOG signal as a column vector.  
+%> @param params A structure for variable parameters passed in
+%> with following fields  {default}
+%> @li @c params.smoothing_filter_order Smoothing filter order  {10}
+%> @li @c params.thresh_ampl_uv  Amplitude threshold in uV {30}
+%> @li @c params.thresh_dur_sec  Maximum duration in seconds allowed for a detection {0.5} 
+%> @li @c params.thresh_slope  Slope threshold to exceed {248} @note 2.5 uV/100 samples/sec -> 248uV/second
+%> @li @c params.merge_within_sec  Duration to merge consecutive events within {0.1}
 %
-%threshold criteria determined empirically by the authors of this paper as:
-%Amplitude > 30 mV
-%duration > 0.5 second
-%slope > 248.3 uV/second
-
+%> @param stageStruct Not used; can be empty (i.e. []).
+%> @retval detectStruct a structure with following fields
+%> @li @c new_data Duplicate of input data.
+%> @li @c new_events A two column matrix of three start stop sample points of
+%> the consecutively ordered detections (i.e. per row).
+%> @li @c paramStruct Structure with following field(s) which are vectors
+%> with the same numer of elements as rows of @c new_events.
+%> @li @c paramStruct.slope_uv_sec  Slope of the signal from event start to
+%> finish
+%> @li @c paramStruct.amplitude_uv Change in signal amplitude between start and stop of the event.
+%> @li @c paramStruct.duration_sec Duration of detected eye movements in seconds.
+function detectStruct = detection_ocular_takahashi(data,params,stageStruct)
 % implementation by Hyatt Moore
 % modified: 3/1/2013 - updates for channel_cell_data and varargin vice
 % global variable and optional_params input
 
-
 %this allows direct input of parameters from outside function calls, which
 %can be particularly useful in the batch job mode
-if(nargin>=2 && ~isempty(varargin{1}))
-    params = varargin{1};
-else
+if(nargin<2 || isempty(params))
     pfile = strcat(mfilename('fullpath'),'.plist');
     
     if(exist(pfile,'file'))

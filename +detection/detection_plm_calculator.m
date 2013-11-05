@@ -1,4 +1,40 @@
-function detectStruct = detection_plm_calculator(channel_cell_data, optional_params, stageStruct)
+%> @file
+%> @brief Detects periodic leg movements (PLM) using Stanford's validated method.
+%======================================================================
+%> @brief Detects PLM using two pass detection method designed at Stanford.
+%> @param data_cell Two element cell of equal lengthed psg 
+%> vectors representing the channels to compare.
+%> @param params A structure for variable parameters passed in
+%> with following fields; validated defaults are set in {}.
+%> @li @c filter_with_anc = Adaptively filter ECG (0 = no; {1} = yes)
+%> @li @c params.min_duration_sec Minimum duration of processed detections
+%to identify leg movements {0.75}
+%> @li @c average_power_window_sec Window duratation in seconds to calculate baseline noise over; {20}
+%> @li @c merge_within_sec Window duration, in seconds, to merge consuective detections; {2.0};
+%> @li @c use_summer SNR+ option (0 = no; {1} = yes).
+%> @li @c median_removal  Minimum strength option (0 = no; {1} = yes). 
+%
+%> @retval detectStruct a structure with following fields
+%> @li @c new_data Copy of processed input data (e.g noise cancelled)
+%> @li @c new_events A two column matrix of three start stop sample points of
+%> the consecutively ordered detections (i.e. one leg movement per row).
+%> @li @c paramStruct Structure with following fields which are each
+%> vectors with the same number of elements as rows of new_events.  Each
+%> field contains a measure of data in the range of the corrensponding
+%> detection.
+%> @li @c paramStruct.HR_min Minimum heart rate before event;
+%> @li @c paramStruct.HR_max Maximum heart before event
+%> @li @c paramStruct.HR_lead HR_lead Number of cardiace cycles before event that
+%> HR_min occurs.
+%> @li @c paramStruct.HR_lag Number of cardiac cycles after event (i.e. lags behind)
+%> that HR_max occurs.
+%> @li @c paramStruct.HR_delta Difference between HR_min and HR_max
+%> @li @c paramStruct.HR_run Difference between HR_lead and HR_lag
+%> @li @c paramStruct.HR_slope Change of heart rate prior to and following
+%> detected events (i.e. HR_delta/HR_run)
+%> @note See reference text for explanation and motivation of default
+%> values.
+function detectStruct = detection_plm_calculator(data_cell, params, stageStruct)
 % detects PLM using selected detection and preprocessing methods
 %
 %
@@ -23,9 +59,7 @@ function detectStruct = detection_plm_calculator(channel_cell_data, optional_par
 
 %this allows direct input of parameters from outside function calls, which
 %can be particularly useful in the batch job mode
-if(nargin>=2 && ~isempty(optional_params))
-    params = optional_params;
-else
+if(nargin<2 || isempty(params)) 
     pfile = strcat(mfilename('fullpath'),'.plist');
     
     if(exist(pfile,'file'))
@@ -45,8 +79,8 @@ end
 
 samplerate = params.samplerate;
 
-if(~iscell(channel_cell_data))
-    channel_cell_data = {channel_cell_data};
+if(~iscell(data_cell))
+    data_cell = {data_cell};
 end
 
 %Heart rate detections
@@ -64,9 +98,9 @@ params.noisefloor_uV_to_turnoff_detection = 50;
 %adaptive noise cancel if selected
 if(params.filter_with_anc)
     %1. adaptively cancel noise from ECG using recursive least squares method
-    data = filter.anc_rls(channel_cell_data{1},channel_cell_data{2});    
+    data = filter.anc_rls(data_cell{1},data_cell{2});    
 else
-    data = channel_cell_data{1};
+    data = data_cell{1};
 end
 
 lm_detectStruct = detection.detection_lm_dualthresh_twopass_variable_noisefloor_mediator(data,params);
@@ -130,7 +164,7 @@ else
     
     rr_params.filter_order = 10;
     rr_params.samplerate = samplerate;
-    hr_detectStruct = detection.detection_rr_simple(channel_cell_data{2},rr_params);
+    hr_detectStruct = detection.detection_rr_simple(data_cell{2},rr_params);
     hr_start_vec = hr_detectStruct.new_events(:,1);
     inst_hr = hr_detectStruct.paramStruct.inst_hr;
     
@@ -186,10 +220,12 @@ else
     
 end
 
+%> @brief Finds the index of the cardiac cycle that occurs directly before
+%> the start sample of the periodic leg movement passed in.
+%> @param plm_sample Digital time sample index of the period leg movement onset.
+%> @param hr_events is Vector of digital time cardiac cycle starts.
+%> @retval p The index of hr_events whose value immediately precedes plm_sample
 function p = getPrecedingCardiacCycle(plm_sample, hr_events)
-%plm_sample is the index of a digital time signal
-%hr_events is a vector of digital time starting events
-%p is the index of hr_events whose value immediately precedes plm_sample
 p = find(hr_events<plm_sample,1,'last');
 
 

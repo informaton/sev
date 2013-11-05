@@ -1,9 +1,26 @@
-function detectStruct = detection_handj(data,optional_params, stageStruct)
+%> @file
+%> @brief Dummy detector for debugging and testing purposes only.
+%======================================================================
+%> @brief Identifies three events and the mean and max of the data over each.
+%> @param data Signal data as a column vector.  
+%> @param params A structure for variable parameters passed in
+%> with following fields
+%> @li @c threshold1 An unused parameter.
+%> @li @c feature2 Unused.
+%> @li @c feature3 Unused.
+%>
+%> @param stageStruct Not used; can be empty (i.e. []).
+%> @retval detectStruct a structure with following fields
+%> @li @c new_data Copy of input data.
+%> @li @c new_events A two column matrix of three start stop sample points of
+%> the consecutively ordered detections (i.e. per row).
+%> @li @c paramStruct Structure with following fields which are vectors
+%> with the same numer of elements as rows of @c new_events.
+%> @li @c pmean Mean of the data covered by event
+%> @li @c pmax Maximum value of the data covered for each event.
+function detectStruct = detection_handj(data,params, stageStruct)
 
-if(nargin>=2 && ~isempty(optional_params))
-    params = optional_params;
-else
-    
+if(nargin<2 || isempty(params))
     pfile = strcat(mfilename('fullpath'),'.plist');
     
     if(exist(pfile,'file'))
@@ -18,7 +35,7 @@ else
     end
 end
 
-samplerate = params.samplerate;
+% samplerate = params.samplerate;
 
 detectStruct.new_data = data;
 detectStruct.new_events = [1, 300;

@@ -5,12 +5,13 @@
 %> @param data Signal data vector.  
 %> @param params A structure for variable parameters passed in
 %> with following fields
-%> @li @c win_length_sec
-%> @li @c win_interval_sec
-%>
+%> @li @c win_length_sec Duration to compute power spectrum over.
+%> @li @c win_interval_sec Interval between consecutive power spectrum
+%> calculations.
+%
 %> @param stageStruct Not used; can be empty (i.e. []).
 %> @retval detectStruct a structure with following fields
-%> @li @c .new_data An empty value in this case.
+%> @li @c .new_data A copy of the input data
 %> @li @c .new_events A two column matrix of start stop sample points of
 %electrode pop detections, ordered consecutively by occurrence
 %> @li @c .paramStruct Empty value returned (i.e. []).

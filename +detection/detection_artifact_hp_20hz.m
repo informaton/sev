@@ -16,7 +16,7 @@
 %> @retval detectStruct a structure with following fields
 %> @li @c .new_data Data after high pass filtering at 20 Hz.
 %> @li @c .new_events A two column matrix of start stop sample points of
-%electrode pop detections, ordered consecutively by occurrence
+%> electrode pop detections, ordered consecutively by occurrence
 %> @li @c .paramStruct Empty value returned (i.e. []).
 function detectStruct = detection_artifact_hp_20hz(data,params,stageStruct)
 % Author Hyatt Moore IV

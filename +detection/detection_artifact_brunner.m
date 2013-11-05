@@ -1,13 +1,13 @@
 %> @file
-%> @brief EEG artifact detector based on the 1996 paper by Brunner titled, "Muscle artifacts in the sleep
-%> EEG: automated detection and effect on all-night EEG power spectra"
-%======================================================================
 %> @brief Determines sections of artifact using Brunner method.
 %> The method using a moving median filter with adaptive thresholds as
 %> determined by the surrounding time windows of different lengths.  The
 %> paper settled on a threshold of 4 times the median value for a surround 3
 %> minute window.  Three minutes was picked in this case because epochs were
 %> scored in 60 second blocks for the study done in 1996.  
+%======================================================================
+%> @brief EEG artifact detector based on the 1996 paper by Brunner titled, "Muscle artifacts in the sleep
+%> EEG: automated detection and effect on all-night EEG power spectra"
 %> @param data Signal data vector.  
 %> @param params A structure for variable parameters passed in
 %> with following fields

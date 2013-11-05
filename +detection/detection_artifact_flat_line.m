@@ -8,23 +8,17 @@
 %> @li @c win_length_sec Window duration to calculate power from
 %> @li @c win_interval_sec Interval in seconds to estimate power from
 %> @li @c min_power Scalar value representing minimum power level allowed before flat line detection.
-%>
+%
 %> @param stageStruct Not used; can be empty (i.e. []).
 %> @retval detectStruct a structure with following fields
 %> @li @c .new_data Empty in this case (i.e. []).
 %> @li @c .new_events A two column matrix of start stop sample points of
-%> the consecutively ordered detections (i.e. per row).
+%> the consecutively ordered flat line detections (i.e. per row).
 %> @li @c .paramStruct Empty value returned (i.e. []).
 %> @note global MARKING is used here for PSD settings @e removemean and
 %> @e wintype.
 function detectStruct = detection_artifact_flat_line(data,params,stageStruct)
-%channel_index is the index of the CLASS in the CLASS_channel_containerCell
-%global variable that will be processed for artifact.
-%looks for occurrences of flat lining in the signal associated with channel
-%index.  detectStruct.new_data will be returned as empty in this case.  
-%detectStruct.new_events will be a matrix of start stop points of flat line detections
-%in terms of the sample index withing the raw data associated with
-%channel_index
+
 
 global MARKING;
 if(nargin<2 || isempty(params))

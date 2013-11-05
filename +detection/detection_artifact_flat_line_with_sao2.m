@@ -17,7 +17,7 @@
 %> @li @c min_power Scalar value representing minimum power level allowed before flat line detection.
 %> @saO2_min_pct Scalar value representing the minimum oxygen saturation as
 %> a percent.
-%>
+%
 %> @param stageStruct Not used; can be empty (i.e. []).
 %> @retval detectStruct a structure with following fields
 %> @li @c .new_data Data from first signal (i.e. channel_data_cell{1}).

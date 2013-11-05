@@ -1,18 +1,36 @@
-function detectStruct = detection_rr_simple(channel_cell_data,varargin)
-%Based on 1985 paper, " Real-Time QRS Detection Algorithm" by Jiapu Pan and
-%Willis Tompkins.  Originally implemented in assembly language this
-%algorithm uses a single ECG lead, bandpass filtering (originally cascade
-%of high and low-pass filters), derivative filtering, squaring, moving
-%integration, and multiple thresholding and adaptation.
+%> @file
+%> @brief Based on 1985 paper, " Real-Time QRS Detection Algorithm" by Jiapu Pan and
+%> Willis Tompkins.  Originally implemented in assembly language this
+%> algorithm uses a single ECG lead, bandpass filtering (originally cascade
+%> of high and low-pass filters), derivative filtering, squaring, moving
+%> integration, and multiple thresholding and adaptation.
+%> This implementation is lite, and only uses the final, integrated signal.
+%======================================================================
+%> @brief Detects RR intervals from ECG input.
+%> @param data_cell Two element cell of equal lengthed psg 
+%> vectors representing the channels to compare.
+%> @param params A structure for variable parameters passed in
+%> with following field
+%> @li @c filter_order Band pass filter order (i.e. number of taps to use).
 %
-% This method is lite, and only uses the final, integrated signal.
+%> @param stageStruct Not used.
+%> @retval detectStruct a structure with following fields
+%> @li @c new_data Calculated heart rate; same size as input data.
+%> @li @c new_events A two column matrix of three start stop sample points of
+%> the consecutively ordered detections (i.e. per row).
+%> @li @c paramStruct Structure with following fields which are each
+%> vectors with the same number of elements as rows of new_events.  Each
+%> field contains a measure of data in the range of the corrensponding
+%> detection.
+%> @li @c paramStruct.inst_hr Instantaneous heart rate
+%> @li @c paramStruct.diff_hr Slope of heart rate (i.e. difference or change of consecutive heart rate measures)
+%> @li @c paramStruct.inst_rr Instantaenous RR interval
+function detectStruct = detection_rr_simple(data_cell,params, stageStruct)
 
 % Implementation by Hyatt Moore IV
 % modified 3/1/2013 - remove global references and use varargin
-if(nargin>=2 && ~isempty(varargin{1}))
-    params = varargin{1};
-else
-    
+if(nargin<2 || isempty(params)) 
+
     pfile = strcat(mfilename('fullpath'),'.plist');
     
     if(exist(pfile,'file'))
@@ -26,10 +44,10 @@ else
 end
 
 
-if(~iscell(channel_cell_data))
-    channel_cell_data = {channel_cell_data};
+if(~iscell(data_cell))
+    data_cell = {data_cell};
 end
-data = channel_cell_data{1};
+data = data_cell{1};
 samplerate = params.samplerate;
 
 %% 1. apply bandpass filter
@@ -105,7 +123,7 @@ inst_rr = diff([0;evt_i]);
 % avgpeakValues = avgdata(avgpeaks);
 % numFiltPeaks = numel(filtpeaks);
 % filtpeakValues = filtdata(filtpeaks);
-1/(mean(inst_rr)/samplerate)*60;
+% 1/(mean(inst_rr)/samplerate)*60;
 
 
 not_hr = inst_rr<min_latency;

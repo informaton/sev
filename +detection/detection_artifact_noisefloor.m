@@ -1,35 +1,36 @@
-function detectStruct = detection_artifact_noisefloor(channel_indices, varargin)
-% detects portions of data that exceed a desired noisefloor as determined
-% by moving average over set order (e.g. number of seconds)
-%
-%  channel_indices(1) = channel to apply detection method too
-%
+%> @file
+%> @brief Detects portions of data that exceed a desired noisefloor as determined
+%> by moving average over set order (e.g. number of seconds)
+%======================================================================
+%> @brief Detects portions of data that exceed a desired noisefloor as determined
+%> by moving average over set order (e.g. number of seconds)
+%> @param data Signal data as a column vector.  
+%> @param params A structure for variable parameters passed in
+%> with following fields
+%> @li @c average_power_window_sec Calculate average power over consecutive windows of this duration in seconds
+%> @li @c noisefloor_uV_threshold Detection threshold in micro-Volts.
+%> @li @c merge_within_sec Window duration to merge events within.
+%> @li @c min_duration_sec Mininum duration of an event in seconds.
+%>
+%> @param stageStruct Not used; can be empty (i.e. []).
+%> @retval detectStruct a structure with following fields
+%> @li @c new_data Copy of input data.
+%> @li @c new_events A two column matrix of three start stop sample points of
+%> the consecutively ordered detections (i.e. one per row).
+%> @li @c paramStruct Structure with following field 
+%> @li @c paramStruct.avg_noisefloor Vector with the same numer of elements
+%> as rows of @c new_events.  Each value contains the average power of the
+%> signal during the corresponding detected event.
+function detectStruct = detection_artifact_noisefloor(data, params, stageStruct)
+
 % optional parameters are included for plm_threshold function and loaded
 % from .plist file otherwise
 %
 % Written by Hyatt Moore IV, 1/10/2013, Stanford, CA
 % modification of detection_lm_dualthresh_with_noisefloor.m
 
+if(nargin<2 || isempty(params))
 
-global CHANNELS_CONTAINER;
-
-samplerate = 100;
-
-if(numel(channel_indices)>20)
-    data = channel_indices;
-else
-    samplerate = CHANNELS_CONTAINER.getSamplerate(channel_indices(1));
-    data = CHANNELS_CONTAINER.getData(channel_indices(1));
-end
-
-%this allows direct input of parameters from outside function calls, which
-%can be particularly useful in the batch job mode
-if(nargin==2 && ~isempty(optional_params))
-    
-    params = varargin{1};
-    samplerate = params.samplerate;
-    
-else
     pfile = strcat(mfilename('fullpath'),'.plist');
     
     if(exist(pfile,'file'))
@@ -44,6 +45,8 @@ else
         plist.saveXMLPlist(pfile,params);
     end
 end
+
+samplerate = params.samplerate;
 
 
 
