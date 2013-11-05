@@ -1,4 +1,23 @@
-function detectStruct = detection_ocular_dualthreshold(data, varargin)
+%> @file
+%> @brief Eye movement detector using a dual amplitude threshold for
+%> detections.
+%======================================================================
+%> @brief Detects eye movements from an EOG channel using two amplitude thresholds.
+%> @param data Sampled EOG signal as a column vector.  
+%> @param params A structure for variable parameters passed in
+%> with following fields  {default}
+%> @li @c params.threshold_high_uv Upper amplitude threshold in uV; this must be crossed to begin a detection {30}
+%> @li @c params.threshold_low_uv Lower amplitude threshold in uV; signal must fall below this to register event completion {10}
+%> @li @c params.merge_within_sec Duration to merge consecutive events within {0.05}
+%> @li @c params.min_dur_sec Minimum duration for detected events in seconds {0.1}
+%>
+%> @param stageStruct Not used; can be empty (i.e. []).
+%> @retval detectStruct a structure with following fields
+%> @li @c new_data Duplicate of input data.
+%> @li @c new_events A two column matrix of three start stop sample points of
+%> the consecutively ordered detections (i.e. per row).
+%> @li @c paramStruct Unused (i.e. [])
+function detectStruct = detection_ocular_dualthreshold(data, params, stageStruct)
 %Apply a dual threshold to single channel - prepped for ocular movements
 % (e.g. LOC is source_indices(1))
 % Detection begins when the signal rises above the first threshold and ends when
@@ -9,10 +28,9 @@ function detectStruct = detection_ocular_dualthreshold(data, varargin)
 % Author Hyatt Moore IV
 % Date: 5/10/2012
 %modified 3/1/2013 - remove global references and use varargin
+%modified 11/5/2013 - Update and use params and stageStruct instead of varargin
 
-if(nargin>=2 && ~isempty(varargin{1}))
-    params = varargin{1};
-else
+if(nargin<2 || isempty(params))
     pfile = strcat(mfilename('fullpath'),'.plist');
     
     if(exist(pfile,'file'))
@@ -50,3 +68,4 @@ end
 detectStruct.new_events = new_events;
 detectStruct.new_data = data;
 detectStruct.paramStruct = [];
+end

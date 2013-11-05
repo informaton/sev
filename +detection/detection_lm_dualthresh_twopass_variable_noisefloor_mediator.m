@@ -1,4 +1,55 @@
-function detectStruct = detection_lm_dualthresh_twopass_variable_noisefloor_mediator(data_In, optional_params)
+%> @file
+%> @brief Leg Movement detector.  A helper function for PLM detector developed and validated
+%> at Stanford University.  
+%======================================================================
+%> @brief Detects Leg Movements using a two pass, variable noisefloor based amplitude thresholding.   
+%> Detects LM using dualthreshold method where the thresholds adjust based on a moving average power
+%>  that accounts for other portions and then does a second pass, with
+%>  adjustment to the noisefloor on account of detections made the first
+%>  time through.
+%> The algorithm is as follows
+%> @li @c (2-1) Smooth using 0.5 second moving averager (MA filter)
+%> @li @c (3-1) Run a 2-sample summer to increase SNR
+%> @li @c (4-1) Dual threshold at 10uV and 8uV
+%> @li @c (5-1) Prune using LM duration criteria
+%> @li @c (6-1) Classify PLM using AASM 2007 criteria
+%> @li @c (7-1) obtain HR data
+%
+%> @param data Sampled leg EMG signal as a column vector.  
+%> @param params A structure for variable parameters passed in
+%> with following fields  {default}
+%> @li @c params.use_summer = 0;  %apply summer or not.
+%> @li @c params.threshold_high_uV = 8; %8 uV above resting - presumably resting is 2uV
+%> @li @c params.threshold_low_uV = 2;
+%> @li @c params.min_duration_sec = 0.75;
+%> @li @c params.max_duration_sec = 10.0;
+%> @li @c params.merge_within_sec = 2;
+%> @li @c params.summer_order = 2;
+%> @li @c params.average_power_window_sec = 30;  %calculate average power over consecutive windows of this duration in seconds
+%> @li @c params.noisefloor_uV_to_engage_variablethreshold = 5;
+%> @li @c params.noisefloor_uV_to_turnoff_detection = 30;
+%> @li @c params.noisefloor_scale_uV_to_engage = 8;
+%> @li @c params.noisefloor_scale = 2;
+%> @li @c params.median_removal = 1;
+%>
+%> @param stageStruct Not used; can be empty (i.e. []).
+%> @retval detectStruct a structure with following fields
+%> @li @c new_data Duplicate of input data.
+%> @li @c new_events A two column matrix of three start stop sample points of
+%> the consecutively ordered detections (i.e. per row).
+%> @li @c paramStruct Structure with following field(s) which are vectors
+%> with the same numer of elements as rows of @c new_events.
+%> @li @c paramStruct.median  Median value of EMG data identified as Leg
+%> movement.
+%> @li @c paramStruct.rms Root mean square
+%> @li @c paramStruct.abs_amplitude Absolute amplitude
+%> @li @c paramStruct.dur_sec Duration in seconds
+%> @li @c paramStruct.density Density is the area under the curve divided
+%> by the duration of the event.
+%> @li @c paramStruct.auc Area of the positive scaled amplitude
+%> @li @c paramStruct.low_uV Lowest signal amplitude
+%> @li @c paramStruct.high_uV Highest signal amplitude
+function detectStruct = detection_lm_dualthresh_twopass_variable_noisefloor_mediator(data_in, params, stageStruct)
 % detects PLM using dualthreshold method where the thresholds adjust based on a moving average power
 %  that accounts for other portions and then does a second pass, with
 %  adjustment to the noisefloor on account of detections made the first
@@ -35,14 +86,8 @@ function detectStruct = detection_lm_dualthresh_twopass_variable_noisefloor_medi
 
 
 
-%this allows direct input of parameters from outside function calls, which
-%can be particularly useful in the batch job mode
-if(nargin==2 && ~isempty(optional_params))
-    
-    params = optional_params;
-    samplerate = params.samplerate;
-    
-else
+if(nargin<2 || isempty(params))
+   
     pfile = strcat(mfilename('fullpath'),'.plist');
     
     if(exist(pfile,'file'))
@@ -66,7 +111,8 @@ else
         plist.saveXMLPlist(pfile,params);
     end
 end
-data = data_In;
+
+data = data_in;
 
 %merge events that are within 1/20th of a second of each other samples of each other
 dur_samples_below_count = ceil(0.05*samplerate);
@@ -128,7 +174,7 @@ if(~isempty(new_events))
     num_events = size(new_events,1);
     if(num_events>0)
         
-        data = data_In;
+        data = data_in;
         paramStruct.median = zeros(num_events,1);
         paramStruct.rms = zeros(num_events,1);
         paramStruct.abs_amplitude = zeros(num_events,1);

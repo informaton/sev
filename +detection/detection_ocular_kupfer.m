@@ -1,12 +1,27 @@
-function detectStruct = detection_ocular_kupfer(channel_cell_data,varargin)
-%detect eye movements from an EOG channel based on McPartland and Kupfer's
+%> @file
+%> @brief Eye movement detector based on McPartland and Kupfer's
+%> paper, "Computerized measures of EOG activity during sleep" - 1977/1978  
+%======================================================================
+%> @brief Detect eye movements from an EOG channel based on McPartland and Kupfer's
 %paper, "Computerized measures of EOG activity during sleep" - 1977/1978
+%> The method requires the upper and lower threshold crossings (one by each channel) within 100ms of
+%> each other to ensure binocular synchrony.
 %
+%> @param data_cell Two element cell of equal lengthed digitized EOG channel samples
+%> @param params A structure for variable parameters passed in
+%> with following fields  {default}
+%> @li @c params.threshold_uV Upper and Lower amplitude thresholds set to +/- 25uV {25}
+%> @li @c params.max_synchrony_duration_seconds = .10; %within 100 mseconds of each other
 %
-% Upper and Lower thresholds set to +/- 25uV
-% the UTH and LTH must be crossed (one by each channel) within 100ms of
-% each other to ensure binocular synchrony.
-%
+%> @param stageStruct Not used; can be empty (i.e. []).
+%> @retval detectStruct a structure with following fields
+%> @li @c new_data Smoothed version of first input data (i.e.
+%> data_cell{1}).
+%> @li @c new_events A two column matrix of three start stop sample points of
+%> the consecutively ordered detections (i.e. per row).
+%> @li @c paramStruct Unused (i.e. []).
+function detectStruct = detection_ocular_kupfer(data_cell,param, stageStruct)
+
 % Implemented by  Hyat Moore IV
 % modified: 5/24/12 - handle case where only one channel is being used
 % (same source_indices).
@@ -21,12 +36,7 @@ function detectStruct = detection_ocular_kupfer(channel_cell_data,varargin)
 % end
 
 
-%this allows direct input of parameters from outside function calls, which
-%can be particularly useful in the batch job mode
-if(nargin>=2 && ~isempty(varargin{1}))
-    params = varargin{1};
-else
-    
+if(nargin<2 || isempty(params))     
     pfile =  strcat(mfilename('fullpath'),'.plist');
     
     if(exist(pfile,'file'))
@@ -42,9 +52,9 @@ else
     end
 end
 
-OCULAR1.data = channel_cell_data{1};
+OCULAR1.data = data_cell{1};
 samplerate = params.samplerate;
-OCULAR2.data = channel_cell_data{2};
+OCULAR2.data = data_cell{2};
 
 %establish the detection parameters
 
