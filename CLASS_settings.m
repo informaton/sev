@@ -5,7 +5,6 @@
 %> user preferences in the SEV.
 %> The class is designed for storage and manipulation of user settings in
 %> the SEV.
-%
 % ======================================================================
 classdef  CLASS_settings < handle
 %     (InferiorClasses = {?JavaVisible}) CLASS_settings < handle
