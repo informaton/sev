@@ -55,47 +55,61 @@ classdef CLASS_database < handle
             
             tableName = 'Medications_T';
 
-            obj.open();
-            fclose all;
-            
-            fid = fopen(meds_filename,'r');
-            firstLine = fgetl(fid);
-            column_names = regexp(firstLine,'(\S+)','tokens');
-            
-            % frewind(fid);
-            data=textscan(fid,repmat('%s',1,numel(firstLine)),'headerlines',0,'delimiter','\t');
-            fclose(fid);
-            
-            
-            %create the table
-            %table create string
-            TStr = sprintf('CREATE TABLE IF NOT EXISTS %s (patstudykey smallint unsigned not null,',tableName);
-            column_names_db_string = 'patstudykey';
-            
-            for n=2:numel(column_names)
-                name = char(column_names{n});
-                TStr = sprintf('%s %s bool default null,',TStr,name);
-                column_names_db_string = sprintf('%s,%s',column_names_db_string,name);
-            end
-            
-            TStr = sprintf('%s PRIMARY KEY (PATSTUDYKEY))',TStr);
-            
-            
-            mym(['DROP TABLE IF EXISTS ',tableName]);
-            mym(TStr);
-            
-            nrows = numel(data{1});
-            ncols = numel(column_names);
-            for row = 1:nrows
-                q = mym('select patstudykey from studyinfo_t where concat(patid,"_",studynum)="{S}"',data{1}{row});
-                if(~isempty(q.patstudykey))
-                    valuesStr = num2str(q.patstudykey);
-                    
-                    for col = 2:ncols
-                        valuesStr = sprintf('%s,%c',valuesStr,data{col}{row});
-                    end
-                    mym(sprintf('insert into %s (%s) values (%s)',tableName,column_names_db_string,valuesStr));
+            if(nargin==1 || isempty(meds_filename))
+                [meds_filenames, pathname, ~] = uigetfile({'*.txt','Tab-delimited Text (*.txt)'},'Select Medications list data file','MultiSelect','off');
+                
+                if(isnumeric(meds_filenames) && ~meds_filenames)
+                    meds_filenames = [];
+                else
+                    meds_filenames = fullfile(pathname,meds_filenames);                    
                 end
+            end
+
+            if(exist(meds_filename,'file'))
+                obj.open();
+                fclose all;
+                
+                fid = fopen(meds_filename,'r');
+                firstLine = fgetl(fid);
+                column_names = regexp(firstLine,'(\S+)','tokens');
+                
+                % frewind(fid);
+                data=textscan(fid,repmat('%s',1,numel(firstLine)),'headerlines',0,'delimiter','\t');
+                fclose(fid);
+                
+                
+                %create the table
+                %table create string
+                TStr = sprintf('CREATE TABLE IF NOT EXISTS %s (patstudykey smallint unsigned not null,',tableName);
+                column_names_db_string = 'patstudykey';
+                
+                for n=2:numel(column_names)
+                    name = char(column_names{n});
+                    TStr = sprintf('%s %s bool default null,',TStr,name);
+                    column_names_db_string = sprintf('%s,%s',column_names_db_string,name);
+                end
+                
+                TStr = sprintf('%s PRIMARY KEY (PATSTUDYKEY))',TStr);
+                
+                
+                mym(['DROP TABLE IF EXISTS ',tableName]);
+                mym(TStr);
+                
+                nrows = numel(data{1});
+                ncols = numel(column_names);
+                for row = 1:nrows
+                    q = mym('select patstudykey from studyinfo_t where concat(patid,"_",studynum)="{S}"',data{1}{row});
+                    if(~isempty(q.patstudykey))
+                        valuesStr = num2str(q.patstudykey);
+                        
+                        for col = 2:ncols
+                            valuesStr = sprintf('%s,%c',valuesStr,data{col}{row});
+                        end
+                        mym(sprintf('insert into %s (%s) values (%s)',tableName,column_names_db_string,valuesStr));
+                    end
+                end
+            else
+                fprintf('Medications text file not provided or found');
             end
         end
 
