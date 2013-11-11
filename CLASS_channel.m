@@ -16,6 +16,8 @@
 %> creating the synthetic file first.
 % ======================================================================
 classdef CLASS_channel < handle
+    %look for *REMOVE* to remove older files that may no longer be in use.
+    
     properties
         %> sets 0 position of the data along the y-axes.
         line_offset; 
@@ -75,8 +77,13 @@ classdef CLASS_channel < handle
         %> 3 element vector (x,y,z) for the label's position relative to the
         %> axes...
         label_position; 
+        %> The offset (in uV) to draw reference lines up and below the
+        %channel's signal.  A value of 0 indicates on reference lines are
+        %drawn (numeric).  
         reference_line_offsets;
+        %> Color of the reference line (string)
         reference_line_color;
+        %> MATLAB line handles for the reference lines
         reference_line_handles;
         %> two element vector of text handles that describe the position of
         %> the reference lines
@@ -160,18 +167,20 @@ classdef CLASS_channel < handle
         
     end
     methods        
+        % =================================================================
         %> @brief filter channel according to properties of filterStructIn.
         %> filtered data is stored in obj.filter_data
         %> @param obj instance of CLASS_channel class.
         %> @param filterStruct is an array structure with the following fields
-        %>   - .src_channel_index = [];
-        %>   - .src_channel_label = [];
-        %>   - .m_file = [];
-        %>   - .ref_channel_index = [];
-        %>   - .ref_channel_label = {};
-        %>   - .params
+        %> @li @c .src_channel_index = [];
+        %> @li @c .src_channel_label = [];
+        %> @li @c .m_file = [];
+        %> @li @c .ref_channel_index = [];
+        %> @li @c .ref_channel_label = {};
+        %> @li @c .params
         %> @note side effect is to set draw_filtered boolean variable depending
         %> on wether filterStruct is empty or not.
+        % =================================================================
         function obj = filter(obj, filterStructIn)
           
           if(isempty(filterStructIn))
@@ -252,7 +261,6 @@ classdef CLASS_channel < handle
         
         % =================================================================
         %> @brief assign class color property.
-        %>
         %> @param obj instance of CLASS_channel class.
         %> @param newColor new color to assign, must be of handle property
         %> <i>color</i> type
@@ -281,7 +289,8 @@ classdef CLASS_channel < handle
         end;
         
         % =================================================================
-        %> @brief Remove a reference of a CLASS_events instance.
+        %> @brief Remove a reference of a CLASS_events instance by setting
+        %> event_index of the event_indices_vector to null ([]).
         %> @param obj instance of CLASS_channel class.
         %> @param event_index index of the CLASS_event to be removed, as maintained by an
         %> instance of CLASS_events_container.
@@ -292,9 +301,10 @@ classdef CLASS_channel < handle
         end
         
         % =================================================================
-        %> @brief 
+        %> @brief This function does not appear to be in use and is likely
+        %> a remnant from previous versions.  ***REMOVE***
         %> @param obj instance of CLASS_channel class.
-        %> @param 
+        %> @param new_event_from_file_obj
         %> @retval obj instance of CLASS_channel class.
         % =================================================================
         function obj = update_file_events_cell(obj,new_event_from_file_obj)
@@ -311,9 +321,11 @@ classdef CLASS_channel < handle
         end;
         
         % =================================================================
-        %> @brief 
+        %> @brief Updates object parameters directly from the field/value
+        %parameters provided in the input struct @e settings
         %> @param obj instance of CLASS_channel class.
-        %> @param 
+        %> @param settings Struct with field-value pairs that are written
+        %> directly into obj.
         %> @retval obj instance of CLASS_channel class.
         % =================================================================        
         function obj = loadSettings(obj,settings)
@@ -328,10 +340,11 @@ classdef CLASS_channel < handle
         end
         
         % =================================================================
-        %> @brief 
-        %> @param obj instance of CLASS_channel class.
-        %> @param 
-        %> @retval obj instance of CLASS_channel class.
+        %> @brief Returns a struct with saveable object parameter values.
+        %> This is useful in saving settings between SEV calls.  See
+        %> @e loadSettings
+        %> @param obj Instance of CLASS_channel class.
+        %> @retval settings Struct containing current parameter value pairs of obj
         % =================================================================
         function settings = getSettings(obj)
             settings.line_offset = obj.line_offset;
@@ -346,10 +359,14 @@ classdef CLASS_channel < handle
         end
         
         % =================================================================
-        %> @brief 
+        %> @brief Return raw or filtered signal data of the CLASS_channel
+        %> instance.  All data may be returned or data in a range of
+        %> interest.  Filtered data is returned if obj.show_filtered is
+        %> true, otherwise raw data is returned (i.e. unfiltered).
         %> @param obj instance of CLASS_channel class.
-        %> @param 
-        %> @retval obj instance of CLASS_channel class.
+        %> @param range_of_interest Vector of indices that include a range
+        %> of indices to take data from (e.g. a start stop pair).
+        %> @retval data
         % =================================================================
         function data = getData(obj, range_of_interest)
             if(nargin==2 && ~isempty(range_of_interest))                
@@ -369,7 +386,7 @@ classdef CLASS_channel < handle
         
         % =================================================================
         %> @brief Calculates the power spectral density for this instance 
-        %> of CLASS_channel.
+        %> of CLASS_channel using modified window, periodogram averaging.
         %> @param obj instance of CLASS_channel class.
         %> @param PSD_settings PSD settings to use.
         %> @param optional_sample_range Optional range to calculate the PSD
@@ -405,16 +422,21 @@ classdef CLASS_channel < handle
         end
         
         % =================================================================
-        %> @brief 
+        %> @brief Calculates the power spectral density for the instance 
+        %> of CLASS_channel using MUSIC.
         %> @param obj instance of CLASS_channel class.
-        %> @param MUSIC_settings - struct with settings for MUSIC
-        %> calculation
-        %> @param optinal_sample_range - optional vector of indices to 
-        %> calculate MUSIC of.
-        %> @retval obj instance of CLASS_channel class.
+        %> @param MUSIC_settings Struct of MUSIC settings to use.
+        %> @param optional_sample_range Optional range to calculate the PSD
+        %> over.  Otherwise the entire data set is calculated.  
+        %> @retval S Vector of spectrum values corresponding to frequencies
+        %> at F
+        %> @retval F Vector of frequency values that the spectrum S is
+        %> calculated at.
+        %> @retval winlen Number of samples used to calculate spectrum from (i.e. the window length)
+        %> @note obj.MUSIC is set to MUSIC_settings parameter.
         % =================================================================
          %calculates the power spectrum using MUSIC for the entire data set
-        function [S,F,nfft] = calculate_PMUSIC(obj,MUSIC_settings,optional_sample_range)
+        function [S,F,winlen] = calculate_PMUSIC(obj,MUSIC_settings,optional_sample_range)
            
             if(nargin<=2 || isempty(optional_sample_range))
                 music_range = 1:numel(obj.raw_data);
@@ -423,22 +445,35 @@ classdef CLASS_channel < handle
             end
             
             obj.MUSIC = MUSIC_settings;
-            [obj.MUSIC.magnitudes obj.MUSIC.freq_vec obj.MUSIC.nfft] = calcPMUSIC(obj.getData(music_range),obj.samplerate,obj.MUSIC);
+            [obj.MUSIC.magnitudes obj.MUSIC.freq_vec obj.MUSIC.winlen] = calcPMUSIC(obj.getData(music_range),obj.samplerate,obj.MUSIC);
             if(nargout>0)
                 S = obj.MUSIC.magnitudes;
                 if(nargout>1)
                     F = obj.MUSIC.freq_vec;
                     if(nargout>2)
-                        nfft = obj.MUSIC.nfft;
+                        winlen = obj.MUSIC.winlen;
                     end
                 end
             end
         end
         
         % =================================================================
-        %> @brief 
-        %> @param obj instance of CLASS_channel class.
-        %> @param 
+        %> @brief Constructor
+        %> @param raw_data Time series signal data for the channel (numeric vector)
+        %> @param src_title Name of the channel as obtained from a source file (e.g. .EDF) (string)
+        %> @param src_channel_index Index of the channel data as obtained
+        %> from the source file (e.g. an .EDF file is a multiplexed file with
+        %> many signals; src_channel_index is the index of the channel that raw_data is obtained from in that file)
+        %> @param src_samplerate Sample rate of data as determined/obtained
+        %> from the source file (e.g. .EDF).  Use 0 if the channel is synthesized and does not have a source file (numeric, unsigned integer)
+        %> @param desired_samplerate Sample rate that the channel should be
+        %> converted to (unsigned numeric)
+        %> @param container_index Index of channel instance as stored in a
+        %> container object (i.e. CLASS_events_container).
+        %> @param parent_fig MATLAB figure handle for displaying and interacting with the channel data
+        %> @param parent_axes MATLAB axes handle where the data is
+        %> displayed and interacted with (i.e. to hold the line handle and
+        %context menus of the channel).
         %> @retval obj instance of CLASS_channel class.
         % =================================================================
         %only first four parameters are required if not using graphics -
@@ -503,10 +538,13 @@ classdef CLASS_channel < handle
         end
 
         % =================================================================
-        %> @brief 
+        %> @brief Initialize reference line properties
         %> @param obj instance of CLASS_channel class.
-        %> @param 
+        %> @param contextmenu_ref_line_h MATLAB contextmenu handle assigned
+        %> to the reference lines that are created/configured.
         %> @retval obj instance of CLASS_channel class.
+        %> @note obj parameter @e reference_line_handles and @e
+        %> reference_text_handles are created and initialized.
         % =================================================================
         function obj = setupReferenceLines(obj,contextmenu_ref_line_h)
             obj.reference_line_handles = zeros(2,1);
@@ -525,22 +563,28 @@ classdef CLASS_channel < handle
         end
 
         % =================================================================
-        %> @brief 
+        %> @brief Sets the current range of samples (i.e. the samples that
+        %> are currently displayed on the screen to the user)
         %> @param obj instance of CLASS_channel class.
-        %> @param 
+        %> @param current_samples Range of samples to set active (vector)
+        %> @note Channel data in the range of @e current_samples is drawn
+        %> if obj is not @e hidden.
         %> @retval obj instance of CLASS_channel class.
         % =================================================================
-        function setCurrentSamples(obj,current_samples)
+        function obj = setCurrentSamples(obj,current_samples)
             %could do checking here, but do not want the slowdown...
             obj.current_samples = current_samples;
             if(~obj.hidden)
                 obj.draw();
             end
         end
+        
         % =================================================================
-        %> @brief 
+        %> @brief Create and setup the line handle for displaying and
+        %interacting with the raw data contained in obj.
         %> @param obj instance of CLASS_channel class.
-        %> @param 
+        %> @param contextmenu_mainline_h MATLAB contextmenu handle for the
+        %> main line (i.e. the channel data) (handle).
         %> @retval obj instance of CLASS_channel class.
         % =================================================================
         function obj = setupMainLine(obj,contextmenu_mainline_h)
@@ -608,9 +652,10 @@ classdef CLASS_channel < handle
         
 
         % =================================================================
-        %> @brief 
+        %> @brief Set color of the channel's reference line.
         %> @param obj instance of CLASS_channel class.
-        %> @param 
+        %> @param new_color Color to set reference line to (can be RGB
+        %> vector or string with color name).
         %> @retval obj instance of CLASS_channel class.
         % =================================================================
         function obj = setReferenceLineColor(obj,new_color)
@@ -621,14 +666,15 @@ classdef CLASS_channel < handle
         end
         
         % =================================================================
-        %> @brief 
+        %> @brief Enables editing of the current text label                
         %> @param obj instance of CLASS_channel class.
-        %> @param 
+        %> @param hObject MATLAB callback object.
+        %> @param eventdata Not used.
         %> @retval obj instance of CLASS_channel class.
         % =================================================================
         function text_buttonDownFcn(obj, hObject,eventdata)
-            %enables editing of the current text label            
             %check to make sure we are not a contextmenu
+        
             if(~strcmp(get(obj.parent_fig,'selectiontype'),'alt'))
                 originalStr = get(hObject,'string');
                 set(hObject,'editing','on');
@@ -645,19 +691,23 @@ classdef CLASS_channel < handle
             end
         end
         % =================================================================
-        %> @brief 
+        %> @brief Set choice to show filtered data or not show it.
         %> @param obj instance of CLASS_channel class.
-        %> @param 
+        %> @param show_boolean (boolean) True is to show filtered data,
+        %> otherwise it is not shown (raw data is shown)
         %> @retval obj instance of CLASS_channel class.
+        %> @note draw() is called.
         % =================================================================
         function set_show_filtered(obj,show_boolean)
             obj.show_filtered = show_boolean==1;
             obj.draw();
         end
+        
         % =================================================================
-        %> @brief 
+        %> @brief Draw filtered data to the screen.
         %> @param obj instance of CLASS_channel class.
-        %> @param 
+        %> @param varargin
+        %>    @le varargin{1} = x range of data to show
         %> @retval obj instance of CLASS_channel class.
         % =================================================================
         function draw_filtered(obj, varargin)            
@@ -689,10 +739,11 @@ classdef CLASS_channel < handle
             end
         end
         % =================================================================
-        %> @brief 
+        %> @brief Sets the vertical position of the channel data on the
+        %> screen (i.e. vertical repositionning)
         %> @param obj instance of CLASS_channel class.
-        %> @param 
-        %> @retval obj instance of CLASS_channel class.
+        %> @param new_lineoffset Vertical offset of channel data to use.
+        %> @note obj.repositioning is set to @true and @obj.draw is called.
         % =================================================================
         function setLineOffset(obj,new_lineoffset)
             obj.line_offset = new_lineoffset;
@@ -701,10 +752,10 @@ classdef CLASS_channel < handle
         end
         
         % =================================================================
-        %> @brief 
+        %> @brief Draw filtered or raw data to the screen depending on the
+        %> boolean parameter value .show_filtered
         %> @param obj instance of CLASS_channel class.
-        %> @param 
-        %> @retval obj instance of CLASS_channel class.
+        %> @param varargin Passed to draw_filtered or draw_raw.
         % =================================================================
         function draw(obj,varargin)
             if(obj.show_filtered)
@@ -714,10 +765,12 @@ classdef CLASS_channel < handle
             end
         end
         % =================================================================
-        %> @brief 
+        %> @brief Draw raw signal data (i.e. data initially loaded to constructor from
+        %> a source file or as synthesized).
         %> @param obj instance of CLASS_channel class.
-        %> @param 
-        %> @retval obj instance of CLASS_channel class.
+        %> @param varargin
+        %> @li varargin{1} current samples to draw.  If empty, then just
+        %> use the object's @e current_samples parameter.
         % =================================================================
         function draw_raw(obj, varargin)
             if(obj.hidden)
@@ -747,10 +800,9 @@ classdef CLASS_channel < handle
         end
 
         % =================================================================
-        %> @brief 
+        %> @brief Draw events attached to the channel instance.
         %> @param obj instance of CLASS_channel class.
-        %> @param 
-        %> @retval obj instance of CLASS_channel class.
+        %> @note Global EVENT_CONTAINER is used
         % =================================================================
         %show the events associated with this channel
         function draw_attached_events(obj)
@@ -770,10 +822,11 @@ classdef CLASS_channel < handle
         end;
 
         % =================================================================
-        %> @brief 
+        %> @brief Set the offset of the reference line associated with the
+        %> channel class instance, obj.
         %> @param obj instance of CLASS_channel class.
-        %> @param 
-        %> @retval obj instance of CLASS_channel class.
+        %> @param reference_offset Value of the offset reference lines; Use
+        %> 0  to turn off (not draw).  A positive value is shown as +/- offset. 
         % =================================================================
         function setReferenceLineOffset(obj,reference_offset)
             if(nargin==2)
@@ -790,15 +843,11 @@ classdef CLASS_channel < handle
                 
                 obj.draw_reference_lines();
             end
-            
-
         end
         
         % =================================================================
-        %> @brief 
+        %> @brief Draw the reference lines of the channel data.
         %> @param obj instance of CLASS_channel class.
-        %> @param 
-        %> @retval obj instance of CLASS_channel class.
         % =================================================================
         function draw_reference_lines(obj)
 %             x = 1:numel(obj.current_samples);
@@ -815,10 +864,16 @@ classdef CLASS_channel < handle
         end
         
         % =================================================================
-        %> @brief 
+        %> @brief Show the channel data, reference line, and text handles
+        %> (i.e. make sure their @e visible and @e handlevisibility
+        %properties are set to @e on.
         %> @param obj instance of CLASS_channel class.
-        %> @param 
+        %> @param varargin MATAB callback arguments (e.g. hObject,
+        %> event_data, handles). - May not be necessary in current
+        %> implementation.
         %> @retval obj instance of CLASS_channel class.
+        %> @note global EVENT_CONTAINER is used and it's @e show method
+        %> also called with the objects @e event_indices_vector.
         % =================================================================
         function obj = show(obj,varargin)
             %varargin so we can use this for a callback
@@ -827,19 +882,19 @@ classdef CLASS_channel < handle
             set(obj.line_handle,'handlevisibility','on','visible','on');
             set(obj.text_handle,'handlevisibility','on','visible','on');
             set(obj.reference_line_handles,'handlevisibility','on');
-            set(obj.reference_text_handles,'handlevisibility','on');
-            
-            obj.setReferenceLineOffset();
-            
-            EVENT_CONTAINER.show(obj.event_indices_vector);
-                
+            set(obj.reference_text_handles,'handlevisibility','on');            
+            obj.setReferenceLineOffset();            
+            EVENT_CONTAINER.show(obj.event_indices_vector);                
         end
         
         % =================================================================
-        %> @brief 
+        %> @brief Hide the channel data, reference line, and text handles
+        %> (i.e. make sure their @e visible and @e handlevisibility
+        %> properties are set to @e off.
         %> @param obj instance of CLASS_channel class.
-        %> @param 
         %> @retval obj instance of CLASS_channel class.
+        %> @note global EVENT_CONTAINER is used and it's @e hide method
+        %> also called with the objects @e event_indices_vector.
         % =================================================================
         function obj = hide(obj)
             global EVENT_CONTAINER;
@@ -854,10 +909,13 @@ classdef CLASS_channel < handle
         end
         
         % =================================================================
-        %> @brief 
+        %> @brief ***REMOVE*** This is used to save PSD data to text files.
+        %> However it appears antiquated based on number of global
+        %> variables referenced withinn.
         %> @param obj instance of CLASS_channel class.
-        %> @param 
-        %> @retval obj instance of CLASS_channel class.
+        %> @param savefilename 
+        %> @param optional_PSD_settings
+        %> @retval obj instance of CLASS_channel class
         % =================================================================
         function savePSD2txt(obj, savefilename,optional_PSD_settings)
             global BATCH_PROCESS;
