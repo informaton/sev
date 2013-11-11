@@ -5,6 +5,7 @@
 %> interaction with SEV and Wisconsin Sleep Cohort data.
 %> @note: A MySQL database must be installed on the local host for class
 %> instantiations to operate correctly.
+%>
 % ======================================================================
 classdef CLASS_WSC_database < CLASS_database
 
