@@ -71,7 +71,7 @@ if(numel(varargin)>0)
     
     %load DB parameter file if it exists
     %database_struct contains fileds 'name','user','password' for interacting with a mysql database
-    database_struct = CLASS_events_container.loadDatabaseStructFromInf(var.database.filename);
+    database_struct = CLASS_database.loadDatabaseStructFromInf(var.database.filename);
     if(~isempty(database_struct))
         set(handles.check_save2DB,'value',var.database.save2DB,'enable','on');
         if(var.database.save2DB)

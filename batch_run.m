@@ -1250,8 +1250,7 @@ end
                     %the channel numbering/ordering does not have the same
                     %requirement
                     artifact_settings = parBATCH_PROCESS.artifact_settings;
-                    event_settings = parBATCH_PROCESS.event_settings;
-               
+                    event_settings = parBATCH_PROCESS.event_settings;               
                     %handle the stage data, which is a requirement for
                     %batch processing - that is, it must exist for batch
                     %processing to continue/work
@@ -1455,9 +1454,8 @@ end
                     for k = 1:numel(parBATCH_PROCESS.PSD_settings)
                         channel_label = parBATCH_PROCESS.PSD_settings{k}.channel_labels{:};
                         channel_index = parBATCH_PROCESS.PSD_settings{k}.channel_indices;
-                        filename_out = fullfile(full_psd_path,[cur_filename(1:end-3), channel_label,'.', BATCH_PROCESS.output_files.psd_filename]);
-                        
-                        batch.save_periodograms(channel_index,filename_out,parBATCH_PROCESS.PSD_settings{k});
+                        filename_out = fullfile(full_psd_path,[cur_filename(1:end-3), channel_label,'.', parBATCH_PROCESS.output_files.psd_filename]);
+                        batch.save_periodograms(batch_CHANNELS_CONTAINER.getChannel(channel_index),batch_STAGES,parBATCH_PROCESS.PSD_settings{k},filename_out,batch_ARTIFACT_CONTAINER,parBATCH_PROCESS.start_time);
                     end;
 
                     for k = 1:numel(parBATCH_PROCESS.MUSIC_settings)
@@ -1465,7 +1463,7 @@ end
                         channel_index = parBATCH_PROCESS.MUSIC_settings{k}.channel_indices;
                         filename_out = fullfile(full_music_path,[cur_filename(1:end-3), channel_label,'.', BATCH_PROCESS.output_files.music_filename]);
                         
-                        batch.save_pmusic(channel_index,filename_out,parBATCH_PROCESS.MUSIC_settings{k});
+                        batch.save_pmusic(batch_CHANNELS_CONTAINER.getChannel(channel_index),filename_out,parBATCH_PROCESS.MUSIC_settings{k});
                     end;
                     
                     %save the files to disk

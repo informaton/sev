@@ -65,7 +65,8 @@ if(ncols>1)
         
     end
     disp([ref{1}(1:4),ref{2}(1:4)]);
-    e = filter.anc_rls_multiple(sig,cell2mat(ref),params.order,params.sigma,params.lambda);
+%     e = filter.anc_rls_multiple(sig,cell2mat(ref),params.order,params.sigma,params.lambda);
+    e = filter.anc_rls_single(sig,cell2mat(ref),params.order,params.sigma,params.lambda);
 else
     
 %     if(ncols<nrows)

@@ -1,47 +1,32 @@
-function save_periodograms(channel_ref,filename_out,PSD_settings)
-% hObject    handle to menu_file_save_psd (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
+%> @brief Calculates periodogram of input channel data according to the
+%> PSD settings provided and saves output to a text file.
+%> @param channelObj Instance of CLASS_channel
+%> @param StagingStruct Sleep staging struct (e.g. hypnogram data)
+%> @param PSD_settings Struct with field/values which describe how to
+%> calculate periodograms
+%> @param filename_out Name of the text file to store periodograms to
+%> @param ARTIFACT_CONTAINER Instance of CLASS_events_container which is
+%> used to identify overlap between periodograms and events/artifacts.
+function save_periodograms(channelObj,StagingStruct,PSD_settings,filename_out,ARTIFACT_CONTAINER,batchID)
 
 %Written by Hyatt Moore IV 
 % (date created is likely 2010-2011)
-
-global CHANNELS_CONTAINER;
-global MARKING;
-global BATCH_PROCESS;
-global ARTIFACT_CONTAINER;
-global STATE;
-
-channel_index = 0; %this causes crash if nothing is found
-if(isnumeric(channel_ref))
-    channel_index = channel_ref;
-elseif(ischar(channel_ref))
-    for k=1:CHANNELS_CONTAINER.num_channels
-        if(strcmp(CHANNELS_CONTAINER.cell_of_channels{k}.EDF_label,channel_ref))
-            channel_index = k;
-            break;
-        end;
-    end;
-end;
-
+% Updated 11/12/13
 try
-    PRIMARY = CHANNELS_CONTAINER.cell_of_channels{channel_index};
     
-    if(isempty(PRIMARY.PSD))
-        if(nargin==2)
-            PRIMARY.calculate_PSD();
-        else
-            PRIMARY.calculate_PSD([],PSD_settings);
-        end
-    end;
+    if(isempty(PSD_settings))
+        channelObj.calculate_PSD();
+    else
+        channelObj.calculate_PSD(PSD_settings);
+    end
     
-    PSD = PRIMARY.PSD;
-    y = PSD.magnitude;
+
+    y = channelObj.PSD.magnitude;
     rows = size(y,1);
     
-    study_duration_in_seconds = numel(PRIMARY.raw_data)/PRIMARY.samplerate;
-    E = floor(0:PSD.interval/BATCH_PROCESS.standard_epoch_sec:(study_duration_in_seconds-PSD.FFT_window_sec)/BATCH_PROCESS.standard_epoch_sec)'+1;
-    S = MARKING.sev_STAGES.line(E);
+    study_duration_in_seconds = numel(channelObj.raw_data)/channelObj.samplerate;
+    E = floor(0:channelObj.PSD.interval/StagingStruct.standard_epoch_sec:(study_duration_in_seconds-channelObj.PSD.FFT_window_sec)/StagingStruct.standard_epoch_sec)'+1;
+    S = StagingStruct.line(E);
 
 %     no_artifact_label = '-';
     A_ind = false(numel(E),ARTIFACT_CONTAINER.num_events);
@@ -52,14 +37,14 @@ try
         
         %periodogram_epoch refers to an epoch that is measured in terms of
         %the periodogram length and not a 30-second length
-        artifacts_per_periodogram_epoch = sample2epoch(artifact_indices,PSD.interval,PRIMARY.samplerate);
+        artifacts_per_periodogram_epoch = sample2epoch(artifact_indices,channelObj.PSD.interval,channelObj.samplerate);
                 
         %need to handle the overlapping case differently here...
-        if(PSD.FFT_window_sec~=PSD.interval)
+        if(channelObj.PSD.FFT_window_sec~=channelObj.PSD.interval)
             %window_sec must be greater than interval_sec if they are not
             %equal - this is ensured in the PSD settings GUI - though
             %adjusting the parametes externally may cause trouble!
-            overlap_sec = ceil(PSD.FFT_window_sec-PSD.interval);
+            overlap_sec = ceil(channelObj.PSD.FFT_window_sec-channelObj.PSD.interval);
             artifacts_per_periodogram_epoch(2:end,1) = artifacts_per_periodogram_epoch(2:end,1)-overlap_sec;
         end;
 
@@ -74,39 +59,20 @@ try
     
      ArtifactBool = sum(A_ind,2)>0;
 
-     if(STATE.batch_process_running)
-         samples_per_artifact = PSD.interval*PRIMARY.samplerate;
-         artifact_mat = find(ArtifactBool);
-         artifact_mat = [(artifact_mat-1)*samples_per_artifact+1,artifact_mat*samples_per_artifact];
-         if(BATCH_PROCESS.output_files.cumulative_stats_flag)
-             batch.updateBatchStatisticsTally(PRIMARY.samplerate,artifact_mat);
-         end
-         if(BATCH_PROCESS.output_files.individual_stats_flag) %artifact statistics
-             batch.saveArtifactandStageStatistics(PRIMARY.samplerate,artifact_mat);
-         end
-     end
-%     
-%     %just make the first row be this character
-%     ArtifactLabels(~A_ind,1) = no_artifact_label;  %refer to no artifacts...
-    
-    %and a quick second pass, I hope...
+%      samples_per_artifact = channelObj.PSD.interval*channelObj.samplerate;
+%      artifact_mat = find(ArtifactBool);
+%      artifact_mat = [(artifact_mat-1)*samples_per_artifact+1,artifact_mat*samples_per_artifact];
+     
+%      if(BATCH_PROCESS.output_files.cumulative_stats_flag)
+%          batch.updateBatchStatisticsTally(channelObj.samplerate,artifact_mat);
+%      end
+%      if(BATCH_PROCESS.output_files.individual_stats_flag) %artifact statistics
+%          batch.saveArtifactandStageStatistics(channelObj.samplerate,artifact_mat);
+%      end
 
-    %final artifact is a sum of the different artifact methods that were used.  The different components that contribute to a non-zero artifact score can be discriminated using knowledge of the artifacts batch_mode_score
-%     A = sum(A,2);
-    
-%     if(isfield(BATCH_PROCESS,'output_path'))
-%         if(isfield(BATCH_PROCESS,'power'))
-%             fout = fopen(fullfile(BATCH_PROCESS.output_path.current,BATCH_PROCESS.psd_path,filename_out),'w');
-%         else
-%             fout = fopen(fullfile(BATCH_PROCESS.output_path.current,filename_out),'w');
-%         end
-%     else
-%         disp('BATCH_PROCESS.output_path not set - saving to current directory!');
-%         fout = fopen(fullfile(pwd,filename_out),'w');
-%     end
     fout = fopen(filename_out,'w');
 
-    analysis_CHANNEL_label = PRIMARY.EDF_label;
+    analysis_CHANNEL_label = channelObj.EDF_label;
     fprintf(fout,['#Power Spectral Density values from FFTs with the following parameters: (Batch ID: %s)\r\n'...
         ,'#\tCHANNEL:\t%s\r\n'...
         ,'#\twindow length (seconds):\t%0.1f\r\n'...
@@ -114,13 +80,12 @@ try
         ,'#\tFFT interval (taken every _ seconds):\t%0.1f\r\n'...
         ,'#\tInitial Sample Rate(Hz):\t%i\r\n'...
         ,'#\tFinal Sample Rate(Hz):\t%i\r\n'...
-        ,'%s\tSlow\tDelta\tTheta\tAlpha\tSigma\tBeta\tGamma\tMean0_30\tSum0_30\tA\tA_type\tS\tE\r\n'],BATCH_PROCESS.start_time,analysis_CHANNEL_label,PSD.FFT_window_sec,PSD.nfft,PSD.interval...
-        ,PRIMARY.src_samplerate,PRIMARY.samplerate...
-        ,num2str(PSD.x,'\t%0.001f'));%'\t%0.1f'
-%     fclose(fout);
+        ,'%s\tSlow\tDelta\tTheta\tAlpha\tSigma\tBeta\tGamma\tMean0_30\tSum0_30\tA\tA_type\tS\tE\r\n'],batchID,analysis_CHANNEL_label,channelObj.PSD.FFT_window_sec,channelObj.PSD.nfft,channelObj.PSD.interval...
+        ,channelObj.src_samplerate,channelObj.samplerate...
+        ,num2str(channelObj.PSD.x,'\t%0.001f'));%'\t%0.1f'
     
     %psd.x is a row vector, delivered by calcPSD
-    freqs = PSD.x;
+    freqs = channelObj.PSD.x;
     slow = mean(y(:,freqs>0&freqs<4),2); %mean across the rows to produce a column vector
     
     delta = sum(y(:,freqs>=0.5&freqs<4),2); %mean across the rows to produce a column vector
@@ -141,24 +106,13 @@ try
     
     fprintf(fout,numeric_output_str,yall');
 
-%     tic
-%     for row = 1:r
-%         fprintf(fout,numeric_output_str,y(row,:),ArtifactLabels(row,:),S(row),E(row));
-%     end;
-%     toc
     
     fclose(fout);
-%     tic
-%     save(fullfile(BATCH_PROCESS.output_path,filename_out),'y','-tabs','-ASCII','-append');
-%     toc
-    x = sprintf('%i %0.04f-second periodograms saved to %s\n',rows,PSD.FFT_window_sec,filename_out);
-
-    disp(x);
+    
+    fprintf('%i %0.04f-second periodograms saved to %s\n',rows,channelObj.PSD.FFT_window_sec,filename_out);
+    
     
 catch ME
-%     warnmsg = ME.message;
-%     stack_error = ME.stack(1);
-%     warnmsg = sprintf('%s\r\n\tFILE: %s\f<a href="matlab:opentoline(''%s'',%s)">LINE: %s</a>\fFUNCTION: %s', warnmsg,stack_error.file,stack_error.file,num2str(stack_error.line),num2str(stack_error.line), stack_error.name);
-%     disp(warnmsg);
-     rethrow(ME);
+    showME(ME);
+    rethrow(ME);
 end;
