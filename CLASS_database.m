@@ -34,9 +34,10 @@ classdef CLASS_database < handle
         %> @param obj CLASS_database derivded instance.
         % =================================================================
         function open(obj)
-            mym('close');
-            mym('open','localhost',obj.DBstruct.user,obj.DBstruct.password);
-            mym(['USE ',obj.DBstruct.name]);
+            obj.openDB(obj.DBstruct);
+%             mym('close');
+%             mym('open','localhost',obj.DBstruct.user,obj.DBstruct.password);
+%             mym(['USE ',obj.DBstruct.name]);
         end   
         
         % ======================================================================
@@ -56,12 +57,12 @@ classdef CLASS_database < handle
             tableName = 'Medications_T';
 
             if(nargin==1 || isempty(meds_filename))
-                [meds_filenames, pathname, ~] = uigetfile({'*.txt','Tab-delimited Text (*.txt)'},'Select Medications list data file','MultiSelect','off');
+                [meds_filename, pathname, ~] = uigetfile({'*.txt','Tab-delimited Text (*.txt)'},'Select Medications list data file','MultiSelect','off');
                 
-                if(isnumeric(meds_filenames) && ~meds_filenames)
-                    meds_filenames = [];
+                if(isnumeric(meds_filename) && ~meds_filename)
+                    meds_filename = [];
                 else
-                    meds_filenames = fullfile(pathname,meds_filenames);                    
+                    meds_filename = fullfile(pathname,meds_filename);                    
                 end
             end
 
@@ -168,7 +169,7 @@ classdef CLASS_database < handle
             mym('open','localhost','root')
             
             %setup a user for this person
-            mym(['GRANT ALL ON ',dbStruct.name,'.* TO ''',dbStruct.user,'''@''localhost'' IDENTIFIED BY ''',DBpassword,'''']);
+            mym(['GRANT ALL ON ',dbStruct.name,'.* TO ''',dbStruct.user,'''@''localhost'' IDENTIFIED BY ''',dbStruct.password,'''']);
             mym('close');
             
             
@@ -214,7 +215,7 @@ classdef CLASS_database < handle
             % detector_pathname ='/Users/hyatt4/Documents/Sleep Project/Software/sev v.43 beta/+detection'
             
             mym('CLOSE');
-            CLASS_database.open(dbStruct);
+            CLASS_database.openDB(dbStruct);
             
             createStr = ['CREATE TABLE IF NOT EXISTS ',TableName,...
                 ' (DetectorId TINYINT(3) UNSIGNED NOT NULL AUTO_INCREMENT,',...
@@ -255,7 +256,7 @@ classdef CLASS_database < handle
             %1/2/12
             
             TableName = 'Events_T';
-            CLASS_database.open(dbStruct);
+            CLASS_database.openDB(dbStruct);
             
             mym(['DROP TABLE IF EXISTS ',TableName]);
             
@@ -377,7 +378,7 @@ classdef CLASS_database < handle
             % database has already been selected and is open for use
             % Written by Hyatt Moore IV
             % 4/20/2013
-            CLASS_database.open(dbStruct);
+            CLASS_database.openDB(dbStruct);
             
             
             TableName = 'Stages_T';
@@ -427,7 +428,7 @@ classdef CLASS_database < handle
             % modified 10.22.12 - check that patstudykey is not empty before continuing
             % with try to load database data
             if(nargin>=2)
-                CLASS_database.open(dbStruct);
+                CLASS_database.openDB(dbStruct);
             end
             
             TableName = 'StageStats_T';
@@ -554,7 +555,7 @@ classdef CLASS_database < handle
                 end
                 
                 if(numel(fCell)>0)
-                    CLASS_database.open(dbStruct);
+                    CLASS_database.openDB(dbStruct);
                     mym('SET autocommit = 0');
                     mym(['DROP TABLE IF EXISTS ',TableName]);
                     mym(['CREATE TABLE IF NOT EXISTS ',TableName,'('...
@@ -617,7 +618,7 @@ classdef CLASS_database < handle
             % Last Edited 1/21/12
             
             TableName = 'Events_T';
-            CLASS_database.open(dbStruct);
+            CLASS_database.openDB(dbStruct);
             
             if(nargin>1 && ~isempty(events_pathname))
                 
@@ -629,69 +630,70 @@ classdef CLASS_database < handle
                     filecount = numel(dirStruct);
                     filenames = cell(numel(dirStruct),1);
                     [filenames{:}] = dirStruct.name;
-                end
                 
                 
                 
-                %PTSD_format...
-                if(strmatch('PTSD',dbStruct.name))
-                    exp = 'evt\.(?<PatID>[a-z_A-Z]+)(?<StudyNum>\d+)\.(?<method>[^\.]+)\.(?<DetectorConfigID>\d+)\.txt';
+                
+                    %PTSD_format...
+                    if(strmatch('PTSD',dbStruct.name))
+                        exp = 'evt\.(?<PatID>[a-z_A-Z]+)(?<StudyNum>\d+)\.(?<method>[^\.]+)\.(?<DetectorConfigID>\d+)\.txt';
+                        
+                        %WSC evt.A0097_6 182831.LM_ferri.1.txt
+                    elseif(strmatch('WSC',dbStruct.name))
+                        exp = 'evt\.(?<PatID>[a-z_A-Z0-9]+)_(?<StudyNum>\d+)\s\d+\.(?<method>[^\.]+)\.(?<DetectorConfigID>\d+)\.txt';
+                    else
+                        exp  = '';
+                    end
+                    fCell = regexp(filenames,exp,'names'); %regexpi is not case sensitive...
                     
-                    %WSC evt.A0097_6 182831.LM_ferri.1.txt
-                elseif(strmatch('WSC',dbStruct.name))
-                    exp = 'evt\.(?<PatID>[a-z_A-Z0-9]+)_(?<StudyNum>\d+)\s\d+\.(?<method>[^\.]+)\.(?<DetectorConfigID>\d+)\.txt';
-                else
-                    exp  = '';
-                end
-                
-                fCell = regexp(filenames,exp,'names'); %regexpi is not case sensitive...
-                
-                if(numel(fCell)>0)
-                    
-                    %DetectorConfigID is parsed as a string, even though it is a
-                    %SMALLINT
-                    %Stage is an ENUM and needs to have apostrophes around it
-                    preInsertStr = ['INSERT INTO ',TableName, ' (PatStudyKey, DetectorID, ConfigID, '...
-                        'Start_sample, Stop_sample, Duration_seconds, Epoch, Stage) VALUES(',...
-                        '%d,%d,%s,%d,%d,%0.3f,%d,''%d'')'];
-                    
-                    mym('SET autocommit = 0');
-                    
-                    numfiles = filecount;  %5000;
-                    h = waitbar(0,'processing');
-                    for k=1:filecount
-                        waitbar(k/numfiles,h,[num2str(k),' - ',filenames{k}]);
-                        drawnow();
-                        if(~isempty(fCell{k})) % && ~strcmp(fCell{k}.method,'txt')) %SECOND PART is no longer necessary
-                            x = mym(['SELECT PatStudyKey FROM StudyInfo_T WHERE PatID=''',...
-                                fCell{k}.PatID,''' AND StudyNum=',fCell{k}.StudyNum]);
-                            PatIDKey = x.PatStudyKey;
-                            
-                            y = mym(['SELECT DetectorID FROM DetectorInfo_T WHERE DetectorLabel=''',...
-                                fCell{k}.method,''' LIMIT 1']);
-                            
-                            DetectorID = y.DetectorID;
-                            DetectorConfigID = fCell{k}.DetectorConfigID; %this is parsed as a string here because of the regexp call
-                            evtStruct = evtTxt2evtStruct(fullfile(events_pathname,filenames{k}));
-                            
-                            for e=1:numel(evtStruct.Start_sample)
-                                InsertStr = sprintf(preInsertStr,PatIDKey,DetectorID,DetectorConfigID,...
-                                    evtStruct.Start_sample(e), evtStruct.Stop_sample(e),...
-                                    evtStruct.Duration_seconds(e), evtStruct.Epoch(e),...
-                                    evtStruct.Stage(e));
-                                try
-                                    mym(InsertStr);
-                                catch ME
-                                    disp(ME.message);
+                    if(numel(fCell)>0)
+                        
+                        %DetectorConfigID is parsed as a string, even though it is a
+                        %SMALLINT
+                        %Stage is an ENUM and needs to have apostrophes around it
+                        preInsertStr = ['INSERT INTO ',TableName, ' (PatStudyKey, DetectorID, ConfigID, '...
+                            'Start_sample, Stop_sample, Duration_seconds, Epoch, Stage) VALUES(',...
+                            '%d,%d,%s,%d,%d,%0.3f,%d,''%d'')'];
+                        
+                        mym('SET autocommit = 0');
+                        
+                        numfiles = filecount;  %5000;
+                        h = waitbar(0,'processing');
+                        for k=1:filecount
+                            waitbar(k/numfiles,h,[num2str(k),' - ',filenames{k}]);
+                            drawnow();
+                            if(~isempty(fCell{k})) % && ~strcmp(fCell{k}.method,'txt')) %SECOND PART is no longer necessary
+                                x = mym(['SELECT PatStudyKey FROM StudyInfo_T WHERE PatID=''',...
+                                    fCell{k}.PatID,''' AND StudyNum=',fCell{k}.StudyNum]);
+                                PatIDKey = x.PatStudyKey;
+                                
+                                y = mym(['SELECT DetectorID FROM DetectorInfo_T WHERE DetectorLabel=''',...
+                                    fCell{k}.method,''' LIMIT 1']);
+                                
+                                DetectorID = y.DetectorID;
+                                DetectorConfigID = fCell{k}.DetectorConfigID; %this is parsed as a string here because of the regexp call
+                                evtStruct = evtTxt2evtStruct(fullfile(events_pathname,filenames{k}));
+                                
+                                for e=1:numel(evtStruct.Start_sample)
+                                    InsertStr = sprintf(preInsertStr,PatIDKey,DetectorID,DetectorConfigID,...
+                                        evtStruct.Start_sample(e), evtStruct.Stop_sample(e),...
+                                        evtStruct.Duration_seconds(e), evtStruct.Epoch(e),...
+                                        evtStruct.Stage(e));
+                                    try
+                                        mym(InsertStr);
+                                    catch ME
+                                        disp(ME.message);
+                                    end
                                 end
                             end
                         end
+                        mym('COMMIT');
+                        mym('SET autocommit = 1');
+                        
                     end
-                    mym('COMMIT');
-                    mym('SET autocommit = 1');
-                    
+                else
+                    disp('No events found.');
                 end
-                
             end
             
             mym('CLOSE');
@@ -722,7 +724,7 @@ classdef CLASS_database < handle
             % Author: Hyatt Moore IV
             % Created 1/21/12
             
-            CLASS_database.open(dbStruct);            
+            CLASS_database.openDB(dbStruct);            
             
             %LOAD the configuration table entries into the Detetion_methodLabel_T
             %tables.  These are taken from _configLegend_methodLabel.txt files in
@@ -777,7 +779,7 @@ classdef CLASS_database < handle
             % Written by Hyatt Moore IV
             % 4/20/2013
             if(nargin>1)
-                openDB(dbStruct);
+                CLASS_database.openDB(dbStruct);
             end
             
             [sta_filenames,sta_fullfilenames] = getFilenames(sta_pathname,'*.STA2');
@@ -843,24 +845,10 @@ classdef CLASS_database < handle
             % Written by Hyatt Moore IV
             %2.25.2013 -mostly taken from create_StageStats_t
             
-            mym('open','localhost',dbStruct.user,dbStruct.password);
-            mym(['USE ',dbStruct.name]);
+             CLASS_database.openDB(dbStruct);
             
             TableName = 'StageStats_T';
-            % %    ', Stage ENUM(''0'',''1'',''2'',''3'',''4'',''5'',''6'',''7'',''8'',''NREM'') NOT NULL'...
-            %
-            % mym(['CREATE TABLE IF NOT EXISTS ',TableName,'('...
-            %     ' PatStudyKey SMALLINT UNSIGNED NOT NULL'...
-            %     ', Stage VARCHAR(2) DEFAULT "7"'...
-            %     ', Cycle TINYINT UNSIGNED DEFAULT ''0'''...
-            %     ', Duration SMALLINT DEFAULT ''0'' '...
-            %     ', Count SMALLINT DEFAULT ''0'''...
-            %     ', Pct_study DECIMAL (4,2) DEFAULT ''0'''...
-            %     ', Pct_sleep DECIMAL (4,2) DEFAULT ''0'''...
-            %     ', Fragmentation_count SMALLINT DEFAULT ''0'''...
-            %     ', Latency SMALLINT DEFAULT ''0'''...
-            %     ', PRIMARY KEY (PatStudyKey, Stage, cycle)'...
-            % ')']);
+
             
             %fragmentation count is the number of times one stage is left for another
             
@@ -928,11 +916,8 @@ classdef CLASS_database < handle
         %> and @e embla.
         % =================================================================
         function populate_StudyInfo_T(dbStruct, edf_directory,montage_suite)
-            %populates the StudyInfo_T table using files in the given directory
-            %dbStruct is a struct with the following fields
-            % name = name of the database to use
-            % user = user of the database
-            % password = password for DBuser
+            %populates the StudyInfo_T table using files in the given
+            %directory
             %patID_studynum_edf vector of files with the following
             %naming convention: 'PatID_StudyNum HHMMSS.EDF'
             % Author: Hyatt Moore IV
@@ -942,9 +927,7 @@ classdef CLASS_database < handle
             %modified 2/26/2013 - updated to match most recent create_StudyInfo_T.m
             
             TableName = 'StudyInfo_T';
-            
-            mym('open','localhost',dbStruct.user,dbStruct.password);
-            mym(['USE ',dbStruct.name]);
+            CLASS_database.openDB(dbStruct);
             mym('SET autocommit = 0');
             edf_files = getFilenames(edf_directory,'*.EDF');
             
@@ -977,16 +960,354 @@ classdef CLASS_database < handle
                     mym(InsertStr);
                 end
             end
-            
-            
             mym('COMMIT');
             mym('SET autocommit = 0');
-            
-            
             mym('CLOSE');
+        end
+        
+        % ======================================================================
+        %> @brief Obtains a unique configuration ID for event detector configuration 
+        %> as obtained from the unique labels that exist and are passed
+        %> through.  A new configID is searched for beginning from
+        %> first_configID.  Once a a configID is obtained for the provided settings (either a new ID in the case of
+        %> a new configuration or the ID of an existing configuration that
+        %> has the same settings entered) it is inserted into the
+        %> DetectionInfo_T table.
+        %> @note connfigID updates/incremennts based on the initial first_configID for each detection
+        %> label used.
+        %> @param DBstruct A structure containing database accessor fields:
+        %> @li @c name Name of the database to use (string)
+        %> @li @c user Database user (string)
+        %> @li @c password Password for @c user (string)
+        %> @param event_settings A structure of the event detector
+        %> configuration with the following fields:
+        %> @li @c channel_labels: {'C3-M2'}
+        %> @li @c method_function: 'detection_artifact_hp_20hz
+        %> @li @c method_label: 'artifact_hp_20hz
+        %> @li @c params: [1x1 struct]
+        %> @li @c configID: 0
+        %> @li @c detectorID: 1 or []
+        %> @param first_configID Integer to start finding/creating
+        %> configuration ID's from.  The configID found or created by this method will be greater than or
+        %> equal to the value of first_configID
+        %> @retval event_settings A structure of the event detector
+        %> configuration with the following fields:
+        %> @li @c channel_labels: {'C3-M2'}
+        %> @li @c method_function: 'detection_artifact_hp_20hz
+        %> @li @c method_label: 'artifact_hp_20hz
+        %> @li @c params: [1x1 struct]
+        %> @li @c configID: 0
+        %> @li @c detectorID: 1 or []
+        %> @note Events with a new configID are removed from events_T if they exist to avoid possible duplication of configID's with stored events.
+        %> @note A new record is added to DetectorInfO_T if configID does not currently exist.
+        function event_settings = setDatabaseConfigID(DBstruct,event_settings,first_configID)
+        
+            mym_status = mym();
+            if(mym_status~=0) %0 when mym is open and reachable (connected)
+                CLASS_database.openDB(dbStruct);
+            end
+            
+            %obtain the unique labels that exist and are passed through,
+            %and are checked for reuse with each unique label one at a time so configID will
+            %update based on the initial first_configID for each detection
+            %label used.
+            evts = cell2mat(event_settings);
+            unique_detection_labels = unique(cells2cell(evts.method_label));
+            for d=1:numel(unique_detection_labels)
+                detect_label = unique_detection_labels{d};
+                cur_config = first_configID;
+                for k=1:numel(event_settings)
+                    if(strcmp(detect_label,event_settings{k}.method_label))
+                        detectStruct = event_settings{k};
+                        event_settings{k}.configID = zeros(event_settings{k}.numConfigurations,1);
+                        
+                        for config=1:event_settings{k}.numConfigurations
+                            event_settings{k}.configID(config) = cur_config;
+                            detectStruct.configID = cur_config;
+                            detectStruct.params = event_settings{k}.params(config);
+                            q = mym('select detectorid from detectorinfo_t where detectorlabel="{S}" and configID={Si}',detect_label,cur_config);
+                            detectorID = q.detectorid;
+                            if(isempty(detectorID))
+                                %insert it into the database now
+                                detectStruct.detectorID = [];
+                            else
+                                detectStruct.detectorID = detectorID;
+                            end
+                            CLASS_database.insertDatabaseDetectorInfoRecord(DBstruct,detectStruct);
+                            cur_config = cur_config+1;
+                        end
+                    end
+                end
+            end
+            if(mym_status~=0)
+                mym('close');
+            end
+            
+            
+        end
+
+        % ======================================================================
+        %> @brief Retrieves the database configurtion ID associated with event_settings.  
+        %> If no match is found in the database table detectorInfo_T for event_settings then a 
+        %> a new, unique configurationID (configID) is set in and returned with the output structure event_settings.
+        %> @param DBstruct A structure containing database accessor fields:
+        %> @li @c name Name of the database to use (string)
+        %> @li @c user Database user (string)
+        %> @li @c password Password for @c user (string)
+        %> @param event_settings A structure of the event detector
+        %> configuration with the following fields:
+        %> @li @c channel_labels: {'C3-M2'}
+        %> @li @c method_function: 'detection_artifact_hp_20hz
+        %> @li @c method_label: 'artifact_hp_20hz
+        %> @li @c params: [1x1 struct]
+        %> @li @c configID: 0
+        %> @li @c detectorID: 1 or []
+        %> @retval event_settings A structure of the event detector
+        %> configuration with the following fields:
+        %> @li @c channel_labels: {'C3-M2'}
+        %> @li @c method_function: 'detection_artifact_hp_20hz
+        %> @li @c method_label: 'artifact_hp_20hz
+        %> @li @c params: [1x1 struct]
+        %> @li @c configID: 0
+        %> @li @c detectorID: 1 or []
+        function event_settings = getDatabaseAutoConfigID(DBstruct,event_settings)
+            if(~isempty(DBstruct))
+                mym_status = mym();
+                if(mym_status~=0) %0 when mym is open and reachable (connected)
+                    CLASS_database.openDB(dbStruct);
+                end
+                for k=1:numel(event_settings)
+                    %                     Q = mym('SELECT DetectorID as detectorID FROM DetectorInfo_T WHERE DetectorLabel="{S}"',event_settings{k}.method_label);
+                    Q = mym('SELECT detectorID, configID, ConfigChannelLabels, configparamstruct as param FROM DetectorInfo_T WHERE DetectorLabel="{S}" order by configid',event_settings{k}.method_label);
+                    
+                    %if no detectorID is found, then it is new, will be autoupdated, and the
+                    %configID should be 1 since it will be the first
+                    %configuration
+                    if(isempty(Q.detectorID))
+                        event_settings{k}.configID = 1:event_settings{k}.numConfigurations;
+                    else
+                        %this method will also work, but need to find out
+                        %what is maximum configID still when the
+                        %query is empty, which would require another query
+                        %                         mym('select * from detectorinfo_t where configparamstruct="{M}"',event_settings{k}.params)
+                        
+                        for ch=1:numel(event_settings{k}.channel_configs)
+                            if(isempty(event_settings{k}.channel_configs{ch}))
+                                event_settings{k}.channel_configs{ch} = event_settings{k}.channel_labels{ch};
+                            end
+                        end
+                        
+                        %detectStruct (detectorStruct) must have these fields:
+                        %   .channel_labels: {'C3-M2'}
+                        %   .channel_configs: {'C3-M2'} nor {[1x1 struct]}
+                        %   .method_function: 'detection_artifact_hp_20hz
+                        %   .method_label: 'artifact_hp_20hz
+                        %   .params: [1x1 struct]
+                        %   .configID: 1
+                        %   .detectorID: 1 or []
+                        detectStruct.channel_labels = event_settings{k}.channel_labels;
+                        detectStruct.channel_configs = event_settings{k}.channel_configs;
+                        detectStruct.method_function = event_settings{k}.method_function;
+                        detectStruct.method_label = event_settings{k}.method_label;
+                        detectStruct.detectorID = event_settings{k}.detectorID;
+                        
+                        event_settings{k}.configID = zeros(event_settings{k}.numConfigurations,1);
+                        for config=1:event_settings{k}.numConfigurations
+                            %determine if the configuration already exists, and
+                            %if so, use the matching configID for that
+                            %configuration
+                            for j=1:numel(Q.param)
+                                if(isequal(Q.param{j},event_settings{k}.params(config)))
+                                    if(isequal(Q.ConfigChannelLabels{j},event_settings{k}.channel_configs)) %event_settings{k}.channel_labels))
+                                        event_settings{k}.configID(config) = Q.configID(j);
+                                    end
+                                end
+                            end
+                            
+                            %if no matches were found, then update to use the
+                            %configID that falls next in line, by one, from the
+                            %list of possible configID's.
+                            if(event_settings{k}.configID(config)==0)
+                                Q.configID(end+1) = Q.configID(end)+1; %increment the last configuration value
+                                event_settings{k}.configID(config)=Q.configID(end); %so it can be assigned to this new setting
+                                
+                                detectStruct.configID = event_settings{k}.configID(config);
+                                detectStruct.params = event_settings{k}.params(config);
+                                %insert it into the database now
+                                CLASS_events_container.insertDatabaseDetectorInfoRecord(DBstruct,detectStruct);
+                            end
+                        end
+                    end
+                end
+                if(mym_status~=0)
+                    mym('close');
+                end
+            end
             
         end
         
+        % ======================================================================
+        %> @brief Removes trieves the database configurtion ID associated with event_settings.  
+        %> If no match is found in the database table detectorInfo_T for event_settings then a 
+        %> a new, unique configurationID (configID) is set in and returned with the output structure event_settings.
+        %> @param DBstruct A structure containing database accessor fields:
+        %> @li @c name Name of the database to use (string)
+        %> @li @c user Database user (string)
+        %> @li @c password Password for @c user (string)
+        %> @li @c table Database table to remove records from (e.g.
+        %> events_T)
+        %> @param event_settings A structure of the event detector
+        %> configuration with the following fields:
+        %> @li @c channel_labels: {'C3-M2'}
+        %> @li @c method_function: 'detection_artifact_hp_20hz
+        %> @li @c method_label: 'artifact_hp_20hz
+        %> @li @c params: [1x1 struct]
+        %> @li @c configID: 0
+        %> @li @c detectorID: 1 or []
+        %> @retval event_settings A structure of the event detector
+        %> configuration with the following fields:
+        %> @li @c channel_labels: {'C3-M2'}
+        %> @li @c method_function: 'detection_artifact_hp_20hz
+        %> @li @c method_label: 'artifact_hp_20hz
+        %> @li @c params: [1x1 struct]
+        %> @li @c configID: 0
+        %> @li @c detectorID: 1 or []
+        function event_settings = deleteDatabaseRecordsUsingSettings(DBstruct,event_settings)
+            if(~isempty(DBstruct))
+                mym_status = mym();
+                if(mym_status~=0) %0 when mym is open and reachable (connected)
+                    mym('open','localhost',DBstruct.user,DBstruct.password);
+                    mym(['USE ',DBstruct.name]);
+                end
+                
+                for k=1:numel(event_settings)
+                    event_settings{k}.detectorID = zeros(size(event_settings{k}.configID)); %allocate detectorIDs
+                    for config=1:event_settings{k}.numConfigurations
+                        event_k = event_settings{k};
+                        event_k.configID = event_k.configID(config);
+                        event_k.params = event_k.params(config);  %make a slim version for each config, useful for calling insertDatabaseDetectorInfoRecord...
+                        Q = mym('SELECT DetectorID as detectorID FROM DetectorInfo_T WHERE DetectorLabel="{S}" and configID={Si}',event_k.method_label,event_k.configID);
+                        %if it doesn't exist at all
+                        event_k.detectorID = Q.detectorID; %this is correct - it should be empty if it doesn't exist.
+                        
+                        if(~isempty(Q.detectorID))
+                            mym(sprintf('DELETE FROM %s WHERE detectorID=%d',DBstruct.table,event_k.detectorID));
+                            
+                            %replace the configParamStruct in the chance that
+                            %there is a difference between the existing one and
+                            %the new one being added in the future.
+                            %                             mym('update DetectorInfo_T set ConfigChannelLabels="{M}", ConfigParamStruct="{M}" WHERE DetectorID={Si}',event_k.channel_labels,event_k.params,event_k.detectorID);
+                        else
+                            %I need to add/insert the detector config to detectorinfo_t here...
+                            %add it either way okay...
+                            CLASS_database.insertDatabaseDetectorInfoRecord(DBstruct,event_k)
+                        end
+                        
+                        %now get the detectorID that I have for these...
+                        Q = mym('SELECT DetectorID as detectorID FROM DetectorInfo_T WHERE DetectorLabel="{S}" and configID={S0}',event_k.method_label,event_k.configID);
+                        event_settings{k}.detectorID(config) = Q.detectorID; %this is correct - it should be empty if it doesn't exist.
+                    end
+                end
+                if(mym_status~=0)
+                    mym('close');
+                end
+                
+            end
+        end
+        
+        % ======================================================================
+        %> @brief Insert a record into the detectorInfo_T table using the field/values passed in
+        %> @param DBstruct A structure containing database accessor fields:
+        %> @li @c name Name of the database to use (string)
+        %> @li @c user Database user (string)
+        %> @li @c password Password for @c user (string)
+        %> @param detectStruct (detectorStruct) must have these fields:
+        %> @li @c channel_labels: {'C3-M2'}
+        %> @li @c method_function: 'detection_artifact_hp_20hz
+        %> @li @c method_label: 'artifact_hp_20hz
+        %> @li @c params: [1x1 struct]
+        %> @li @c configID: 1
+        %> @li @c detectorID: 1 or []            
+        function insertDatabaseDetectorInfoRecord(DBstruct,detectStruct)
+            
+            %detectorinfo_t table create string:
+            %             createStr = ['CREATE TABLE IF NOT EXISTS ',TableName,...
+            %                 ' (DetectorId TINYINT(3) UNSIGNED NOT NULL AUTO_INCREMENT,',...
+            %                 'DetectorFilename VARCHAR(50),',...
+            %                 'DetectorLabel VARCHAR(50),',...
+            %                 'ConfigID TINYINT(3) UNSIGNED DEFAULT 0,',...
+            %                 'ConfigChannelLabels BLOB,',...
+            %                 'ConfigParamStruct BLOB,',...
+            %                 'PRIMARY KEY(DETECTORID))'];
+            mym_status = mym();
+            if(mym_status~=0) %0 when mym is open and reachable (connected)
+                CLASS_database.openDB(DBstruct);
+            end
+            
+            detectorID = num2str(detectStruct.detectorID);
+            if(isempty(detectorID))
+                detectorID = 'NULL';
+            end
+            
+            valuesStr = sprintf('%s,"%s","%s",%u',detectorID,detectStruct.method_function,detectStruct.method_label,detectStruct.configID);
+            if(~isfield(detectStruct,'channel_configs'))
+                channel_configs = detectStruct.channel_labels;
+            else
+                channel_configs = detectStruct.channel_configs;
+            end
+            if(isempty(channel_configs))
+                channel_configs = detectStruct.channel_labels;
+            else
+                for k=1:numel(channel_configs)
+                    if(isempty(channel_configs{k}))
+                        channel_configs{k} = detectStruct.channel_labels{k};
+                    end
+                end
+            end
+            on_duplicate = sprintf(' on duplicate key update detectorfilename="%s", detectorlabel="%s", configchannellabels="{M}", configparamstruct="{M}"',detectStruct.method_function,detectStruct.method_label);
+            try
+                mym(['insert into DetectorInfo_T values (',valuesStr,',"{M}","{M}")', on_duplicate],channel_configs,detectStruct.params,channel_configs,detectStruct.params);
+            catch me
+                showME(me);
+            end
+            if(mym_status~=0)
+                mym('close');
+            end
+            
+        end
+        
+        
+        % ======================================================================
+        %> @brief Retrieves database access data as a struct from
+        %> the .inf filename provided.
+        %> @param inf_filename Full filename (i.e. path included) of text
+        %> file containing database accessor information 'name', 'user', 'password' as tab-delimited entries.
+        %> @param optional_choice Optional index that can be provided to return the specified database
+        %> preference when multiple database entries are present in the supplied inf_filename (integer)
+        %> @retval database_struct A structure containing database accessor fields:
+        %> @li @c name Name of the database to use (string)
+        %> @li @c user Database user (string)
+        %> @li @c password Password for @c user (string)
+        function database_struct = loadDatabaseStructFromInf(inf_filename,optional_choice)
+            database_struct = [];
+            if(exist(inf_filename,'file'))
+                fid = fopen(inf_filename,'r');
+                database_cell = textscan(fid,'%s %s %s','commentstyle','#');
+                fclose(fid);
+                if(~isempty(database_cell))
+                    if(nargin>1 && ~isempty(optional_choice))
+                        database_struct.name = database_cell{1}{optional_choice};
+                        database_struct.user = database_cell{2}{optional_choice};
+                        database_struct.password = database_cell{3}{optional_choice};
+                    else
+                        database_struct.name = database_cell{1};
+                        database_struct.user = database_cell{2};
+                        database_struct.password = database_cell{3};
+                    end
+                end
+            end
+        end
+
     end        
        
     

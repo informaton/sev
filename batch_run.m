@@ -1144,15 +1144,15 @@ if(pathname)
     %% setup database for events 
     if(BATCH_PROCESS.database.save2DB)
         %database_struct contains fields 'name','user','password' for interacting with a mysql database
-        DBstruct = CLASS_events_container.loadDatabaseStructFromInf(BATCH_PROCESS.database.filename,BATCH_PROCESS.database.choice);
+        DBstruct = CLASS_database.loadDatabaseStructFromInf(BATCH_PROCESS.database.filename,BATCH_PROCESS.database.choice);
         if(~isempty(DBstruct))
             DBstruct.table = 'events_t';
             if(BATCH_PROCESS.database.auto_config~=0||BATCH_PROCESS.database.config_start==0)
-                event_settings = CLASS_events_container.getDatabaseAutoConfigID(DBstruct,event_settings);
+                event_settings = CLASS_database.getDatabaseAutoConfigID(DBstruct,event_settings);
             else
-                event_settings = CLASS_events_container.setDatabaseConfigID(DBstruct,event_settings,BATCH_PROCESS.database.config_start);
+                event_settings = CLASS_database.setDatabaseConfigID(DBstruct,event_settings,BATCH_PROCESS.database.config_start);
             end
-            event_settings = CLASS_events_container.deleteDatabaseRecordsUsingSettings(DBstruct,event_settings);
+            event_settings = CLASS_database.deleteDatabaseRecordsUsingSettings(DBstruct,event_settings);
         end
     else
         DBstruct = [];

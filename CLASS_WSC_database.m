@@ -32,7 +32,7 @@ classdef CLASS_WSC_database < CLASS_database
         %> @param EDF_pathname Directory containing cohort of sleep studies
         %> in European Data Format, .EDF (string).
         %> @param evt_pathname Directory containing SEV format event
-        %files, .evt.*.txt (string)
+        %> files, .evt.*.txt (string)
         % =================================================================
         function createDBandTables(obj,EDF_pathname,evt_pathname)
             % modified: 7/27/12
@@ -44,13 +44,15 @@ classdef CLASS_WSC_database < CLASS_database
             
             % make the database for the WSC
             if(nargin<3)
+                disp('Select Event directory (*.evt)');
                 evt_pathname =uigetdir(pwd,'Select Event directory (*.evt) to use or Cancel for none.');
                 if(isnumeric(evt_pathname) && ~evt_pathname)
                     evt_pathname = [];
                 end
 
                 if(nargin<2)
-                    EDF_pathname =uigetdir(pwd,'Select .EDF directory to use');
+                    disp('Select PSG directory (Contains *.EDF and *.STA files)');
+                    EDF_pathname =uigetdir(evt_pathname,'Select .EDF directory to use');
                     if(isnumeric(EDF_pathname) && ~EDF_pathname)
                         EDF_pathname = [];
                     end
@@ -65,11 +67,11 @@ classdef CLASS_WSC_database < CLASS_database
             obj.open();mym('describe studyinfo_t');           
             
             obj.create_DetectorInfo_T(obj.DBstruct);
-            obj.populate_SCO_DetectorInfo_T();
+            obj.populate_SCO_DetectorInfo_T(obj.DBstruct);
             obj.open();mym('describe detectorinfo_t');
             
-            obj.create_Diagnostics_T(obj.DBstruct);
-            opendb();mym('describe diagnostics_t');
+            obj.create_Diagnostics_T();
+            obj.open();mym('describe diagnostics_t');
             
             %% gather the snp data
             %             snp_filenames_cell = {'wsc_snps_corrected.txt'
@@ -78,14 +80,14 @@ classdef CLASS_WSC_database < CLASS_database
             obj.update_Diagnostics_T_for_SNP();            
             
             %add PLM fields
-            update_Diagnostics_T_for_PLM();
+            %obj.update_Diagnostics_T_for_PLM();
 
             % this builds the medication table using WSC meidcation list received from Simon Warby (most likely)
-%             meds_filename = 'wsc_medication_listing.txt';
+            % meds_filename = 'wsc_medication_listing.txt';
             obj.create_Medications_T();
             
             STA_pathname = EDF_pathname;
-            obj.create_StageStats_T(STA_pathname,obj.DBstruct);
+            obj.create_StageStats_T(STA_pathname);
             
             obj.open();mym('describe stagestats_t');
             
@@ -93,7 +95,7 @@ classdef CLASS_WSC_database < CLASS_database
             opendb();mym('describe events_t');
             
             %% convert SCO to .evt files
-            % % directory to export SCO events to
+            % directory to export SCO events to
             % SCO_Evt_pathname = fullfile(EDF_pathname,'Output/SCOevents');
 
             % SCO_pathname = EDF_pathname;
@@ -116,7 +118,7 @@ classdef CLASS_WSC_database < CLASS_database
         %> @note If StageStats_T already exists, it is first dropped and
         %> then created again.
         % =================================================================
-        function create_Stagestats_T(obj,STA_pathname)
+        function create_StageStats_T(obj,STA_pathname)
             if(nargin<2 || isempty(STA_pathname))
                 STA_pathname =uigetdir(pwd,'Select Stage Directory (*.STA) to use');
             end            
@@ -126,7 +128,7 @@ classdef CLASS_WSC_database < CLASS_database
             else
                 stats = stage2stats(STA_pathname,sta_exp);
             end            
-            obj.create_StageStats_T(stats,obj.DBstruct);            
+            CLASS_database.create_StageStats_T(stats,obj.DBstruct);            
         end
         
         % ======================================================================
@@ -141,7 +143,7 @@ classdef CLASS_WSC_database < CLASS_database
         %> @note  The created table Diagnostics_T is added to the WSC_DB database.  Any previously existing
         %> table with the same name is first dropped.
         % =================================================================
-        function create_WSC_Diagnostics_T(obj, diagnostics_xls_filename)
+        function create_Diagnostics_T(obj, diagnostics_xls_filename)
             % this builds the Diagnostics table
             %
             % Author: Hyatt Moore IV
@@ -185,15 +187,15 @@ classdef CLASS_WSC_database < CLASS_database
             %             xls_filename = fullfile('/Volumes/Macintosh HD 2/Sleep/PLM/DataFiles','Hyatt data 9 2013.xls');
             
             if(nargin<2 || isempty(diagnostics_xls_filename))
-                            [wsc_filename, pathname, ~] = uigetfile({'*.xls','Microsoft Excel (*.xls)';'*.xlsx','Microsoft Excel (*.xlsx)'},'Select WSC Diagnostics File');
-
-                            if(isnumeric(wsc_filename) && ~wsc_filename)
-                                wsc_filename = [];
-                            else
-                                wsc_filename = fullfile(pathname,wsc_filename);
-                            end
+                [wsc_filename, pathname, ~] = uigetfile({'*.xls','Microsoft Excel (*.xls)';'*.xlsx','Microsoft Excel (*.xlsx)'},'Select WSC Diagnostics File');
+                
+                if(isnumeric(wsc_filename) && ~wsc_filename)
+                    wsc_filename = [];
+                else
+                    wsc_filename = fullfile(pathname,wsc_filename);
+                end
             else
-                wsc_filename = diagnostics_xls_filename;                
+                wsc_filename = diagnostics_xls_filename;
             end
             if(exist(wsc_filename,'file'))
                 
@@ -361,7 +363,7 @@ classdef CLASS_WSC_database < CLASS_database
                 %get the RLS symptoms
                 
                 try
-                    loadStruct = scoreRLSsymptoms(loadStruct);
+                    loadStruct = obj.scoreRLSsymptoms(loadStruct);
                 catch me
                     disp(me)
                 end
@@ -412,9 +414,12 @@ classdef CLASS_WSC_database < CLASS_database
                             valuesStr = '';
                             
                             for f=1:numel(fields)
+                                try
                                 fmt = loadStruct.(fields{f}).fmt;
                                 value = loadStruct.(fields{f}).value{k};
-                                
+                                catch me
+                                    showME(me);
+                                end
                                 if(strcmpi(fields{f},'SLEEP_LAB_DATE'))
                                     value = ['"',datestr(value+excel_pivot_year,'yyyy-mm-dd'),'"'];
                                 elseif(isempty(value)||any(isnan(value)))
@@ -463,7 +468,7 @@ classdef CLASS_WSC_database < CLASS_database
         %> measures taken by Jason (string)
         %> @note Blood_T is overwritten in the case it already exists (i.e.
         %> first dropped, then created)
-        function create_WSC_Blood_T(obj,blood_xls_filename)
+        function create_Blood_T(obj,blood_xls_filename)
             %
             % Author: Hyatt Moore IV
             % created 7/31/12
@@ -832,6 +837,7 @@ classdef CLASS_WSC_database < CLASS_database
                 'SCO_SaO2'
                 'SCO_Arousal'};
             detectStruct.channel_labels ={'LAT/RAT'};
+            
             detectStruct.configID = 1;
             detectStruct.detectorID = [];
             detectStruct.method_function = [];
@@ -841,12 +847,14 @@ classdef CLASS_WSC_database < CLASS_database
             for k=1:numel(SCO_labels)
                 detectStruct.method_function = SCO_labels{k};
                 detectStruct.method_label = SCO_labels{k};
-                CLASS_events_container.insertDatabaseDetectorInfoRecord(DBstruct,detectStruct);
+                CLASS_database.insertDatabaseDetectorInfoRecord(DBstruct,detectStruct);
             end
         end
         
         % @brief Export parts of WSC Diagnostics_T to tab delimited text
-        % file.
+        % file
+        % @param txt_filname Name of the file to write data to (it will be
+        % created or over written depending if it already exists or not).
         function diagnostics2txt(txt_filename)
             % Author: Hyatt Moore IV
             % created 8/28/12
@@ -893,8 +901,8 @@ classdef CLASS_WSC_database < CLASS_database
         % ======================================================================
         %> @brief Populates DetectorInfo_T table with manually scored event labels obtained from
         %> WSC .SCO files
-        %> @param loadStruct Struct derived from create_WSC_Diagnostics_T
-        %> @note This is a helper function for create_WSC_Diagnostics_T and
+        %> @param loadStruct Struct derived from create_Diagnostics_T
+        %> @note This is a helper function for create__Diagnostics_T and
         %> is not designed for external use.  
         % =================================================================        
         function loadStruct = scoreRLSsymptoms(loadStruct)
