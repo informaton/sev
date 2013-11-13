@@ -73,7 +73,6 @@ else
     
     set(handles.push_psd_settings,'enable','off','userdata',MARKING.SETTINGS.PSD);
     
-    
     if(isfield(MARKING.SETTINGS.BATCH_PROCESS,'edf_folder'))
         if(~isdir(MARKING.SETTINGS.BATCH_PROCESS.edf_folder) || strcmp(MARKING.SETTINGS.BATCH_PROCESS.edf_folder,'.'))
             MARKING.SETTINGS.BATCH_PROCESS.edf_folder = pwd;
@@ -84,7 +83,6 @@ else
     end
     
     checkPathForEDFs(handles);
-    
     
     set([handles.menu_artifact_channel1
         handles.menu_event_channel1],'enable','off','string','Channel 1');
@@ -105,7 +103,6 @@ else
     
 end
 
-
 function addCHANNELRow(handles)
 resizeForAddedRow(handles,handles.panel_synth_CHANNEL);
 
@@ -114,17 +111,14 @@ function addEventRow(handles)
 %make room for the event row
 resizeForAddedRow(handles,handles.panel_events);
 
-
 function addArtifactRow(handles)
 resizeForAddedRow(handles,handles.panel_artifact);
-
 
 function addPSDRow(handles)
 resizeForAddedRow(handles,handles.panel_psd);
 
 function resizeForAddedRow(handles,resized_panel_h)
 global GUI_TEMPLATE;
-
 
 %move all of the children up to account for the change in size and location
 %of the panel being resized.
@@ -1461,9 +1455,8 @@ end
                     for k = 1:numel(parBATCH_PROCESS.MUSIC_settings)
                         channel_label = parBATCH_PROCESS.MUSIC_settings{k}.channel_labels{:};
                         channel_index = parBATCH_PROCESS.MUSIC_settings{k}.channel_indices;
-                        filename_out = fullfile(full_music_path,[cur_filename(1:end-3), channel_label,'.', BATCH_PROCESS.output_files.music_filename]);
-                        
-                        batch.save_pmusic(batch_CHANNELS_CONTAINER.getChannel(channel_index),filename_out,parBATCH_PROCESS.MUSIC_settings{k});
+                        filename_out = fullfile(full_psd_path,[cur_filename(1:end-3), channel_label,'.', parBATCH_PROCESS.output_files.music_filename]);
+                        batch.save_pmusic(batch_CHANNELS_CONTAINER.getChannel(channel_index),batch_STAGES,parBATCH_PROCESS.MUSIC_settings{k},filename_out,batch_ARTIFACT_CONTAINER,parBATCH_PROCESS.start_time);
                     end;
                     
                     %save the files to disk
@@ -1776,8 +1769,7 @@ function figure1_CloseRequestFcn(hObject, eventdata, handles)
 
 % Hint: delete(hObject) closes the figure
 global MARKING;
-global BATCH_PROCESS;
-BATCH_PROCESS = handles.user.BATCH_PROCESS; %need to return this to the global for now 
+MARKING.SETTINGS.BATCH_PROCESS = handles.user.BATCH_PROCESS; %need to return this to the global for now 
 % in order to save settings between use.
 try
     if(ishandle(MARKING.figurehandle.sev))
