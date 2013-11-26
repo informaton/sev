@@ -8,15 +8,11 @@ function [PMUSIC freq_vec nfft] = calcPMUSIC(signal_x,Fs,MUSIC_settings,ZeroPad)
 %
 
 % Hyatt Moore, IV (< June, 2013)
-global MUSIC;
+% removed MUSIC global reference
 
 if(nargin<4)
     ZeroPad = false;
 end;
-if(nargin<3)
-    MUSIC_settings = MUSIC;
-end;
-
 winlen_sec = MUSIC_settings.window_length_sec;
 interval_sec = MUSIC_settings.interval_sec;
 winlen = winlen_sec*Fs;

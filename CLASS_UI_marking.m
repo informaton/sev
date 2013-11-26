@@ -2543,7 +2543,6 @@ cropFigure2Axes(f,axes1_copy);
         end
         
         function plotMUSICofSelection_callback(obj,varargin)
-            global MUSIC;
             global CHANNELS_CONTAINER;
 
             f=figure;
@@ -2551,15 +2550,15 @@ cropFigure2Axes(f,axes1_copy);
             roi = obj.getSelectedIndices();
             
             if(~isempty(roi))
-                CHANNELS_CONTAINER.showMUSIC(MUSIC,a,obj.class_channel_index,roi);
-                try
-                    waitforbuttonpress();
-                catch ME
-                    showME(ME);
-                end;
-                if(ishandle(f))
-                    close(f);
-                end
+                CHANNELS_CONTAINER.showMUSIC(obj.SETTINGS.MUSIC,a,obj.class_channel_index,roi);
+%                 try
+%                     waitforbuttonpress();
+%                 catch ME
+%                     showME(ME);
+%                 end;
+%                 if(ishandle(f))
+%                     close(f);
+%                 end
             end            
         end
         
@@ -2571,14 +2570,14 @@ cropFigure2Axes(f,axes1_copy);
             
             if(~isempty(roi))
                 CHANNELS_CONTAINER.showPSD(obj.SETTINGS.PSD,a,obj.class_channel_index,roi);
-                try
-                    waitforbuttonpress();
-                catch ME
-                    showME(ME);
-                end;
-                if(ishandle(f))
-                    close(f);
-                end
+%                 try
+%                     waitforbuttonpress();
+%                 catch ME
+%                     showME(ME);
+%                 end;
+%                 if(ishandle(f))
+%                     close(f);
+%                 end
             end
         end;
         
@@ -2588,10 +2587,10 @@ cropFigure2Axes(f,axes1_copy);
             if(~isempty(y))
                 f=figure;
                 plot(y);
-                waitforbuttonpress();
-                if(ishandle(f))
-                    close(f);
-                end
+%                 waitforbuttonpress();
+%                 if(ishandle(f))
+%                     close(f);
+%                 end
                 
             end;
             

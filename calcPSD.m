@@ -26,18 +26,9 @@ function [psd freq_vec nfft] = calcPSD(signal_x,Fs,PSD_settings,ZeroPad)
 %passing a PSD_settings struct instead of individual variable names
 %Modified November 27, 2012 - zeropad signal_x when it is smaller than
 %PSD_settings.win_len*Fs
-global PSD;
-% PSD.wintype = handles.user.wintype;
-% PSD.modified = handles.user.modified;
-% PSD.FFT_window_sec = handles.user.winlen;
-% PSD.interval = handles.user.fftint;
-% PSD.removemean = true;
 
 if(nargin<4)
     ZeroPad = false;
-end;
-if(nargin<3)
-    PSD_settings = PSD;
 end;
 
 winlen = PSD_settings.FFT_window_sec;
