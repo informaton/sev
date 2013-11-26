@@ -662,6 +662,9 @@ classdef CLASS_events_container < handle
         %> @retval object of class CLASS_events_container
         % =================================================================
         function draw_events(obj,event_indices)
+             if(nargin<2 || isempty(event_indices))
+                 event_indices = obj.event_indices_to_plot; 
+             end
             for k=1:numel(event_indices)
                 index = event_indices(k);
                 if(index>0  && index<=obj.num_events)
@@ -1530,7 +1533,7 @@ classdef CLASS_events_container < handle
                        cur_event = SCO.start_stop_matrix(event_indices(k)==indJ,:);
                        cur_evt_label = event_labels{k};
                        obj.updateEvent(cur_event, cur_evt_label, class_channel_index,sourceStruct,paramStruct);  
-                       obj.set_Channel_drawEvents(obj.current_event_index);
+%                        obj.set_Channel_drawEvents(obj.cur_event_index);
                    end
                end
             end           

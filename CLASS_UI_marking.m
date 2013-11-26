@@ -561,7 +561,7 @@ cropFigure2Axes(f,axes1_copy);
             if(filename~=0)
                 obj.SETTINGS.VIEW.src_event_pathname = pathname;
                 EVENT_CONTAINER.loadEventsFromSCOFile(fullfile(pathname,filename));
-                EVENT_CONTAINER.draw_events(); %events_to_plot(event_index) = 1;                
+%                 EVENT_CONTAINER.draw_events(); %events_to_plot(event_index) = 1;                
                 obj.refreshAxes();
             end;
             
