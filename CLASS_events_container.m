@@ -2123,11 +2123,6 @@ classdef CLASS_events_container < handle
             PatID = x{1};
             StudyNum = x{2};
         end
-
-
-        
-        
-
         
         function [embla_evt_Struct,embla_samplerate_out] = parseEmbla_evt(evtFilename,embla_samplerate,desired_samplerate)
             %embla_samplerate_out may change if there is a difference found in
@@ -2154,7 +2149,6 @@ classdef CLASS_events_container < handle
                 start_stop_matrix = [];
                 
                 eventType = name;
-                
                 
                 if(HDR.num_records>0 && strncmpi(deblank(HDR.label),'event',5))
                     fseek(fid,0,'eof');
