@@ -7,4 +7,5 @@
 
 *.c~
 
+_sev_parameters.txt
 palidromes.txt
