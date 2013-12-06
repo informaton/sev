@@ -2168,6 +2168,26 @@ classdef CLASS_events_container < handle
                             stop_sample(r) = fread(fid,1,'uint32');
                             remainder(r,:) = fread(fid,bytes_per_record-intro_size,'uint8');
                         end
+                    elseif(strcmpi(eventType,'desat'))
+                        intro_size = 8;
+                        remainder_size = bytes_per_record-intro_size;
+                        remainder = zeros(HDR.num_records,remainder_size,'uint8');                        
+                        
+                        for r=1:HDR.num_records
+                            
+                            start_sample(r) = fread(fid,1,'uint32');
+                            stop_sample(r) = fread(fid,1,'uint32');
+%                             description = fread(fid,remainder_size/2,'uint16=>char')';
+%desats - (come in pairs?)
+% [8 1 2 0] [0/4 0 ? ?]  [255 255 255 255] [255 255 255 255] [84 16 13 164]
+
+% [? ? 88/86/87 64] [? ? ? ?] [? ? 86/87/85 64] [8/10 ? ? ?] [? ? ? ?]
+%    
+%1 byte [224] = ?
+%4 bytes 224  106   99  104] [186  131   88   64]  [87   27   67  211]  [29 108   87   64]   [9  144   98    0  228  151    98  0]
+%4 bytes
+                            remainder(r,:) = fread(fid,remainder_size,'uint8');
+                        end
                     elseif(strcmpi(eventType,'resp'))
                         %80 byte blocks
                         

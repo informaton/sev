@@ -1216,6 +1216,71 @@ classdef CLASS_database < handle
         end
         
         % ======================================================================
+        %> @brief Writes information in mym query output q to a file.
+        %> @param q The mym query result to be written to file
+        %> @param filename Name of the file to store data to (will be
+        %> created if it does not already exist, or overwrite existing
+        %> contents
+        %> @param optional_delim Optional string delimiter to separate output fields
+        %> The default is tab delimited (i.e. '\t')
+        %> @note set optional_delim to ',' for comma separated values.
+        function query2file(q,filename,optional_delim)
+            fid = fopen(filename,'w');
+            if(nargin<=2)
+                fprintf(fid,'%s',CLASS_database.query2text(q));                
+            else
+                fprintf(fid,'%s',CLASS_database.query2text(q,optional_delim));
+            end
+            fclose(fid);
+        end
+        
+        % ======================================================================
+        %> @brief Outputs mym query output statment to the console or string output.
+        %> @param q The mym query result to be displayed
+        %> @param optional_delim Optional string delimiter to separate output fields
+        %> The default is tab delimited (i.e. '\t')
+        %> @note set optional_delim to ',' for comma separated values.
+        %> @retval strout Stores the output string when provided.
+        function strout = query2text(q,optional_delim)
+            if(nargin<2)
+                delim='\t';
+            else
+                delim =optional_delim;
+            end
+            fields = fieldnames(q);
+            numfields = numel(fields);
+            numrecs = numel(q.(fields{1}));
+            strout = sprintf(fields{1});
+            for f=2:numfields
+                strout = sprintf(strcat('%s',delim,'%s'),strout,fields{f});
+            end
+            
+            for n=1:numrecs
+                if(iscell(q.(fields{1})))
+                    strout = sprintf('%s\n%s',strout,q.(fields{1}){n});
+                else
+                    strout = sprintf('%s\n%0.2f',strout,q.(fields{1})(n));
+                end
+                for f=2:numfields
+                    if(iscell(q.(fields{f})))
+                        if(numel(q.(fields{f}){n}==1))
+                            strout = sprintf(strcat('%s',delim,'%c'),strout,q.(fields{f}){n});
+                        else
+                            strout = sprintf(strcat('%s',delim,'%s'),strout,q.(fields{f}){n});
+                        end
+                    else
+                        strout = sprintf(strcat('%s',delim,'%0.2f'),strout,q.(fields{f})(n));
+                    end
+                end
+            end
+            if(nargout==0)
+                fprintf(strout);                
+            end
+                
+
+            
+        end
+        % ======================================================================
         %> @brief Insert a record into the detectorInfo_T table using the field/values passed in
         %> @param DBstruct A structure containing database accessor fields:
         %> @li @c name Name of the database to use (string)
