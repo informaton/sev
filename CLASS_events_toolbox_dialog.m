@@ -75,7 +75,7 @@ classdef CLASS_events_toolbox_dialog < handle
             if(isempty(obj.channel_names))
                 warndlg({'No source files loaded.','Please load channels first'},'Warning');
             elseif(isempty(obj.dialog_handle)||~ishandle(obj.dialog_handle))
-                max_num_sources = 3;  %maximum number of sources that can be drawn...
+                max_num_sources = 18;  %maximum number of sources that can be drawn...
                 max_width = 0; %keep track of the width and get the largest chunk as the dialog grows/changes
                 delta = 15;
                 cur_pos = [delta, delta, 0 0]; %bottom left position 
