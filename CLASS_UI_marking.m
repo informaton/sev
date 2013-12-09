@@ -22,7 +22,7 @@
 % centering.
 % ======================================================================
 classdef CLASS_UI_marking < handle
-
+    
     properties
         %> for the patch handles when editing and dragging
         hg_group; 
