@@ -172,8 +172,7 @@ classdef CLASS_UI_marking < handle
             obj.toolbarhandle.jCombo = [];
             obj.saveParameters(); %requires SETTINGS variable
             obj.SETTINGS = [];
-        end
-        
+        end        
         
         function paramStruct = getSaveParametersStruct(obj)
             paramStruct = obj.SETTINGS.VIEW;
