@@ -327,7 +327,7 @@ classdef CLASS_database < handle
                                 fCell{k}.method,''' LIMIT 1']);
                             DetectorID = y.DetectorID;
                             DetectorConfigID = fCell{k}.DetectorConfigID; %this is parsed as a string here because of the regexp call
-                            evtStruct = evtTxt2evtStruct(fullfile(events_pathname,filenames{k}));
+                            evtStruct = CLASS_events_container.evtTxt2evtStruct(fullfile(events_pathname,filenames{k}));
                             numEvts = numel(evtStruct.Start_sample);
                             if(isempty(evtStruct.Params))
                                 for e=1:numEvts
