@@ -124,9 +124,9 @@ classdef CLASS_WSC_database < CLASS_database
             end            
             sta_exp = '(?<PatID>[a-zA-Z0-9]+)_(?<StudyNum>\d+)[^\.]+\.STA';            
             if(isempty(STA_pathname))
-                stats = stage2stats([],sta_exp);
+                stats = CLASS_database.stage2stats([],sta_exp);
             else
-                stats = stage2stats(STA_pathname,sta_exp);
+                stats = CLASS_database.stage2stats(STA_pathname,sta_exp);
             end            
             CLASS_database.create_StageStats_T(stats,obj.DBstruct);            
         end
