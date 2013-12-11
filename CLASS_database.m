@@ -660,7 +660,7 @@ classdef CLASS_database < handle
                         %Stage is an ENUM and needs to have apostrophes around it
                         preInsertStr = ['INSERT INTO ',TableName, ' (PatStudyKey, DetectorID, '...
                             'Start_sample, Stop_sample, Duration_seconds, Epoch, Stage) VALUES(',...
-                            '%d,%d,%s,%d,%d,%0.3f,%d,''%d'')'];
+                            '%d,%d,%d,%d,%0.3f,%d,''%d'')'];
                         
                         mym('SET autocommit = 0');
                         
@@ -680,7 +680,6 @@ classdef CLASS_database < handle
                                     fCell{k}.method,''' LIMIT 1']);
                                 
                                 DetectorID = y.DetectorID;
-                                DetectorConfigID = fCell{k}.DetectorConfigID; %this is parsed as a string here because of the regexp call
                                 evtStruct = CLASS_events_container.evtTxt2evtStruct(fullfile(events_pathname,filenames{k}));
                                 
                                 for e=1:numel(evtStruct.Start_sample)
@@ -691,7 +690,7 @@ classdef CLASS_database < handle
                                     try
                                         mym(InsertStr);
                                     catch ME
-                                        disp(ME.message);
+                                        showME(ME);
                                     end
                                 end
                             end
