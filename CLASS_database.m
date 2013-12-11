@@ -674,7 +674,7 @@ classdef CLASS_database < handle
                                     fCell{k}.PatID,''' AND StudyNum=',fCell{k}.StudyNum]);
                                 PatIDKey = x.PatStudyKey;
                                 
-                                y = mym(['SELECT DetectorID FROM DetectorInfo_T WHERE DetectorLabel=''',...
+                                y = mym(['SELECT DetectorID FROM detectorinfo_t WHERE DetectorLabel=''',...
                                     fCell{k}.method,''' LIMIT 1']);
                                 
                                 DetectorID = y.DetectorID;
