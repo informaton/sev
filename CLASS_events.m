@@ -934,7 +934,6 @@ classdef CLASS_events < handle
                 start_times = datenum([zeros(numel(start_offset_sec),numel(t0)-1),start_offset_sec(:)])+datenum(t0);
                 start_times = datestr(start_times,'HH:MM:SS.FFF');
                 
-                
 %                 start_epochs = sample2epoch(starts,studyStruct.standard_epoch_sec,obj.samplerate);
                 start_epochs = sample2epoch(starts,30,obj.samplerate);
                 start_stages = stageStruct.line(start_epochs);

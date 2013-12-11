@@ -1428,17 +1428,22 @@ classdef CLASS_events_container < handle
         end;
 
         % =================================================================
-        %> @brief
+        %> @brief Loads Embla formatted event file (.evt or .nvt) into obj
         %> @param obj instance of CLASS_events_container class.
-        %> @param
-        %> @retval 
+        %> @param evtFilename Pathname (string) containing the embla events
+        %> to load.
+        %> @param embla_samplerate Sampling rate used in the Embla files.
+        %> @note The embla samplerate can often be determined from the
+        %stage.evt file.
+        %> @retval embla_evt_Struct Result of internal parseEmblaEvent call
         % =================================================================
-        function embla_evt_Struct = loadEmbla_evt(obj,evtFilename,embla_samplerate)
-            embla_evt_Struct = obj.parseEmbla_evt(evtFilename,embla_samplerate,obj.defaults.parent_channel_samplerate);
+        function embla_evt_Struct = loadEmblaEvent(obj,evtFilename,embla_samplerate)
+            embla_evt_Struct = obj.parseEmblaEvent(evtFilename,embla_samplerate,obj.defaults.parent_channel_samplerate);
             if(~isempty(embla_evt_Struct) && embla_evt_Struct.HDR.num_records>0)
                 paramStruct = [];
                 class_channel_index = 0;
-                sourceStruct.algorithm = 'external file (.evt)';
+                
+                sourceStruct.algorithm = 'external file (Embla .evt)';
                 sourceStruct.channel_indices = 0;
                 sourceStruct.editor = 'none';
                 
@@ -1446,26 +1451,6 @@ classdef CLASS_events_container < handle
                 obj.updateEvent(embla_evt_Struct.start_stop_matrix, cur_evt_label, class_channel_index,sourceStruct,paramStruct);
             end
         end
-        
-        % =================================================================
-        %> @brief
-        %> @param obj instance of CLASS_events_container class.
-        %> @param
-        %> @retval 
-        % =================================================================
-        function eventStruct = loadEmbla_nvt(obj,nvtFilename,embla_samplerate)
-            eventStruct = obj.parseEmbla_nvt(nvtFilename,embla_samplerate,obj.defaults.parent_channel_samplerate);
-            if(~isempty(eventStruct) && eventStruct.HDR.num_records>0)
-                paramStruct = [];
-                class_channel_index = 0;
-                sourceStruct.algorithm = 'external file (.nvt)';
-                sourceStruct.channel_indices = 0;
-                sourceStruct.editor = 'none';
-                
-                cur_evt_label = eventStruct.type;
-                obj.updateEvent(eventStruct.start_stop_matrix, cur_evt_label, class_channel_index,sourceStruct,paramStruct);
-            end
-        end        
         
         % =================================================================
         %> @brief
@@ -1844,6 +1829,71 @@ classdef CLASS_events_container < handle
                     end;
                 end;
             end
+        end 
+       % =================================================================
+        %> @brief Saves events to a .SCO format file.
+        %> @param obj instance of CLASS_events_container class.
+        %> @param filename (optional) file name to save events too.
+        %> If filename is not empty, then all events in obj are saved to
+        %> filename in .SCO format        
+        % =================================================================
+        function save2sco(obj,optional_filename)
+
+            %save2text(filename) - saves all events using the filename
+            %given.  If filename is a cell, then it must be of the same
+            %length as the number of events, and each cell element is used
+            %as unique filename to save the corresponding events to. 
+            if(nargin>1 && ~isempty(optional_filename))
+                start_stop_matrix = [];
+                evt_indices = [];
+                evt_labels = cell(obj.num_events,1);
+                for k =1:obj.num_events                    
+                    cur_evt = obj.getEventObj(k);
+                    evt_labels{k} = obj.getName(k);
+                    evt_indices = [evt_indices(:);repmat(k,size(cur_evt.start_stop_matrix,1),1)]; 
+                    start_stop_matrix = [start_stop_matrix;cur_evt.start_stop_matrix];
+                end
+                [~,i] = sort(start_stop_matrix(:,1));
+                event_start_stop_matrix = start_stop_matrix(i,:);
+                evt_indices = evt_indices(i);
+                
+                fid = fopen(optional_filename,'w');
+                if(fid>1)
+                    t0 = obj.stageStruct.startDateTime;
+                    
+                    starts = event_start_stop_matrix(:,1);
+                    
+                    %subtract 1 below, since the 1st sample technically starts at
+                    %           %t0 and thus the first sample in matlab would otherwise be listed as 1/fs seconds after t0
+                    start_offset_sec = (starts-1)/obj.defaults.parent_channel_samplerate; %add the seconds here
+                    
+                    start_times = datenum([zeros(numel(start_offset_sec),numel(t0)-1),start_offset_sec(:)])+datenum(t0);
+                    start_times = datestr(start_times,'HH:MM:SS.FFF');
+                    
+                    %                 start_epochs = sample2epoch(starts,studyStruct.standard_epoch_sec,obj.samplerate);
+                    start_epochs = sample2epoch(starts,30,obj.defaults.parent_channel_samplerate);
+                    
+                    duration = (event_start_stop_matrix(:,2)-event_start_stop_matrix(:,1)+1);
+                    %                 fid = 1;
+                    for r=1:numel(evt_indices);
+                        e=evt_indices(r);
+                        fprintf(fid,'%u\t%u\t%u\t%u\t%s\t%u\t%s\n',start_epochs(r),starts(r),duration(r),e,...
+                            evt_labels{e},e,start_times(r,:));
+                    end
+                    
+                    fclose(fid);
+                else
+                    fprintf('Could not open %s for writing.\n',optional_filename);
+                end
+                
+                
+            else
+                if(obj.num_events<1)
+                    warndlg('No events currently available');
+                else
+                    
+                end;
+            end
         end  %end save2txt(obj,varargin)
         
         % =================================================================
@@ -2124,7 +2174,25 @@ classdef CLASS_events_container < handle
             StudyNum = x{2};
         end
         
-        function [embla_evt_Struct,embla_samplerate_out] = parseEmbla_evt(evtFilename,embla_samplerate,desired_samplerate)
+        % =================================================================
+        %> @brief Parse events from an Embla formatted events file (.evt/.nvt)
+        %> The function parses Embla files 
+        %> @li stage
+        %> @li plm
+        %> @li desat
+        %> @li biocals
+        %> @li user
+        %> @li numeric
+        %> @li baddata
+        %> @param evtFilename Filename (string) of the Embla formatted event file
+        %> @param embla_samplerate Sampling rate of the Embla event file.
+        %> @param desired_samplerate (optional) sample rate to convert
+        %> Embla events to.  This is helpful when displaying a samplerate
+        %> different than recorded in the .evt file.  If desired_samplerate
+        %> is not provided, then embla_samplerate is used.
+        %> filename in .SCO format        
+        % =================================================================
+        function [embla_evt_Struct,embla_samplerate_out] = parseEmblaEvent(evtFilename,embla_samplerate,desired_samplerate)
             %embla_samplerate_out may change if there is a difference found in
             %the stage .evt file processing as determined by adjusting for
             %a 30 second epoch.
@@ -2336,64 +2404,17 @@ classdef CLASS_events_container < handle
                 embla_evt_Struct.stage = stage;
                 fclose(fid);
             end
-            
         end
-        
-        function eventStruct = parseEmbla_nvt(nvtFilename,sampleRate)
-            if(~exist(nvtFilename,'file'))
-                eventStruct = [];
-                disp([nvt_filename,' not handled']);
-            else
-                [~,name,~] = fileparts(nvtFilename);
-                
-                fid = fopen(nvtFilename,'r');
-                HDR = CLASS_events_container.parseEmblaHDR(fid);
-                %label should be EVENT;
-                start_sec = [];
-                stop_sec = [];
-                dur_sec = [];
-                epoch = [];
-                stage = [];
-                start_stop_matrix = [];
-                
-                eventType = name;
-                fseek(fid,32,'bof');
-                if(HDR.num_records>0)
-                    
-                    if(strcmpi(eventType,'plm')) %52 byte blocks
-                        data = fread(fid,[13,HDR.num_records],'uint32')';
-                    elseif(strcmpi(eventType,'resp'))
-                        %80 byte blocks
-                        data = fread(fid,[20,HDR.num_records],'uint32')';
-                    else
-                        fseek(fid,32,'bof');
-                        x = fread(fid,[HDR.num_records,inf]);
-                        block_size = size(x,2);
-                        fseek(fid,32,'bof');
-                        data = fread(fid,[block_size/4,HDR.num_records],'uint32');
-                    end
-                    
-                    if(~isempty(data))
-                        stage = [];
-                        epoch = data(:,5);
-                        start_stop_matrix = data(:,1:2);
-                        start_sec = start_stop_matrix(:,1)/sampleRate; %bitshift(data(:,1),-16); %-8 or 256samples per second sampling rate
-                        stop_sec = start_stop_matrix(:,2)/sampleRate; %bitshift(data(:,2),-16);
-                        dur_sec = stop_sec-start_sec;
-                    end
-                end
-                eventStruct.HDR = HDR;
-                eventStruct.type = eventType;
-                eventStruct.start_stop_matrix = start_stop_matrix;
-                eventStruct.start_sec = start_sec;
-                eventStruct.stop_sec = stop_sec;
-                eventStruct.dur_sec = dur_sec;
-                eventStruct.epoch = epoch;
-                eventStruct.stage = stage;
-                fclose(fid);
-            end
-            
-        end
+
+        % =================================================================
+        %> @brief Parse header an Embla formatted events file (.evt/.nvt)
+        %> @param fid File identifier of opened Embla file stream (see
+        %> fopen)
+        %> @retval HDR Struct containing Embla event header
+        %> @li label String label of the event file.
+        %> @li checksum A chuck sum of the file stream.
+        %> @li num_records Number of records stored in the file stream.
+        % =================================================================
         function HDR=parseEmblaHDR(fid)
             %HDR is struct with the event file header information
             fseek(fid,2,'bof'); %2
@@ -2402,6 +2423,111 @@ classdef CLASS_events_container < handle
             HDR.num_records = fread(fid,1,'int32'); %32 bytes read
         end
         
+        % =================================================================
+        %> @brief This function automates the file conversion process from
+        %> Embla formatted .nvt and .evt files and a single Wisconsin Sleep
+        %> Cohort multiplex .SCO format.
+        %> @param emblaStudyPath (optional) This is the parent directory of
+        %> Embla saved sleep studies.  Contents of this folder include
+        %> subfolders for each sleep study.  The emblaStudyPath is parsed for
+        %> subfolders and the events found in each subfolder are saved to a
+        %> .SCO file of same name as the subfolder in the outPath directory.
+        %> The user is prompted if emblaStudy does not exist or is not
+        %> entered.
+        %> @param outPath (optional) String name of the directory to store the output .SCO files.
+        %> The user is prompted if outPath does not exist or is not entered.
+        % =================================================================
+        function embla2sco(emblaStudyPath, outPath)
+            if(nargin<1 || ~exist(emblaStudyPath,'file'))
+                disp('Select Directory containing Embla PSG direcotories.  Typically Embla stores each study as a separate named directory.  Choose the directory that contains these named directories in them.');
+                emblaStudyPath =uigetdir(pwd,'Select Event directory (*.evt) to use or Cancel for none.');
+                if(isnumeric(emblaStudyPath) && ~emblaStudyPath)
+                    emblaStudyPath = [];
+                end                
+            end
+            
+            if(nargin<2 || ~exist(outPath,'file'))
+                disp('Select Directory (*.evt)');
+                outPath =uigetdir(pwd,'Select Event directory (*.evt) to use or Cancel for none.');
+                if(isnumeric(outPath) && ~outPath)
+                    outPath = [];
+                end
+            end
+            
+            if(exist(emblaStudyPath,'file') && exist(outPath,'file'))
+                pathnames = getPathnames(emblaStudyPath);
+                unknown_range = '0000';
+                
+                expressions =  {'^(?<studyname>\d{4})_(?<studydate>\d{1,2}-\d{1,2}-\d{4})';
+                    '^nonMatch(?<studyname>\d{1,3})'};
+                
+                studyStruct = getSevStruct();
+                studyStruct.samplerate = 256;
+                                
+                for e=1:numel(expressions)
+                    %matched files
+                    exp = regexp(pathnames,expressions{e},'names');
+                    for s=1:numel(exp)
+                        
+                        cur_exp = exp{s};
+                        
+                        if(~isempty(cur_exp))
+                            try
+                                studyname = strcat(unknown_range(1:end-numel(cur_exp.studyname)),cur_exp.studyname);
+                                srcFile = [pathnames{s},'.edf'];
+                                
+                                srcPath = fullfile(emblaStudyPath,pathnames{s});
+                                studyID = strcat('SSC_',studyname,'_1');
+                                
+                                fullSrcFile = fullfile(srcPath,srcFile);
+                                
+                                HDR = loadEDF(fullSrcFile);
+                                studyStruct.startDateTime = HDR.T0;
+                                
+                                num_epochs = ceil(HDR.duration_sec/studyStruct.standard_epoch_sec);
+                                stage_evt_file = fullfile(srcPath,'stage.evt');
+                                if(exist(stage_evt_file,'file'))
+                                    [eventStruct,src_samplerate] = CLASS_events_container.parseEmblaEvent(stage_evt_file,studyStruct.samplerate,studyStruct.samplerate);
+                                    studyStruct.samplerate = src_samplerate;
+                                    
+                                    if(num_epochs~=numel(eventStruct.epoch))
+                                        %                         fprintf(1,'different stage epochs found in %s\n',studyname);
+                                        fprintf(1,'%s\texpected epochs: %u\tencountered epochs: %u to %u\n',srcFile,num_epochs,min(eventStruct.epoch),max(eventStruct.epoch));
+                                        
+                                        new_stage = repmat(7,num_epochs,1);
+                                        new_epoch = (1:num_epochs)';
+                                        new_stage(eventStruct.epoch)=eventStruct.stage;
+                                        eventStruct.epoch = new_epoch;
+                                        eventStruct.stage = new_stage;
+                                    end
+                                    
+%                                     y = [eventStruct.epoch,eventStruct.stage];
+%                                     save(staFilename,'y','-ascii'); 
+                                    events_container_obj = CLASS_events_container.importEmblaEvtDir(srcPath,src_samplerate);
+                                    events_container_obj.setStageStruct(studyStruct);
+                                    scoFilename = fullfile(outPath,strcat(studyID,'.SCO'));
+                                    events_container_obj.save2sco(scoFilename);
+                                else
+                                    fprintf(1,'%s\tNo stage File found\n',srcFile);
+                                    
+                                end
+                                
+                            catch me
+                                showME(me);
+                                fprintf(1,'%s (%u) - Fail\n',srcFile,s);                                
+                            end
+                        end
+                    end                    
+                end     
+                
+                
+            else
+                fprintf('One or both of the paths were not found');
+            end
+            
+            
+            
+        end
         
         function evtStruct = evtTxt2evtStruct(filenameIn)
         %This function takes an event file of SEV's evt.* format and
@@ -2858,6 +2984,47 @@ classdef CLASS_events_container < handle
             end
         end
         
+        function obj = importEmblaEvtDir(embla_path,embla_samplerate,desired_samplerate)
+            obj = CLASS_events_container();
+            import_types = {'resp','desat','plm','biocals'}; 
+            if(nargin<2 || isempty(embla_samplerate))
+                stage_evt_file = fullfile(embla_path,'stage.evt');
+                if(exist(stage_evt_file,'file'))
+                    [eventStruct,base_samplerate] = CLASS_events_container.parseEmblaEvent(stage_evt_file,studyStruct.samplerate,studyStruct.samplerate);
+                    embla_samplerate = base_samplerate;
+                    if(num_epochs~=numel(eventStruct.epoch))
+                        fprintf(1,'%s\texpected epochs: %u\tencountered epochs: %u to %u\n',srcFile,num_epochs,min(eventStruct.epoch),max(eventStruct.epoch));
+                        
+                        new_stage = repmat(7,num_epochs,1);
+                        new_epoch = (1:num_epochs)';
+                        new_stage(eventStruct.epoch)=eventStruct.stage;
+                        eventStruct.epoch = new_epoch;
+                        eventStruct.stage = new_stage;
+                    end
+                else
+                    fprintf('Original embla samplerate used for storing events is unknown, so there is no point in continuing to load the file.');
+                    embla_samplerate = [];
+                end
+            end
+            if(~isempty(embla_samplerate))
+                if(nargin<3)
+                    desired_samplerate = 100;
+                end
+                obj.setDefaultSamplerate(desired_samplerate);
+                
+                %get the sample rate from the .EDF in there?
+                for f=1:numel(import_types)
+                    event_file = fullfile(embla_path,strcat(import_types{f},'.evt'));
+                    if(~exist(event_file,'file'))
+                        event_file = fullfile(embla_path,strcat(import_types{f},'.nvt'));                        
+                    end
+                    if(exist(event_file,'file'))
+                        obj.loadEmblaEvent(event_file,embla_samplerate);
+                    end
+                end
+            end
+        end
+            
         function import_evtFile2db(dbStruct,edf_sta_path,evt_path,samplerate)
             %import the events into a database structure
             

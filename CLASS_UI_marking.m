@@ -1324,7 +1324,7 @@ cropFigure2Axes(f,axes1_copy);
             
             %% Toolbox
             % toolbox_img = imread(fullfile(obj.sev.rootpathname,'icons/toolbox-16x16.png'));
-            toolbox_img = imread(fullfile(obj.SETTINGS.rootpathname,'icons/toolbox-24x24.png'));
+            toolbox_img = imread(fullfile(obj.SETTINGS.rootpathname,'icons/Toolbox-24x24.png'));
             blank_ind = xor(toolbox_img,backgroundImg);
             toolbox_img(blank_ind) = backgroundImg(blank_ind);
             obj.toolbarhandle.toolbox_push = uipushtool(th,'CData',toolbox_img,'separator','on',...
