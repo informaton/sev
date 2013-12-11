@@ -835,7 +835,8 @@ classdef CLASS_WSC_database < CLASS_database
                 'SCO_Mixed_Apnea'
                 'SCO_Obs_Apnea'
                 'SCO_SaO2'
-                'SCO_Arousal'};
+                'SCO_Arousal'
+                'SCO_RESPIRATORY_EVENT'};
             detectStruct.channel_labels ={'LAT/RAT'};
             
             detectStruct.configID = 1;
