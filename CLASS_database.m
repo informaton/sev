@@ -1381,9 +1381,236 @@ classdef CLASS_database < handle
                 end
             end
         end
-
-    end        
-       
+        
+        %> @brief Converts .STA files (ascii tab delimited files with first column epoch
+        %> number and second column the corresponding sleep stage) to a three column
+        %> .STA file - the third column being the cycle of the current stage (e.g.
+        %> many rem cycles, 1st, 2nd, third, etc.  Also calculates statistics:
+        %> pct of rem, nrem, stage 1,2,3,4,5,0,7 and returns as a
+        %> structure.
+        %> @param STA_pathname Optional directory name (string) containing the .STA
+        %> files to process.  User is prompted for directory name if one
+        %> is not provided.
+        %> @param patID_studyNum_regexp Regular expression (string) for
+        %how to identify the <i>PatID</i> and <i>StudyNum</i> fields from the .STA
+        %filenames.
+        %> @retval stats A cell of stage structures
+        %> @note A new file is saved with a .STA2 extension which has a
+        %> third column with the stage cycle:
+        %> [column 1: epoch column] [2: stage column] [3: stage cycle]
+        
+        function stats = stage2stats(STA_pathname,patID_studyNum_regexp) %,databasename, user, password)
+            
+            %
+            % Written by Hyatt Moore
+            % Modified 12.3.2012 - add cycle field to distinguish current NREM/REM
+            % cycle
+            % Modified 10.25.2012
+            % altered to handle the case of different patid studynum combinations for
+            % file formats; will help with PTSD, and SSC file name conventions which
+            % are different than WSC's.
+            
+            if(nargin<1)
+                STA_pathname = uigetdir(pwd,'Select stage (.STA) directory');
+                
+                %     STA_pathname = '/Users/hyatt4/Documents/Sleep Project/PTSD/sta';
+                % STA_pathname = '/Users/hyatt4/Documents/Sleep Project/Data/Spindle_7Jun11'
+                
+                %     STA_pathname = uigetdir(pwd,'Select Event (evt.) directory');
+            end
+            
+            if(~isempty(STA_pathname))
+                if(~ispc)
+                    dirStruct = [dir(fullfile(STA_pathname,'*.STA'));dir(fullfile(STA_pathname,'*.sta'))];
+                else
+                    dirStruct = dir(fullfile(STA_pathname,'*.STA'));
+                end
+                
+                if(~isempty(dirStruct))
+                    filecount = numel(dirStruct);
+                    filenames = cell(numel(dirStruct),1);
+                    [filenames{:}] = dirStruct.name;
+                end
+                %example filename:    A0097_4 174733.STA
+                if(nargin<2)
+                    exp = '(?<PatID>[a-zA-Z0-9]+)_(?<StudyNum>\d+)[^\.]+\.STA';
+                else
+                    exp = patID_studyNum_regexp;
+                end
+                %     exp = '(?<PatID>[a-zA-Z0-9]+)_(?<studyNum>\d+)\s\d+\.STA';
+                
+                
+                fCell= regexp(filenames,exp,'names');
+                
+                %         %might be PTSD format - so try it second
+                %     if(numel(fCell)==0||isempty(fCell{1}))
+                %         expPTSD = '(?<PatID>[a-z]+)(?<StudyNum>\d+)[^\.]*\.sta';
+                %         fCell= regexpi(filenames,expPTSD,'names'); %regexpi is not case sensitive...
+                %     end
+                
+                stats = cell(filecount,1);
+                
+                for k=1:filecount
+                    %    tic
+                    if(~isempty(fCell{k})) % && ~strcmp(fCell{k}.method,'txt')) %SECOND PART is no longer necessary
+                        try
+                            sta_filename = fullfile(STA_pathname,filenames{k});
+                            %                 if(strcmpi('/Volumes/Macintosh HD 2/Data/SSC/_PLM_psg/SSC_0080_1.STA',sta_filename))
+                            %                     disp('get ready');
+                            %                 end
+                            STAGES = loadSTAGES(sta_filename);
+                            
+                            
+                            %                 staging_matrix = load(sta_filename,'-ascii');
+                            %                 staging_matrix(isnan(staging_matrix(:,2)),2)=7; %reset these to be number 2
+                            %
+                            %                 cycle_vector = stage2cycle(staging_matrix(:,2));
+                            %
+                            %                 staging_matrix = [staging_matrix(:,1:2),cycle_vector]; %just make it a three column section
+                            %                 save(fullfile(STA_pathname,[filenames{k},'2']),'staging_matrix','-ascii');
+                            
+                            %                 stage_stats = getStagingStats(staging_matrix(:,2),cycle_vector,fCell{k}.PatID,fCell{k}.StudyNum);
+                            
+                            cycle_vector = stage2cycle(STAGES.line);
+                            stage_stats = getStagingStats(STAGES.line,cycle_vector,STAGES.cycles,fCell{k}.PatID,fCell{k}.StudyNum);
+                            
+                            stats{k} = stage_stats;
+                        catch me
+                            showME(me);
+                            stats{k} = [];
+                        end
+                    else
+                        fprintf(1,'%s is missing\n',filenames{k});
+                        stats{k} = [];
+                    end
+                end
+                %     stats = stats(~isempty(stats));
+                
+                %     disp(['Total time = ',num2str(toc,'%0.2f'), ' seconds']);
+                
+            end
+            
+            
+        end
+        
+        % ======================================================================
+        %> @brief Calculates statistics of scored sleep stages.
+        %> @param stage_vector Numeric vector of consecutively scored sleep stages.
+        %> @param sleepfragmentation_vector Vector of length(stage_vector) with
+        %> elements containing the cycle of the stage at the corresponding
+        %> position in stage_vector.  See CLASS_database method <i>stage2cycle</i>
+        %> @param nrem_rem_cycle_vector
+        %> @param PatID
+        %> @param StudyNum
+        %> @retval staging_stats Structure (struct) with staging
+        %> statisitcs.  It includes the following fields:
+        %> @li PatID
+        %> @li StudyNum Foreign key reference
+        %> @li Stage The numeric stage {e.g. REM,NREM,Wake, SWS, etc}
+        %> @li Cycle The NREM/REM sleep cycle (1,2,3,etc.)
+        %> @li Duration Calculated as 30-second/epoch*stage.count;
+        %> @li Count Number of epochs labeled with stage.ID
+        %> @li Pct_study
+        %> @li Pct_sleep
+        %> @li Fragmentation_count Number of times the sleep stage was switched from
+        %> @li Latency The duration in seconds from first non-wake period
+        %> @note This method is a helper for CLASS_database method stage2stats
+        function staging_stats = getStagingStats(stage_vector,sleepfragmentation_vector,nrem_rem_cycle_vector,PatID,StudyNum)
+            %stage_vector is a 1xN vector that contains staging data corresponding to
+            %ordinal epochs.
+            %cycle_vector is a 1xN vector of the cycle of the stage at the same
+            %position in stage_vector
+            %for example if stage_vector is [1 1 5 5 1 1 2 2 5 5]
+            %then cycle_vector is [1 1 1 1 2 2 1 1 2 2]
+            
+            epoch_dur_sec = 30; %30 second epochs
+            uniqueStages = unique(stage_vector);
+            uniqueCycles = unique(nrem_rem_cycle_vector);
+            stage.PatID = PatID;
+            stage.StudyNum=StudyNum; %foreign key reference
+            stage.Stage=zeros(size(uniqueCycles)); %REM,NREM,Wake, SWS, etc
+            stage.Cycle = zeros(size(uniqueCycles)); %NREM/REM sleep cycle (1,2,3,etc.)
+            stage.Duration = zeros(size(uniqueCycles)); %30-second/epoch*stage.count;
+            stage.Count = zeros(size(uniqueCycles)); %number of epochs labeled with stage.ID
+            stage.Pct_study = zeros(size(uniqueCycles));
+            stage.Pct_sleep = zeros(size(uniqueCycles));
+            stage.Fragmentation_count = zeros(size(uniqueCycles)); %number of times the sleep stage was switched from
+            stage.Latency = zeros(size(uniqueCycles)); %latency -> duration in seconds from first non-wake period
+            %rem latency -> duration in seconds from first non-wake period to rem.
+            
+            stage = repmat(stage,numel(uniqueStages),1);
+            
+            total_study_sec = sum(stage_vector~=7)*epoch_dur_sec;
+            total_sleep_sec = sum(stage_vector~=7&stage_vector~=0)*epoch_dur_sec;
+            
+            first_non_wake_vec = stage_vector~=0&stage_vector~=7;
+            first_non_wake_ind = find(first_non_wake_vec==1,1); %if this is empty, then we have problems and need to reject anyway
+            if(isempty(first_non_wake_ind))
+                disp([PatID,StudyNum,' stage file does not contain any valid sleep stages!']);
+                stage = [];
+            else
+                
+                for k=1:numel(uniqueStages)
+                    curStage = uniqueStages(k);
+                    for c = 1:numel(uniqueCycles)
+                        curCycle = uniqueCycles(c);
+                        matching_stage_cycle = (stage_vector == curStage) & (nrem_rem_cycle_vector==curCycle);
+                        stage(k).Cycle(c) = curCycle;
+                        stage(k).Stage(c)=curStage;
+                        
+                        stage(k).Count(c) = sum(matching_stage_cycle);
+                        if(stage(k).Count(c)>0)
+                            stage(k).Duration(c) = stage(k).Count(c)*epoch_dur_sec;
+                            stage(k).Pct_study(c) = stage(k).Duration(c)/total_study_sec;
+                            stage(k).Pct_sleep(c) = stage(k).Duration(c)/total_sleep_sec;
+                            frag_vec = sleepfragmentation_vector(matching_stage_cycle);   %find(stage_vector==curStage,1,'last')); %get the last/maximum cycle value
+                            stage(k).Fragmentation_count(c) = frag_vec(end)-frag_vec(1);
+                            stage(k).Latency(c) = (find(matching_stage_cycle,1)-first_non_wake_ind)*epoch_dur_sec; %this will be negative for some ... %a value of 0 means it is the first to occur
+                        end
+                    end
+                end
+                
+            end
+            staging_stats = stage;
+        end
+        
+        % ======================================================================
+        %> @brief Determines the cycle of score sleep stages by grouping
+        %> consecutive periods of the same numeric sleep stage into cycles of
+        %> that stage.
+        %> @note stage_vector is a 1xN vector that contains staging data corresponding to
+        %> ordinal epochs.
+        %> cycle_vector is a 1xN vector of the cycle of the stage at the same
+        %> position in stage_vector
+        %> for example if stage_vector is [1 1 5 5 1 1 2 2 5 5]
+        %> then cycle_vector is [1 1 1 1 2 2 1 1 2 2]
+        %> @param stage_vector Numeric vector of consecutively scored sleep stages.
+        %> @retval cycle_vector Vector of length(stage_vector) with
+        %> elements containing the cycle of the stage at the corresponding
+        %> position in stage_vector.
+        function cycle_vector =  stage2cycle(stage_vector)
+            
+            %capture the vector of cycle changes; %non-zeros from the diff occur at the
+            %last element before a transition - it represents where a cycle ends before
+            %another begins
+            cycle_changes = find(diff(stage_vector)~=0);
+            
+            %adding a one to the cycle_change represents where the next consecutive
+            %cycle begins
+            cycle_range = [[1;cycle_changes(:)+1],[cycle_changes(:);numel(stage_vector)]];
+            
+            cycle_vector = zeros(size(stage_vector));
+            stages = zeros(max(stage_vector(:))+1,1);
+            
+            for k=1:size(cycle_range,1)
+                cur_stage = stage_vector(cycle_range(k,1)); %cycle_range(k,1) is the index of stage_vector where a cycle of the same stage begins; cycle_range(k,2) is the index of where that cycle ends in stage_vector
+                stages(cur_stage+1)=stages(cur_stage+1)+1; %(cur_stage+1) b/c Matlab is 1-based;
+                cycle_vector(cycle_range(k,1):cycle_range(k,2)) = stages(cur_stage+1);
+            end
+            
+        end
+        
+    end
     
 end
 
