@@ -666,6 +666,8 @@ classdef CLASS_database < handle
                         
                         numfiles = filecount;  %5000;
                         h = waitbar(0,'processing');
+                        axes_title_h = get(get(h,'children'),'title');
+                        set(axes_title_h,'interpreter','none');  %turn off annoying underscore to subscripting business.
                         for k=1:filecount
                             waitbar(k/numfiles,h,[num2str(k),' - ',filenames{k}]);
                             drawnow();
