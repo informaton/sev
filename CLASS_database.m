@@ -54,7 +54,8 @@ classdef CLASS_database < handle
             % Author: Hyatt Moore IV
             % created 4/13/2013
             
-            tableName = 'Medications_T';
+            TableName = 'Medications_T';
+            TableName = lower(TableName);
 
             if(nargin==1 || isempty(meds_filename))
                 [meds_filename, pathname, ~] = uigetfile({'*.txt','Tab-delimited Text (*.txt)'},'Select Medications list data file','MultiSelect','off');
@@ -81,7 +82,7 @@ classdef CLASS_database < handle
                 
                 %create the table
                 %table create string
-                TStr = sprintf('CREATE TABLE IF NOT EXISTS %s (patstudykey smallint unsigned not null,',tableName);
+                TStr = sprintf('CREATE TABLE IF NOT EXISTS %s (patstudykey smallint unsigned not null,',TableName);
                 column_names_db_string = 'patstudykey';
                 
                 for n=2:numel(column_names)
@@ -93,7 +94,7 @@ classdef CLASS_database < handle
                 TStr = sprintf('%s PRIMARY KEY (PATSTUDYKEY))',TStr);
                 
                 
-                mym(['DROP TABLE IF EXISTS ',tableName]);
+                mym(['DROP TABLE IF EXISTS ',TableName]);
                 mym(TStr);
                 
                 nrows = numel(data{1});
@@ -106,7 +107,7 @@ classdef CLASS_database < handle
                         for col = 2:ncols
                             valuesStr = sprintf('%s,%c',valuesStr,data{col}{row});
                         end
-                        mym(sprintf('insert into %s (%s) values (%s)',tableName,column_names_db_string,valuesStr));
+                        mym(sprintf('insert into %s (%s) values (%s)',TableName,column_names_db_string,valuesStr));
                     end
                 end
             else
@@ -210,6 +211,7 @@ classdef CLASS_database < handle
             %         with  insertStr = [insertStr,'NULL)'];
             
             TableName = 'DetectorInfo_T';
+            TableName = lower(TableName);
             
             %testing
             % detector_pathname ='/Users/hyatt4/Documents/Sleep Project/Software/sev v.43 beta/+detection'
@@ -256,6 +258,7 @@ classdef CLASS_database < handle
             %1/2/12
             
             TableName = 'Events_T';
+            TableName = lower(TableName);
             CLASS_database.openDB(dbStruct);
             
             mym(['DROP TABLE IF EXISTS ',TableName]);
@@ -382,6 +385,7 @@ classdef CLASS_database < handle
             
             
             TableName = 'Stages_T';
+            TableName = lower(TableName);
             mym(['DROP TABLE IF EXISTS ',TableName]);
             
             %    ', Stage ENUM(''0'',''1'',''2'',''3'',''4'',''5'',''6'',''7'',''8'',''NREM'') NOT NULL'...
@@ -432,6 +436,7 @@ classdef CLASS_database < handle
             end
             
             TableName = 'StageStats_T';
+            TableName = lower(TableName);
             mym(['DROP TABLE IF EXISTS ',TableName]);
             
             %    ', Stage ENUM(''0'',''1'',''2'',''3'',''4'',''5'',''6'',''7'',''8'',''NREM'') NOT NULL'...
@@ -525,6 +530,7 @@ classdef CLASS_database < handle
             %               updated 7/17/12 - added visitSequence field
             
             TableName = 'StudyInfo_T';
+            TableName = lower(TableName);
             
             if(nargin<2)
                 study_pathname = uigetdir(pwd,'Select Study (.EDF) directory');
@@ -618,6 +624,7 @@ classdef CLASS_database < handle
             % Last Edited 1/21/12
             
             TableName = 'Events_T';
+            TableName = lower(TableName);
             CLASS_database.openDB(dbStruct);
             
             if(nargin>1 && ~isempty(events_pathname))
@@ -848,6 +855,7 @@ classdef CLASS_database < handle
              CLASS_database.openDB(dbStruct);
             
             TableName = 'StageStats_T';
+            TableName = lower(TableName);
 
             
             %fragmentation count is the number of times one stage is left for another
@@ -927,6 +935,7 @@ classdef CLASS_database < handle
             %modified 2/26/2013 - updated to match most recent create_StudyInfo_T.m
             
             TableName = 'StudyInfo_T';
+            TableName = lower(TableName);
             CLASS_database.openDB(dbStruct);
             mym('SET autocommit = 0');
             edf_files = getFilenames(edf_directory,'*.EDF');

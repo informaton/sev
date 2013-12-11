@@ -203,7 +203,7 @@ classdef CLASS_WSC_database < CLASS_database
                 
                 hdr = raw(1,:);
                 
-                tableName = 'Diagnostics_T';
+                tableName = 'diagnostics_t';
                 
                 % BIT, TINYINT(1), BOOL, AND BOOLEAN ARE AL THE SAME
                 % TINYINT IS A BYTE
@@ -497,7 +497,7 @@ classdef CLASS_WSC_database < CLASS_database
 
             if(exist(blood_xls_filename,'file'))
                 
-                tableName = 'bloodiron_T';
+                tableName = 'bloodiron_t';
                 
                 mym(['DROP TABLE IF EXISTS ',tableName]);
                 
