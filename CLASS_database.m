@@ -320,10 +320,10 @@ classdef CLASS_database < handle
                     
                     for k=1:filecount
                         if(~isempty(fCell{k})) % && ~strcmp(fCell{k}.method,'txt')) %SECOND PART is no longer necessary
-                            x =mym(['SELECT PatStudyKey FROM StudyInfo_T WHERE PatID=''',...
+                            x =mym(['SELECT PatStudyKey FROM studyinfo_t WHERE PatID=''',...
                                 fCell{k}.PatID,''' AND StudyNum=',fCell{k}.StudyNum]);
                             PatIDKey = x.PatStudyKey;
-                            y = mym(['SELECT DetectorID FROM DetectorInfo_T WHERE Label=''',...
+                            y = mym(['SELECT DetectorID FROM detectorinfo_t WHERE Label=''',...
                                 fCell{k}.method,''' LIMIT 1']);
                             DetectorID = y.DetectorID;
                             DetectorConfigID = fCell{k}.DetectorConfigID; %this is parsed as a string here because of the regexp call
@@ -471,7 +471,7 @@ classdef CLASS_database < handle
                 %will have the same PatID and StudyNum field values
                 if(~isempty(stats{k}))
                     %     PatStudyKey = num2str(mym(['SELECT PatStudyKey FROM StudyInfo_T WHERE PatID=''',stats{k}(1).PatID,''' AND StudyNum=''',stats{k}(1).StudyNum,''' LIMIT 1']));
-                    x = mym(['SELECT PatStudyKey FROM StudyInfo_T WHERE PatID=''',stats{k}(1).PatID,''' AND StudyNum=''',stats{k}(1).StudyNum,''' LIMIT 1']);
+                    x = mym(['SELECT PatStudyKey FROM studyinfo_t WHERE PatID=''',stats{k}(1).PatID,''' AND StudyNum=''',stats{k}(1).StudyNum,''' LIMIT 1']);
                     PatStudyKey = num2str(x.PatStudyKey);
                     if(~isempty(PatStudyKey))
                         numStages = numel(stats{k});
@@ -670,7 +670,7 @@ classdef CLASS_database < handle
                             waitbar(k/numfiles,h,[num2str(k),' - ',filenames{k}]);
                             drawnow();
                             if(~isempty(fCell{k})) % && ~strcmp(fCell{k}.method,'txt')) %SECOND PART is no longer necessary
-                                x = mym(['SELECT PatStudyKey FROM StudyInfo_T WHERE PatID=''',...
+                                x = mym(['SELECT PatStudyKey FROM studyinfo_t WHERE PatID=''',...
                                     fCell{k}.PatID,''' AND StudyNum=',fCell{k}.StudyNum]);
                                 PatIDKey = x.PatStudyKey;
                                 
@@ -817,7 +817,7 @@ classdef CLASS_database < handle
                         try
                             %key, epoch, start, stage, cycle, duration, fragment,
                             %so_start
-                            mym(sprintf('Insert into STAGES_T values (%u,%u,%u,%u,%u,%u,%u,%u)',key,epochs(e),start_samples(e),...
+                            mym(sprintf('Insert into stages_t values (%u,%u,%u,%u,%u,%u,%u,%u)',key,epochs(e),start_samples(e),...
                                 STAGES.line(e),STAGES.cycles(e),duration_sec,STAGES.fragments(e),so_latency_start_samples(e)));
                         catch me
                             showME(me);
@@ -872,7 +872,7 @@ classdef CLASS_database < handle
                 %will have the same PatID and StudyNum field values
                 if(~isempty(stats{k}))
                     %     PatStudyKey = num2str(mym(['SELECT PatStudyKey FROM StudyInfo_T WHERE PatID=''',stats{k}(1).PatID,''' AND StudyNum=''',stats{k}(1).StudyNum,''' LIMIT 1']));
-                    x = mym(['SELECT PatStudyKey FROM StudyInfo_T WHERE PatID=''',stats{k}(1).PatID,''' AND StudyNum=''',stats{k}(1).StudyNum,''' LIMIT 1']);
+                    x = mym(['SELECT PatStudyKey FROM studyinfo_t WHERE PatID=''',stats{k}(1).PatID,''' AND StudyNum=''',stats{k}(1).StudyNum,''' LIMIT 1']);
                     PatStudyKey = num2str(x.PatStudyKey);
                     if(~isempty(PatStudyKey))
                         numStages = numel(stats{k});
@@ -1087,7 +1087,7 @@ classdef CLASS_database < handle
                 end
                 for k=1:numel(event_settings)
                     %                     Q = mym('SELECT DetectorID as detectorID FROM DetectorInfo_T WHERE DetectorLabel="{S}"',event_settings{k}.method_label);
-                    Q = mym('SELECT detectorID, configID, ConfigChannelLabels, configparamstruct as param FROM DetectorInfo_T WHERE DetectorLabel="{S}" order by configid',event_settings{k}.method_label);
+                    Q = mym('SELECT detectorID, configID, ConfigChannelLabels, configparamstruct as param FROM detectorinfo_t WHERE DetectorLabel="{S}" order by configid',event_settings{k}.method_label);
                     
                     %if no detectorID is found, then it is new, will be autoupdated, and the
                     %configID should be 1 since it will be the first
@@ -1195,7 +1195,7 @@ classdef CLASS_database < handle
                         event_k = event_settings{k};
                         event_k.configID = event_k.configID(config);
                         event_k.params = event_k.params(config);  %make a slim version for each config, useful for calling insertDatabaseDetectorInfoRecord...
-                        Q = mym('SELECT DetectorID as detectorID FROM DetectorInfo_T WHERE DetectorLabel="{S}" and configID={Si}',event_k.method_label,event_k.configID);
+                        Q = mym('SELECT DetectorID as detectorID FROM detectorinfo_t WHERE DetectorLabel="{S}" and configID={Si}',event_k.method_label,event_k.configID);
                         %if it doesn't exist at all
                         event_k.detectorID = Q.detectorID; %this is correct - it should be empty if it doesn't exist.
                         
@@ -1213,7 +1213,7 @@ classdef CLASS_database < handle
                         end
                         
                         %now get the detectorID that I have for these...
-                        Q = mym('SELECT DetectorID as detectorID FROM DetectorInfo_T WHERE DetectorLabel="{S}" and configID={S0}',event_k.method_label,event_k.configID);
+                        Q = mym('SELECT DetectorID as detectorID FROM detectorinfo_t WHERE DetectorLabel="{S}" and configID={S0}',event_k.method_label,event_k.configID);
                         event_settings{k}.detectorID(config) = Q.detectorID; %this is correct - it should be empty if it doesn't exist.
                     end
                 end
@@ -1340,7 +1340,7 @@ classdef CLASS_database < handle
             end
             on_duplicate = sprintf(' on duplicate key update detectorfilename="%s", detectorlabel="%s", configchannellabels="{M}", configparamstruct="{M}"',detectStruct.method_function,detectStruct.method_label);
             try
-                mym(['insert into DetectorInfo_T values (',valuesStr,',"{M}","{M}")', on_duplicate],channel_configs,detectStruct.params,channel_configs,detectStruct.params);
+                mym(['insert into detectorinfo_t values (',valuesStr,',"{M}","{M}")', on_duplicate],channel_configs,detectStruct.params,channel_configs,detectStruct.params);
             catch me
                 showME(me);
             end
