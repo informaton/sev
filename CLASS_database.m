@@ -1382,6 +1382,20 @@ classdef CLASS_database < handle
             end
         end
         
+        %> @brief Calculates cycle vector from .STA files and creates a .STA2 file 
+        %> (i.e. a new file with a .STA2 extension) which has a third column for the stage cycle:
+        %> [column 1: epoch column] [2: stage column] [3: stage cycle]
+        %> @param STA_pathname Optional directory name (string) containing the .STA
+        %> files to process.  User is prompted for directory name if one
+        %> is not provided.
+        %> @param patID_studyNum_regexp Regular expression (string) for
+        %> how to identify the <i>PatID</i> and <i>StudyNum</i> fields from the .STA
+        %> filenames.
+        function makeSTA2file(STA_pathname,patID_studyNum_regexp)
+            save2file = true;
+            CLASS_database.stage2stats(STA_pathname,patID_studyNum_regexp,save2file);
+        end
+            
         %> @brief Converts .STA files (ascii tab delimited files with first column epoch
         %> number and second column the corresponding sleep stage) to a three column
         %> .STA file - the third column being the cycle of the current stage (e.g.
@@ -1392,14 +1406,13 @@ classdef CLASS_database < handle
         %> files to process.  User is prompted for directory name if one
         %> is not provided.
         %> @param patID_studyNum_regexp Regular expression (string) for
-        %how to identify the <i>PatID</i> and <i>StudyNum</i> fields from the .STA
-        %filenames.
-        %> @retval stats A cell of stage structures
-        %> @note A new file is saved with a .STA2 extension which has a
-        %> third column with the stage cycle:
-        %> [column 1: epoch column] [2: stage column] [3: stage cycle]
-        
-        function stats = stage2stats(STA_pathname,patID_studyNum_regexp) %,databasename, user, password)
+        %> how to identify the <i>PatID</i> and <i>StudyNum</i> fields from the .STA
+        %> filenames.
+        %> @param save2file Optional boolean value which, if true, results
+        %> in creation of a .STA2 file that adds a third column for the the
+        %> stage cycle.  See CLASS_database method makeSTA2file.
+        %> @retval stats A cell of stage structures        
+        function stats = stage2stats(STA_pathname,patID_studyNum_regexp,save2file) %,databasename, user, password)
             
             %
             % Written by Hyatt Moore
@@ -1412,11 +1425,6 @@ classdef CLASS_database < handle
             
             if(nargin<1)
                 STA_pathname = uigetdir(pwd,'Select stage (.STA) directory');
-                
-                %     STA_pathname = '/Users/hyatt4/Documents/Sleep Project/PTSD/sta';
-                % STA_pathname = '/Users/hyatt4/Documents/Sleep Project/Data/Spindle_7Jun11'
-                
-                %     STA_pathname = uigetdir(pwd,'Select Event (evt.) directory');
             end
             
             if(~isempty(STA_pathname))
@@ -1437,16 +1445,8 @@ classdef CLASS_database < handle
                 else
                     exp = patID_studyNum_regexp;
                 end
-                %     exp = '(?<PatID>[a-zA-Z0-9]+)_(?<studyNum>\d+)\s\d+\.STA';
-                
                 
                 fCell= regexp(filenames,exp,'names');
-                
-                %         %might be PTSD format - so try it second
-                %     if(numel(fCell)==0||isempty(fCell{1}))
-                %         expPTSD = '(?<PatID>[a-z]+)(?<StudyNum>\d+)[^\.]*\.sta';
-                %         fCell= regexpi(filenames,expPTSD,'names'); %regexpi is not case sensitive...
-                %     end
                 
                 stats = cell(filecount,1);
                 
@@ -1455,26 +1455,25 @@ classdef CLASS_database < handle
                     if(~isempty(fCell{k})) % && ~strcmp(fCell{k}.method,'txt')) %SECOND PART is no longer necessary
                         try
                             sta_filename = fullfile(STA_pathname,filenames{k});
-                            %                 if(strcmpi('/Volumes/Macintosh HD 2/Data/SSC/_PLM_psg/SSC_0080_1.STA',sta_filename))
-                            %                     disp('get ready');
-                            %                 end
+
                             STAGES = loadSTAGES(sta_filename);
-                            
-                            
-                            %                 staging_matrix = load(sta_filename,'-ascii');
-                            %                 staging_matrix(isnan(staging_matrix(:,2)),2)=7; %reset these to be number 2
-                            %
-                            %                 cycle_vector = stage2cycle(staging_matrix(:,2));
-                            %
-                            %                 staging_matrix = [staging_matrix(:,1:2),cycle_vector]; %just make it a three column section
-                            %                 save(fullfile(STA_pathname,[filenames{k},'2']),'staging_matrix','-ascii');
-                            
-                            %                 stage_stats = getStagingStats(staging_matrix(:,2),cycle_vector,fCell{k}.PatID,fCell{k}.StudyNum);
-                            
-                            cycle_vector = stage2cycle(STAGES.line);
-                            stage_stats = getStagingStats(STAGES.line,cycle_vector,STAGES.cycles,fCell{k}.PatID,fCell{k}.StudyNum);
+                            cycle_vector = CLASS_database.stage2cycle(STAGES.line);
+                            stage_stats = CLASS_database.getStagingStats(STAGES.line,cycle_vector,STAGES.cycles,fCell{k}.PatID,fCell{k}.StudyNum);
                             
                             stats{k} = stage_stats;
+                            
+                            if(nargin>=3 && save2file)
+                                
+                                stage_vector = STAGES.line;
+                                stage_vector(isnan(stage_vector))=7; %reset these to be number 7
+
+                                epoch_vector = 1:numel(stage_vector);
+                                cycle_vector = stage2cycle(stage_vector(:,2));
+                                
+                                staging_matrix = [epoch_vector(:),stage_vector(:),cycle_vector(:)]; %just make it a three column section
+                                save(fullfile(STA_pathname,[filenames{k},'2']),'staging_matrix','-ascii');
+                            end
+                           
                         catch me
                             showME(me);
                             stats{k} = [];
@@ -1484,9 +1483,6 @@ classdef CLASS_database < handle
                         stats{k} = [];
                     end
                 end
-                %     stats = stats(~isempty(stats));
-                
-                %     disp(['Total time = ',num2str(toc,'%0.2f'), ' seconds']);
                 
             end
             
