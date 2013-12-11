@@ -679,7 +679,7 @@ classdef CLASS_database < handle
                                 
                                 DetectorID = y.DetectorID;
                                 DetectorConfigID = fCell{k}.DetectorConfigID; %this is parsed as a string here because of the regexp call
-                                evtStruct = evtTxt2evtStruct(fullfile(events_pathname,filenames{k}));
+                                evtStruct = CLASS_events_container.evtTxt2evtStruct(fullfile(events_pathname,filenames{k}));
                                 
                                 for e=1:numel(evtStruct.Start_sample)
                                     InsertStr = sprintf(preInsertStr,PatIDKey,DetectorID,DetectorConfigID,...
