@@ -64,7 +64,8 @@ classdef CLASS_SSC_database < CLASS_database
             
             %% these functions create the named tables
             %these functions create the named tables
-            obj.create_StudyInfo_T(obj.dbStruct,EDF_pathname);           
+            obj.create_StudyInfo_T(obj.dbStruct);           
+            obj.populate_StudyInfo_T(obj.dbStruct,EDF_pathname,'Embla');           
             obj.open();mym('describe studyinfo_t');           
             
             obj.create_DetectorInfo_T(obj.dbStruct);

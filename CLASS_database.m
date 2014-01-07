@@ -443,6 +443,72 @@ classdef CLASS_database < handle
             end
         end
         
+        %> @brief populates the StudyInfo_T table using files in the given directory
+        %> @param dbStruct A structure containing database accessor fields:
+        %> @li @c name Name of the database to use (string)
+        %> @li @c user Database user (string)
+        %> @li @c password Password for @c user (string)
+        %> @param study_pathname Name of directory that contains .EDF files
+        %> @param montage_type (optional) string that specifies the montage
+        %> type.  It can be one of {'WSC','Grass','Gamma','Twin','Embla'','Woodward','Unknown'}
+        %> @note If no montage_type is given, the default is 'Unknown'
+        %> @note If the study_pathname argument is not supplied, the user is prompted to select        
+        %> a pathname via GUI dialog box.        
+        function populate_StudyInfo_T(dbStruct, edf_directory,montage_suite)
+            % Author: Hyatt Moore IV
+            % 10.21.2012
+            % modified: 10.25.2012 - add the tmp_ prefix to handle numeric patID which
+            % are not valid field names in MATLAB
+            %modified 2/26/2013 - updated to match most recent create_StudyInfo_T.m
+
+            TableName = lower('StudyInfo_T');
+            
+            if(nargin<3 || isempty(montage_suite))
+                montage_suite = 'Unknown';
+            end
+            
+            
+            if(nargin<2)
+                edf_directory = uigetdir(pwd,'Select Study (.EDF) directory');
+            end
+            
+            
+            if(~isempty(edf_directory))
+                edf_files = getFilenames(edf_directory,'*.EDF');
+                
+                CLASS_database.openDB(dbStruct);
+                preInsertStr = ['INSERT INTO ',TableName, ' (PatID, StudyNum, VisitSequence, Montage_suite) '];
+                
+                for f=1:numel(edf_files)
+                    skip = false;
+                    patstudy = strrep(edf_files{f},'.EDF','');
+                    [PatID,StudyNum] = CLASS_events_container.getDB_PatientIdentifiers(patstudy);
+                    
+                    q=mym('select * from {S} where patid="{S}"',TableName,PatID);
+                    if(isempty(q.StudyNum))
+                        visitSequence = 1;
+                    else
+                        if(StudyNum>q.StudyNum(end))
+                            visitSequence = q.VisitSequence(end)+1;
+                        else
+                            visitSequence = 0;
+                            skip = true;
+                            fprintf('********Major problem with %s_%u********\n',PatID,str2double(StudyNum));
+                        end
+                    end
+                    %
+                    if(~skip)
+                        InsertStr = sprintf('%s values ("%s",%u,%u,"%s")',preInsertStr,PatID,str2double(StudyNum),visitSequence,montage_suite);
+                        mym(InsertStr);
+                    end
+                end
+                mym('COMMIT');
+                mym('SET autocommit = 0');
+                mym('CLOSE');
+            end
+        end
+        
+        
         % ======================================================================
         %> @brief Creates the StudyInfo_T table which stores meta data associated
         %> with a cohort of sleep studies.  The table is populated if a
@@ -451,12 +517,9 @@ classdef CLASS_database < handle
         %> @li @c name Name of the database to use (string)
         %> @li @c user Database user (string)
         %> @li @c password Password for @c user (string)
-        %> @param study_pathname Name of directory that contains .EDF files
-        %> @note If the study_pathname argument is not supplied, the user is prompted to select
-        %> a pathname via GUI dialog box.
         %> @note StudyInfo_T table is first dropped if it exists.
         % =================================================================
-        function create_StudyInfo_T(dbStruct, study_pathname)
+        function create_StudyInfo_T(dbStruct)
             %this creates a StudyInfo_T table based on the provided input arguments
             %study_pathname = name of directory that contains .EDF files that use WSC
             %naming convention: 'PatID_StudyNum HHMMSS.EDF'
@@ -468,75 +531,19 @@ classdef CLASS_database < handle
             TableName = 'StudyInfo_T';
             TableName = lower(TableName);
             
-            if(nargin<2)
-                study_pathname = uigetdir(pwd,'Select Study (.EDF) directory');
-            end
             
-            if(~isempty(study_pathname))
-                if(~ispc)
-                    dirStruct = [dir(fullfile(study_pathname,'*.EDF'));dir(fullfile(study_pathname,'*.edf'))];
-                else
-                    dirStruct = dir(fullfile(study_pathname,'*.EDF'));
-                end
-                if(~isempty(dirStruct))
-                    filecount = numel(dirStruct);
-                    filenames = cell(numel(dirStruct),1);
-                    [filenames{:}] = dirStruct.name;
-                end
-                
-                %try WSC format first
-                %example filename:    A0097_4 174733.STA
-                exp = '(?<PatID>[a-zA-Z0-9]+)_(?<StudyNum>\d+)[^\.]+\.EDF';
-                %     exp = '(?<PatID>[a-zA-Z0-9]+)_(?<studyNum>\d+)\s\d+\.STA';
-                fCell= regexp(filenames,exp,'names'); %regexpi is not case sensitive...
-                
-                %might be PTSD format - so try it second
-                if(numel(fCell)==0||isempty(fCell{1}))
-                    expPTSD = '(?<PatID>[a-z]+)(?<StudyNum>\d+)[^\.]*\.edf';
-                    fCell= regexpi(filenames,expPTSD,'names'); %regexpi is not case sensitive...
-                end
-                
-                if(numel(fCell)>0)
-                    CLASS_database.openDB(dbStruct);
-                    mym('SET autocommit = 0');
-                    mym(['DROP TABLE IF EXISTS ',TableName]);
-                    mym(['CREATE TABLE IF NOT EXISTS ',TableName,'('...
-                        ' PatStudyKey SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT'...
-                        ', PatID VARCHAR(5) NOT NULL'...
-                        ', StudyNum TINYINT (3) UNSIGNED NOT NULL'...
-                        ', VisitSequence TINYINT(3) UNSIGNED NOT NULL'...
-                        ', Montage_suite ENUM(''Grass'',''Gamma'',''Twin'',''Embla'',''Woodward'',''Unknown'') DEFAULT ''Grass'''...
-                        ', PRIMARY KEY(PatStudyKey))']);
-                    
-                    preInsertStr = ['INSERT INTO ',TableName, ' (PatID, StudyNum, VisitSequence) VALUES('];
-                    lastPatID = [];
-                    VisitSequence = 1;
-                    for k=1:filecount
-                        if(~isempty(fCell{k})) % && ~strcmp(fCell{k}.method,'txt')) %SECOND PART is no longer necessary
-                            PatID = fCell{k}.PatID;
-                            StudyNum = fCell{k}.StudyNum;
-                            
-                            if(strcmp(PatID,lastPatID))
-                                VisitSequence = VisitSequence+1;
-                            else
-                                VisitSequence = 1;
-                            end
-                            lastPatID = PatID;
-                            InsertStr = [preInsertStr,'''',PatID,''',',...
-                                num2str(StudyNum),',',num2str(VisitSequence),')'];
-                            mym(InsertStr);
-                        end
-                    end
-                    
-                    mym('COMMIT');
-                    mym('SET autocommit = 0');
-                    
-                end
-            end
-            
-            mym('CLOSE');
-            
+            openDB(dbStruct);
+            mym('SET autocommit = 0');
+            mym(['DROP TABLE IF EXISTS ',TableName]);
+            mym(['CREATE TABLE IF NOT EXISTS ',TableName,'('...
+                ' PatStudyKey SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT'...
+                ', PatID VARCHAR(8) NOT NULL'...
+                ', StudyNum TINYINT (3) UNSIGNED NOT NULL'...
+                ', VisitSequence TINYINT(3) UNSIGNED NOT NULL'...
+                ', Montage_suite ENUM(''Grass'',''Gamma'',''Twin'',''Embla'',''Woodward'',''Unknown'',''APOE'',''WSC'') DEFAULT ''Unknown'''...
+                ', PRIMARY KEY(PatStudyKey))']);
         end
+          
         
         % ======================================================================
         %> @brief Populates Events_T table using events found in the directory provided. 

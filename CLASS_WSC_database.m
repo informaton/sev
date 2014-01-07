@@ -65,7 +65,8 @@ classdef CLASS_WSC_database < CLASS_database
             
             %% these functions create the named tables
             %these functions create the named tables
-            obj.create_StudyInfo_T(obj.dbStruct,EDF_pathname);           
+            obj.create_StudyInfo_T(obj.dbStruct);           
+            obj.populate_StudyInfo_T(obj.dbStruct,EDF_pathname,'WSC');           
             obj.open();mym('describe studyinfo_t');           
             
             obj.create_DetectorInfo_T(obj.dbStruct);
@@ -80,8 +81,6 @@ classdef CLASS_WSC_database < CLASS_database
             %                 'wsc_snp_rs11693221_corrected.txt'};
             
             obj.update_Diagnostics_T_for_SNP();            
-            
-            
             
             %add PLM fields
             %obj.update_Diagnostics_T_for_PLM();
@@ -1083,14 +1082,7 @@ classdef CLASS_WSC_database < CLASS_database
             dbStruct.name = CLASS_WSC_database.dbName;
             dbStruct.user = CLASS_WSC_database.dbUser;
             dbStruct.password = CLASS_WSC_database.dbPassword;
-        end
-
-
-        
-
-        
-        
-        
+        end        
     end
 end
 
