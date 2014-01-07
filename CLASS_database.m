@@ -443,17 +443,22 @@ classdef CLASS_database < handle
             end
         end
         
-        %> @brief populates the StudyInfo_T table using files in the given directory
+        % ======================================================================
+        %> @brief Populates StudyInfo_T table for the database identified by dbStruct
+        %> and the information found in EDF directory and montage suite provided.
         %> @param dbStruct A structure containing database accessor fields:
         %> @li @c name Name of the database to use (string)
         %> @li @c user Database user (string)
         %> @li @c password Password for @c user (string)
-        %> @param study_pathname Name of directory that contains .EDF files
-        %> @param montage_type (optional) string that specifies the montage
-        %> type.  It can be one of {'WSC','Grass','Gamma','Twin','Embla'','Woodward','Unknown'}
+        %> @param edf_directory Name of directory that contains the .EDF sleep
+        %> studies (string)
+        %> @param montage_suite Sleep recording/collection suite identifier (string)
+        %> @note montage_suite defaults to the string @b Unknown if empty.
+        %> @note Examples of montage suites include @e WSC, @e Grass, @e Gamma, @e Twin, @e Embla, @e Woodward, @e WSC, and @e Unknown {default}'
         %> @note If no montage_type is given, the default is 'Unknown'
         %> @note If the study_pathname argument is not supplied, the user is prompted to select        
         %> a pathname via GUI dialog box.        
+        % =================================================================
         function populate_StudyInfo_T(dbStruct, edf_directory,montage_suite)
             % Author: Hyatt Moore IV
             % 10.21.2012
@@ -853,70 +858,6 @@ classdef CLASS_database < handle
             
         end
         
-        % ======================================================================
-        %> @brief Populates StudyInfo_T table for the database identified by dbStruct
-        %> and the information found in EDF directory and montage suite provided.
-        %> @param dbStruct A structure containing database accessor fields:
-        %> @li @c name Name of the database to use (string)
-        %> @li @c user Database user (string)
-        %> @li @c password Password for @c user (string)
-        %> @param edf_directory Name of directory that contains the .EDF sleep
-        %> studies (string)
-        %> @param montage_suite Sleep recording/collection suite identifier (string)
-        %> @note montage_suite defaults to the string @b NULL if empty.
-        %> @note Examples of montage suites include @e grass, @e twin, 
-        %> and @e embla.
-        % =================================================================
-        function populate_StudyInfo_T(dbStruct, edf_directory,montage_suite)
-            %populates the StudyInfo_T table using files in the given
-            %directory
-            %patID_studynum_edf vector of files with the following
-            %naming convention: 'PatID_StudyNum HHMMSS.EDF'
-            % Author: Hyatt Moore IV
-            % 10.21.2012
-            % modified: 10.25.2012 - add the tmp_ prefix to handle numeric patID which
-            % are not valid field names in MATLAB
-            %modified 2/26/2013 - updated to match most recent create_StudyInfo_T.m
-            
-            TableName = 'StudyInfo_T';
-            TableName = lower(TableName);
-            CLASS_database.openDB(dbStruct);
-            mym('SET autocommit = 0');
-            edf_files = getFilenames(edf_directory,'*.EDF');
-            
-            
-            if(nargin<3)
-                montage_suite = 'NULL';
-            end
-            preInsertStr = ['INSERT INTO ',TableName, ' (PatID, StudyNum, VisitSequence, Montage_suite) '];
-            
-            for f=1:numel(edf_files)
-                skip = false;
-                patstudy = strrep(edf_files{f},'.EDF','');
-                [PatID,StudyNum] = CLASS_events_container.getDB_PatientIdentifiers(patstudy);
-                
-                q=mym('select * from {S} where patid="{S}"',TableName,PatID);
-                if(isempty(q.StudyNum))
-                    visitSequence = 1;
-                else
-                    if(StudyNum>q.StudyNum(end))
-                        visitSequence = q.VisitSequence(end)+1;
-                    else
-                        visitSequence = 0;
-                        skip = true;
-                        fprintf('********Major problem with %s_%u********\n',PatID,str2double(StudyNum));
-                    end
-                end
-                %
-                if(~skip)
-                    InsertStr = sprintf('%s values ("%s",%u,%u,"%s")',preInsertStr,PatID,str2double(StudyNum),visitSequence,montage_suite);
-                    mym(InsertStr);
-                end
-            end
-            mym('COMMIT');
-            mym('SET autocommit = 0');
-            mym('CLOSE');
-        end
         
         % ======================================================================
         %> @brief Obtains a unique configuration ID for event detector configuration 
