@@ -129,7 +129,7 @@ classdef CLASS_SSC_database < CLASS_database
         %> @note  The created table Diagnostics_T is added to the SSC_DB database.  Any previously existing
         %> table with the same name is first dropped.
         % =================================================================
-        function create_Diagnostics_T(obj, diagnostics_xls_filename)
+        function create_Diagnostics_T(obj, path_with_diagnostics_xls_file)
             % this builds the Diagnostics table for the Stanford Sleep Cohort
             % The created table Diagnostics_T is added to the SSC_DB database.  Any previously existing
             % table with the same name is first dropped.
@@ -138,13 +138,21 @@ classdef CLASS_SSC_database < CLASS_database
             % created 10/25/12
             obj.open();
             
-            try
-                ssc_filename = diagnostics_xls_filename;
+            if(nargin<2 || isempty(path_with_diagnostics_xls_file))
+                disp('Select directory with SSC diagnostic .xls files (blood_work, psg_study_1, doctor_notes)');
+                path_with_diagnostics_xls_file =uigetdir(evt_pathname,'Select .EDF directory to use');
+                if(isnumeric(path_with_diagnostics_xls_file) && ~path_with_diagnostics_xls_file)
+                    path_with_diagnostics_xls_file = [];
+                end
+                
+            end
+            if(~isempty(path_with_diagnostics_xls_file))
+                
                 worksheets = {'blood_work','psg_study_1','doctor_notes'};
                 hdr = {};
                 for w=1:numel(worksheets)
                     sheet = worksheets{w};
-                    ssc_filename = strcat('ssc_data_',sheet,'.xls');
+                    ssc_filename = fullfile(path_with_diagnostics_xls_file,strcat('ssc_data_',sheet,'.xls'));
                     
                     [~,~,raw] =xlsread(ssc_filename);
                     data.(sheet) = raw;
@@ -156,122 +164,147 @@ classdef CLASS_SSC_database < CLASS_database
                 exp = regexp(column_names,ext_exp,'names');
                 
                 
-            catch me
-                disp(me.message)   
-            end
-            
-            tableName = 'Diagnostics_T';
-            
-            %table create string
-            TStr = sprintf('CREATE TABLE IF NOT EXISTS %s (patstudykey smallint unsigned default not null, patid char(4) default not null, studynum tinyint unsigned default 1, visitsequence tinyint unsigned default 1,',tableName);
-            try
-                for n=1:numel(column_names)
-                    name = column_names{n};
-                    if(isempty(exp{n}))
-                        col_type = '';
-                    else
-                        col_type = exp{n}.type;
+                
+                tableName = lower('Diagnostics_T');
+                
+                %table create string
+                TStr = sprintf('CREATE TABLE IF NOT EXISTS %s (patstudykey smallint unsigned default not null, patid char(4) default not null, studynum tinyint unsigned default 1, visitsequence tinyint unsigned default 1,',tableName);
+                try
+                    for n=1:numel(column_names)
+                        name = column_names{n};
+                        if(isempty(exp{n}))
+                            col_type = '';
+                        else
+                            col_type = exp{n}.type;
+                        end
+                        
+                        if(~strcmpi(col_type,'ignore'))
+                            switch col_type
+                                case {'flag','bool'}
+                                    column.(name).table_format = 'bool default null';
+                                    column.(name).sprint_format = '%u';
+                                case {'float','pct','index'}
+                                    column.(name).table_format = 'DECIMAL (6,3) UNSIGNED DEFUALT NULL';
+                                    column.(name).sprint_format = '%0.3f';
+                                    
+                                case 'string'
+                                    column.(name).table_format = 'VARCHAR(100) default null';
+                                    column.(name).sprint_format = '%s';
+                                case 'date'
+                                    column.(name).table_format = 'DATE';
+                                    column.(name).sprint_format = '%s';
+                                case 'smallint'
+                                    column.(name).table_format = 'SMALLINT UNSIGNED DEFAULT NULL';
+                                    column.(name).sprint_format = '%u';
+                                otherwise
+                                    column.(name).table_format = 'SMALLINT UNSIGNED DEFAULT NULL';
+                                    column.(name).sprint_format = '%u';
+                            end
+                            TStr = sprintf('%s %s %s,',TStr,name,column.(name).table_format);
+                        else
+                            disp([name,' ignored']);
+                        end
                     end
                     
-                    if(~strcmpi(col_type,'ignore'))
-                        switch col_type
-                            case {'flag','bool'}
-                                column.(name).table_format = 'bool default null';
-                                column.(name).sprint_format = '%u';
-                            case {'float','pct','index'}
-                                column.(name).table_format = 'DECIMAL (6,3) UNSIGNED DEFUALT NULL';
-                                column.(name).sprint_format = '%0.3f';
-                                
-                            case 'string'
-                                column.(name).table_format = 'VARCHAR(100) default null';
-                                column.(name).sprint_format = '%s';
-                            case 'date'
-                                column.(name).table_format = 'DATE';
-                                column.(name).sprint_format = '%s';
-                            case 'smallint'
-                                column.(name).table_format = 'SMALLINT UNSIGNED DEFAULT NULL';
-                                column.(name).sprint_format = '%u';
-                            otherwise
-                                column.(name).table_format = 'SMALLINT UNSIGNED DEFAULT NULL';
-                                column.(name).sprint_format = '%u';
-                        end
-                        TStr = sprintf('%s %s %s,',TStr,name,column.(name).table_format);
-                    else
-                        disp([name,' ignored']);
+                catch me
+                    
+                    disp(me.message);
+                    me.stack
+                end
+                TStr = sprintf('%s PRIMARY KEY (PATSTUDYKEY))',TStr);
+                
+                
+                %Excel stores dates as the number of days elapsed from 1/1/1900 - where
+                %this date has a value of 00001.  And I need to subtract 2, in order to get
+                %the correct date entered.
+                excel_pivot_year=datenum('01.01.1900','mm.dd.yyyy')-2;
+                
+                studynum = 1; %the default here for all ssc studies at the moment
+                for w=1:numel(worksheets)
+                    sheet = worksheets{w};
+                    %obtain the hdr row and find out where the unique column names are
+                    %located in the header
+                    hdr_names = lower(data.(sheet)(1,:));
+                    [matched_names,column_name_indices,hdr_name_indices] = intersect(column_names,hdr_names);
+                    
+                    columnStr = 'patstudykey,patid,studynum,visitsequence'; % keep track of the columns I will be adding into one at a time...
+                    
+                    for m=1:numel(hdr_name_indices)
+                        hdr_index = hdr_name_indices(m);
+                        name = hdr_names{hdr_index};
+                        column.(name).values = data.(sheet)(2:end,hdr_index);
+                        columnStr = sprintf('%s,%s',columnStr,name);
                     end
-                end
-                
-            catch me
-                
-                disp(me.message);
-                me.stack
-            end
-            TStr = sprintf('%s PRIMARY KEY (PATSTUDYKEY))',TStr);
-            
-            
-            % openDB(dbStruct);
-            % mym(['DROP TABLE IF EXISTS ',tableName]);
-            % mym(TStr);
-            
-            %Excel stores dates as the number of days elapsed from 1/1/1900 - where
-            %this date has a value of 00001.  And I need to subtract 2, in order to get
-            %the correct date entered.
-            excel_pivot_year=datenum('01.01.1900','mm.dd.yyyy')-2;
-            
-            studynum = 1; %the default here for all ssc studies at the moment
-            worksheets = {'blood_work','psg_study_1','doctor_notes'};
-            for w=1:numel(worksheets)
-                
-                %obtain the hdr row and find out where the unique column names are
-                %located in the header
-                hdr_names = lower(data.(sheet)(1,:));
-                [matched_names,column_name_indices,hdr_name_indices] = intersect(column_names,hdr_names);
-                
-                columnStr = 'patstudykey,patid,studynum,visitsequence'; % keep track of the columns I will be adding into one at a time...
-                
-                for m=1:numel(hdr_name_indices)
-                    hdr_index = hdr_name_indices(m);
-                    name = hdr_names{hdr_index};
-                    column.(name).values = data.(sheet)(:,hdr_name_indices);
-                    columnStr = sprintf('%s,%s',columnStr,name);
-                end
-                for k=1:numel(column.dbid.values)
-                    patid = column.dbid.values(k);
-                    q = mym('select patstudykey, visitsequence from studyinfo_t where patid="{S}" and studynum={Si}',patid,studynum);
-                    if(~isempty(q.patstudykey))
-                        valuesStr = sprintf('%u,%s,%u,%u',q.paststudykey,patid,studynum,q.visitsequence);
-                        for n=1:numel(matched_names)
-                            name = matched_names{n};
-                            value = column.(name).values{k};
-                            fmt = column.(name).sprint_format;
-                            if(isempty(value)||any(isnan(value)))
-                                value = 'NULL';
-                                fmt = '%s';
+                    for k=1:numel(column.dbid.values)
+                        patid = num2str(column.dbid.values{k},'%.4u');
+                        q = mym('select patstudykey, visitsequence from studyinfo_t where patid="{S}" and studynum={Si}',patid,studynum);
+                        
+                        if(~isempty(q.patstudykey))
+                            
+                            valuesStr = sprintf('%u,%s,%u,%u',q.patstudykey,patid,studynum,q.visitsequence);
+                            updateColumnStr ='';
+                            for n=1:numel(matched_names)
                                 
-                            elseif(strcmpi(column.(name).table_format,'date'))
-                                value = ['"',datestr(value+excel_pivot_year,'yyyy-mm-dd'),'"'];
-                            else(strcmpi(column.(name).table_format,'string'))
-                                value = ['"',value,'"'];
+                                %                 if(k==903 && strcmpi(sheet,'doctor_notes') && n>15)
+                                %                    disp('stop here');
+                                %                 end
+                                name = matched_names{n};
+                                value = column.(name).values{k};
+                                fmt = column.(name).sprint_format;
+                                if(isempty(value)||any(isnan(value)))
+                                    value = 'NULL';
+                                    fmt = '%s';
+                                elseif(strcmpi(column.(name).table_format,'date'))
+                                    try
+                                        if(ischar(value))
+                                            value = datestr(datenum(value,'mm/dd/yyyy'),'"yyyy-mm-dd"');
+                                        elseif(isnumeric(value))
+                                            value = ['"',datestr(value+excel_pivot_year,'yyyy-mm-dd'),'"'];
+                                        end
+                                    catch me
+                                        showME(me);
+                                    end
+                                    
+                                elseif(strcmpi(column.(name).table_format,'VARCHAR(100) default null'))
+                                    value = deblank(value);
+                                    if(isempty(value))
+                                        value = 'NULL';
+                                    else
+                                        value = ['"',strrep(value,'"',''''),'"'];
+                                    end
+                                elseif(strcmpi(column.(name).table_format,'bool default null'))
+                                    if(strcmp(value,'.')||strcmpi(value,'false'))
+                                        value = 0;
+                                    elseif(strcmpi(value,'true'))
+                                        value = 1;
+                                    end
+                                end
+                                
+                                valuesStr = sprintf(['%s,',fmt],valuesStr,value);
+                                updateColumnStr = sprintf(['%s,%s=',fmt],updateColumnStr,name,value);
                             end
-                            valuesStr = sprintf(['%s,',fmt],valuesStr,value);
                             try
-                                %                     mym(sprintf('insert into diagnostics_t (%s) values (%s)',columnStr,valuesStr));
-                                (fprintf(1,'insert into diagnostics_t (%s) values (%s)',columnStr,valuesStr));
+                                updateColumnStr(1) = ''; %remove leading comman
+                                mym(sprintf('insert into diagnostics_t (%s) values (%s) on duplicate key update %s',columnStr,valuesStr,updateColumnStr));
+                                %                 (fprintf(1,'insert into diagnostics_t (%s) values (%s)',columnStr,valuesStr));
                                 
                             catch me
                                 me.stack
                                 me.message
                                 disp(me);
                             end
+                            
+                        else
+                            disp([patid,' does not exist']);
                         end
-                        
-                    else
-                        disp([patid,' does not exist']);
                     end
-                end                
-            end
-        end        
+                end
+            else
+                fprintf('No files were entered or found.  The diagnostics_t table was not created.\n');
+            end            
+        end
     end
+    
     methods(Static)
         function staticOpen()
             CLASS_database.close();
