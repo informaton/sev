@@ -10,9 +10,9 @@
 classdef CLASS_SSC_database < CLASS_database
 
     properties (Constant)
-        dbName = 'WSC_DB';
-        dbUser = 'WSC_user';
-        dbPassword = 'WSC_password';
+        dbName = 'SSC_DB';
+        dbUser = 'SSC_user';
+        dbPassword = 'SSC_password';
     end
     properties
     end
