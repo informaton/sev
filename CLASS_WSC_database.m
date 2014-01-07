@@ -81,12 +81,16 @@ classdef CLASS_WSC_database < CLASS_database
             
             obj.update_Diagnostics_T_for_SNP();            
             
+            
+            
             %add PLM fields
             %obj.update_Diagnostics_T_for_PLM();
 
             % this builds the medication table using WSC meidcation list received from Simon Warby (most likely)
             % meds_filename = 'wsc_medication_listing.txt';
             obj.create_Medications_T();
+            
+            CLASS_WSC_database.create_SNP_T();
             
             STA_pathname = EDF_pathname;
             obj.create_StageStats_T(STA_pathname);

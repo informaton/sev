@@ -9,15 +9,17 @@
 % ======================================================================
 classdef CLASS_SSC_database < CLASS_database
 
+    properties (Constant)
+        dbName = 'WSC_DB';
+        dbUser = 'WSC_user';
+        dbPassword = 'WSC_password';
+    end
     properties
     end
     
     methods
-        function obj = CLASS_SSC_database()
-            dbStruct.name = 'SSC_DB';
-            dbStruct.user = 'SSC_user';
-            dbStruct.password = 'SSC_password';
-            obj.dbStruct = dbStruct;            
+        function obj = CLASS_WSC_database()
+            obj.dbStruct = CLASS_WSC_database.getDBStruct();
         end
         
         % ======== ABSTRACT implementations for SSC_database =========
@@ -273,7 +275,19 @@ classdef CLASS_SSC_database < CLASS_database
             end
         end        
     end
+    methods(Static)
+        function staticOpen()
+            CLASS_database.close();
+            CLASS_database.openDB(CLASS_SSC_database.getDBStruct);
+        end
+    end
     
-    
+    methods(Static, Access=private)
+        function dbStruct = getDBStruct()
+            dbStruct.name = CLASS_WSC_database.dbName;
+            dbStruct.user = CLASS_WSC_database.dbUser;
+            dbStruct.password = CLASS_WSC_database.dbPassword;
+        end 
+    end
 end
 

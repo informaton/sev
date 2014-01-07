@@ -1570,7 +1570,7 @@ classdef CLASS_database < handle
                 'SCO_SaO2'
                 'SCO_Arousal'
                 'SCO_RESPIRATORY_EVENT'
-                'SCO_desat'};
+                'SCO_Desat'};
             detectStruct.channel_labels ={'LAT/RAT'};
             
             detectStruct.configID = 1;
