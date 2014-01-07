@@ -13,9 +13,10 @@ classdef CLASS_database < handle
         %> @li @c name Name of the database to use (string)
         %> @li @c user Database user (string)
         %> @li @c password Password for @c user (string)
-        DBstruct;
+        dbStruct;
         
     end
+    
     
     methods(Abstract)
         % ======================================================================
@@ -24,7 +25,7 @@ classdef CLASS_database < handle
         %> database desired.
         %> @param obj CLASS_database derived instance
         % =================================================================
-        createDBandTables(obj)
+        createDBandTables(obj);
         
         % ======================================================================
         %> @brief Abstract method to create a mysql database table, Diagnostics_T. 
@@ -42,90 +43,17 @@ classdef CLASS_database < handle
         %> @param obj CLASS_database derivded instance.
         % =================================================================
         function open(obj)
-            obj.openDB(obj.DBstruct);
-%             mym('close');
-%             mym('open','localhost',obj.DBstruct.user,obj.DBstruct.password);
-%             mym(['USE ',obj.DBstruct.name]);
-        end   
+            obj.openDB(obj.dbStruct);
+        end  
         
-        % ======================================================================
-        %> @brief Creates Medications_T table and populates it using the filename of medications provided.
-        %> @param obj CLASS_database instance
-        %> @param meds_filename Name of file containing medications for the cohort.
-        %> @note Medications_T table is first dropped if it already exists.
-        %> @note This function has only been implemented with WSC data and
-        %> is biased toward WSC patient - study identifier conventions,
-        % =================================================================
-        function create_Medications_T(obj,meds_filename)
-            % this builds the medication table using WSC meidcation list received from Simon Warby (most likely)
-            %
-            % Author: Hyatt Moore IV
-            % created 4/13/2013
-            
-            TableName = 'Medications_T';
-            TableName = lower(TableName);
-
-            if(nargin==1 || isempty(meds_filename))
-                [meds_filename, pathname, ~] = uigetfile({'*.txt','Tab-delimited Text (*.txt)'},'Select Medications list data file','MultiSelect','off');
-                
-                if(isnumeric(meds_filename) && ~meds_filename)
-                    meds_filename = [];
-                else
-                    meds_filename = fullfile(pathname,meds_filename);                    
-                end
-            end
-
-            if(exist(meds_filename,'file'))
-                obj.open();
-                fclose all;
-                
-                fid = fopen(meds_filename,'r');
-                firstLine = fgetl(fid);
-                column_names = regexp(firstLine,'(\S+)','tokens');
-                
-                % frewind(fid);
-                data=textscan(fid,repmat('%s',1,numel(firstLine)),'headerlines',0,'delimiter','\t');
-                fclose(fid);
-                
-                
-                %create the table
-                %table create string
-                TStr = sprintf('CREATE TABLE IF NOT EXISTS %s (patstudykey smallint unsigned not null,',TableName);
-                column_names_db_string = 'patstudykey';
-                
-                for n=2:numel(column_names)
-                    name = char(column_names{n});
-                    TStr = sprintf('%s %s bool default null,',TStr,name);
-                    column_names_db_string = sprintf('%s,%s',column_names_db_string,name);
-                end
-                
-                TStr = sprintf('%s PRIMARY KEY (PATSTUDYKEY))',TStr);
-                
-                
-                mym(['DROP TABLE IF EXISTS ',TableName]);
-                mym(TStr);
-                
-                nrows = numel(data{1});
-                ncols = numel(column_names);
-                for row = 1:nrows
-                    q = mym('select patstudykey from studyinfo_t where concat(patid,"_",studynum)="{S}"',data{1}{row});
-                    if(~isempty(q.patstudykey))
-                        valuesStr = num2str(q.patstudykey);
-                        
-                        for col = 2:ncols
-                            valuesStr = sprintf('%s,%c',valuesStr,data{col}{row});
-                        end
-                        mym(sprintf('insert into %s (%s) values (%s)',TableName,column_names_db_string,valuesStr));
-                    end
-                end
-            else
-                fprintf('Medications text file not provided or found');
-            end
-        end
-
+        
     end
     
     methods(Static)
+        
+        function close()
+            mym('close');
+        end
         
         % ======================================================================
         %> @brief Helper function for opening the MySQL database using field values
@@ -993,7 +921,7 @@ classdef CLASS_database < handle
         %> DetectionInfo_T table.
         %> @note connfigID updates/incremennts based on the initial first_configID for each detection
         %> label used.
-        %> @param DBstruct A structure containing database accessor fields:
+        %> @param dbStruct A structure containing database accessor fields:
         %> @li @c name Name of the database to use (string)
         %> @li @c user Database user (string)
         %> @li @c password Password for @c user (string)
@@ -1018,7 +946,7 @@ classdef CLASS_database < handle
         %> @li @c detectorID: 1 or []
         %> @note Events with a new configID are removed from events_T if they exist to avoid possible duplication of configID's with stored events.
         %> @note A new record is added to DetectorInfO_T if configID does not currently exist.
-        function event_settings = setDatabaseConfigID(DBstruct,event_settings,first_configID)
+        function event_settings = setDatabaseConfigID(dbStruct,event_settings,first_configID)
         
             mym_status = mym();
             if(mym_status~=0) %0 when mym is open and reachable (connected)
@@ -1051,7 +979,7 @@ classdef CLASS_database < handle
                             else
                                 detectStruct.detectorID = detectorID;
                             end
-                            CLASS_database.insertDatabaseDetectorInfoRecord(DBstruct,detectStruct);
+                            CLASS_database.insertDatabaseDetectorInfoRecord(dbStruct,detectStruct);
                             cur_config = cur_config+1;
                         end
                     end
@@ -1068,7 +996,7 @@ classdef CLASS_database < handle
         %> @brief Retrieves the database configurtion ID associated with event_settings.  
         %> If no match is found in the database table detectorInfo_T for event_settings then a 
         %> a new, unique configurationID (configID) is set in and returned with the output structure event_settings.
-        %> @param DBstruct A structure containing database accessor fields:
+        %> @param dbStruct A structure containing database accessor fields:
         %> @li @c name Name of the database to use (string)
         %> @li @c user Database user (string)
         %> @li @c password Password for @c user (string)
@@ -1088,8 +1016,8 @@ classdef CLASS_database < handle
         %> @li @c params: [1x1 struct]
         %> @li @c configID: 0
         %> @li @c detectorID: 1 or []
-        function event_settings = getDatabaseAutoConfigID(DBstruct,event_settings)
-            if(~isempty(DBstruct))
+        function event_settings = getDatabaseAutoConfigID(dbStruct,event_settings)
+            if(~isempty(dbStruct))
                 mym_status = mym();
                 if(mym_status~=0) %0 when mym is open and reachable (connected)
                     CLASS_database.openDB(dbStruct);
@@ -1152,7 +1080,7 @@ classdef CLASS_database < handle
                                 detectStruct.configID = event_settings{k}.configID(config);
                                 detectStruct.params = event_settings{k}.params(config);
                                 %insert it into the database now
-                                CLASS_events_container.insertDatabaseDetectorInfoRecord(DBstruct,detectStruct);
+                                CLASS_events_container.insertDatabaseDetectorInfoRecord(dbStruct,detectStruct);
                             end
                         end
                     end
@@ -1168,7 +1096,7 @@ classdef CLASS_database < handle
         %> @brief Removes trieves the database configurtion ID associated with event_settings.  
         %> If no match is found in the database table detectorInfo_T for event_settings then a 
         %> a new, unique configurationID (configID) is set in and returned with the output structure event_settings.
-        %> @param DBstruct A structure containing database accessor fields:
+        %> @param dbStruct A structure containing database accessor fields:
         %> @li @c name Name of the database to use (string)
         %> @li @c user Database user (string)
         %> @li @c password Password for @c user (string)
@@ -1190,12 +1118,12 @@ classdef CLASS_database < handle
         %> @li @c params: [1x1 struct]
         %> @li @c configID: 0
         %> @li @c detectorID: 1 or []
-        function event_settings = deleteDatabaseRecordsUsingSettings(DBstruct,event_settings)
-            if(~isempty(DBstruct))
+        function event_settings = deleteDatabaseRecordsUsingSettings(dbStruct,event_settings)
+            if(~isempty(dbStruct))
                 mym_status = mym();
                 if(mym_status~=0) %0 when mym is open and reachable (connected)
-                    mym('open','localhost',DBstruct.user,DBstruct.password);
-                    mym(['USE ',DBstruct.name]);
+                    mym('open','localhost',dbStruct.user,dbStruct.password);
+                    mym(['USE ',dbStruct.name]);
                 end
                 
                 for k=1:numel(event_settings)
@@ -1209,7 +1137,7 @@ classdef CLASS_database < handle
                         event_k.detectorID = Q.detectorID; %this is correct - it should be empty if it doesn't exist.
                         
                         if(~isempty(Q.detectorID))
-                            mym(sprintf('DELETE FROM %s WHERE detectorID=%d',DBstruct.table,event_k.detectorID));
+                            mym(sprintf('DELETE FROM %s WHERE detectorID=%d',dbStruct.table,event_k.detectorID));
                             
                             %replace the configParamStruct in the chance that
                             %there is a difference between the existing one and
@@ -1218,7 +1146,7 @@ classdef CLASS_database < handle
                         else
                             %I need to add/insert the detector config to detectorinfo_t here...
                             %add it either way okay...
-                            CLASS_database.insertDatabaseDetectorInfoRecord(DBstruct,event_k)
+                            CLASS_database.insertDatabaseDetectorInfoRecord(dbStruct,event_k)
                         end
                         
                         %now get the detectorID that I have for these...
@@ -1300,7 +1228,7 @@ classdef CLASS_database < handle
         end
         % ======================================================================
         %> @brief Insert a record into the detectorInfo_T table using the field/values passed in
-        %> @param DBstruct A structure containing database accessor fields:
+        %> @param dbStruct A structure containing database accessor fields:
         %> @li @c name Name of the database to use (string)
         %> @li @c user Database user (string)
         %> @li @c password Password for @c user (string)
@@ -1311,7 +1239,7 @@ classdef CLASS_database < handle
         %> @li @c params: [1x1 struct]
         %> @li @c configID: 1
         %> @li @c detectorID: 1 or []            
-        function insertDatabaseDetectorInfoRecord(DBstruct,detectStruct)
+        function insertDatabaseDetectorInfoRecord(dbStruct,detectStruct)
             
             %detectorinfo_t table create string:
             %             createStr = ['CREATE TABLE IF NOT EXISTS ',TableName,...
@@ -1324,7 +1252,7 @@ classdef CLASS_database < handle
             %                 'PRIMARY KEY(DETECTORID))'];
             mym_status = mym();
             if(mym_status~=0) %0 when mym is open and reachable (connected)
-                CLASS_database.openDB(DBstruct);
+                CLASS_database.openDB(dbStruct);
             end
             
             detectorID = num2str(detectStruct.detectorID);
@@ -1618,12 +1546,12 @@ classdef CLASS_database < handle
                 % ======================================================================
         %> @brief Populates DetectorInfo_T table with manually scored event labels obtained from
         %> WSC .SCO files
-        %> @param DBstruct A structure containing database accessor fields:
+        %> @param dbStruct A structure containing database accessor fields:
         %> @li @c name Name of the database to use (string)
         %> @li @c user Database user (string)
         %> @li @c password Password for @c user (string)
         % =================================================================
-        function populate_SCO_DetectorInfo_T(DBstruct)
+        function populate_SCO_DetectorInfo_T(dbStruct)
             %need to add the SCO table information as it is not in the detection.inf
             %file since it is not incorporated into the SEV
             %a detection.inf line would look like this for a .SCO method
@@ -1654,7 +1582,7 @@ classdef CLASS_database < handle
             for k=1:numel(SCO_labels)
                 detectStruct.method_function = SCO_labels{k};
                 detectStruct.method_label = SCO_labels{k};
-                CLASS_database.insertDatabaseDetectorInfoRecord(DBstruct,detectStruct);
+                CLASS_database.insertDatabaseDetectorInfoRecord(dbStruct,detectStruct);
             end
         end
         

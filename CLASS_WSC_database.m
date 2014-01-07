@@ -9,15 +9,17 @@
 % ======================================================================
 classdef CLASS_WSC_database < CLASS_database
 
+    properties (Constant)
+        dbName = 'WSC_DB';
+        dbUser = 'WSC_user';
+        dbPassword = 'WSC_password';
+    end
     properties
     end
     
     methods
         function obj = CLASS_WSC_database()
-            DBstruct.name = 'WSC_DB';
-            DBstruct.user = 'WSC_user';
-            DBstruct.password = 'WSC_password';
-            obj.DBstruct = DBstruct;            
+            obj.dbStruct = CLASS_WSC_database.getDBStruct();
         end
         
         % ======== ABSTRACT implementations for WSC_database =========
@@ -59,15 +61,15 @@ classdef CLASS_WSC_database < CLASS_database
                 end
             end
             
-            obj.create_DB(obj.DBstruct);
+            obj.create_DB(obj.dbStruct);
             
             %% these functions create the named tables
             %these functions create the named tables
-            obj.create_StudyInfo_T(obj.DBstruct,EDF_pathname);           
+            obj.create_StudyInfo_T(obj.dbStruct,EDF_pathname);           
             obj.open();mym('describe studyinfo_t');           
             
-            obj.create_DetectorInfo_T(obj.DBstruct);
-            obj.populate_SCO_DetectorInfo_T(obj.DBstruct);
+            obj.create_DetectorInfo_T(obj.dbStruct);
+            obj.populate_SCO_DetectorInfo_T(obj.dbStruct);
             obj.open();mym('describe detectorinfo_t');
             
             obj.create_Diagnostics_T();
@@ -91,7 +93,7 @@ classdef CLASS_WSC_database < CLASS_database
             
             obj.open();mym('describe stagestats_t');
             
-            obj.create_Events_T(obj.DBstruct);
+            obj.create_Events_T(obj.dbStruct);
             obj.open();mym('describe events_t');
             
             %% convert SCO to .evt files
@@ -105,9 +107,84 @@ classdef CLASS_WSC_database < CLASS_database
             %             renameFiles(SCO_Evt_pathname,'PLME','PLM');
             
             if(~isempty(evt_pathname))
-                obj.populate_Events_T(evt_pathname,obj.DBstruct);
+                obj.populate_Events_T(evt_pathname,obj.dbStruct);
             end
         end       
+        
+        % ======================================================================
+        %> @brief Creates Medications_T table and populates it using the filename of medications provided.
+        %> @param obj CLASS_database instance
+        %> @param meds_filename Name of file containing medications for the cohort.
+        %> @note Medications_T table is first dropped if it already exists.
+        %> @note This function has only been implemented with WSC data and
+        %> is biased toward WSC patient - study identifier conventions,
+        % =================================================================
+        function create_Medications_T(obj,meds_filename)
+            % this builds the medication table using WSC meidcation list received from Simon Warby (most likely)
+            %
+            % Author: Hyatt Moore IV
+            % created 4/13/2013
+            
+            TableName = 'Medications_T';
+            TableName = lower(TableName);
+            
+            if(nargin==1 || isempty(meds_filename))
+                [meds_filename, pathname, ~] = uigetfile({'*.txt','Tab-delimited Text (*.txt)'},'Select Medications list data file','MultiSelect','off');
+                
+                if(isnumeric(meds_filename) && ~meds_filename)
+                    meds_filename = [];
+                else
+                    meds_filename = fullfile(pathname,meds_filename);
+                end
+            end
+            
+            if(exist(meds_filename,'file'))
+                obj.open();
+                fclose all;
+                
+                fid = fopen(meds_filename,'r');
+                firstLine = fgetl(fid);
+                column_names = regexp(firstLine,'(\S+)','tokens');
+                
+                % frewind(fid);
+                data=textscan(fid,repmat('%s',1,numel(firstLine)),'headerlines',0,'delimiter','\t');
+                fclose(fid);
+                
+                
+                %create the table
+                %table create string
+                TStr = sprintf('CREATE TABLE IF NOT EXISTS %s (patstudykey smallint unsigned not null,',TableName);
+                column_names_db_string = 'patstudykey';
+                
+                for n=2:numel(column_names)
+                    name = char(column_names{n});
+                    TStr = sprintf('%s %s bool default null,',TStr,name);
+                    column_names_db_string = sprintf('%s,%s',column_names_db_string,name);
+                end
+                
+                TStr = sprintf('%s PRIMARY KEY (PATSTUDYKEY))',TStr);
+                
+                
+                mym(['DROP TABLE IF EXISTS ',TableName]);
+                mym(TStr);
+                
+                nrows = numel(data{1});
+                ncols = numel(column_names);
+                for row = 1:nrows
+                    q = mym('select patstudykey from studyinfo_t where concat(patid,"_",studynum)="{S}"',data{1}{row});
+                    if(~isempty(q.patstudykey))
+                        valuesStr = num2str(q.patstudykey);
+                        
+                        for col = 2:ncols
+                            valuesStr = sprintf('%s,%c',valuesStr,data{col}{row});
+                        end
+                        mym(sprintf('insert into %s (%s) values (%s)',TableName,column_names_db_string,valuesStr));
+                    end
+                end
+            else
+                fprintf('Medications text file not provided or found');
+            end
+        end
         
         % ======================================================================
         %> @brief Creates StageStats_T table and populates it for WSC using
@@ -128,7 +205,7 @@ classdef CLASS_WSC_database < CLASS_database
             else
                 stats = CLASS_database.stage2stats(STA_pathname,sta_exp);
             end            
-            CLASS_database.create_StageStats_T(stats,obj.DBstruct);            
+            CLASS_database.create_StageStats_T(stats,obj.dbStruct);            
         end
         
         % ======================================================================
@@ -809,96 +886,15 @@ classdef CLASS_WSC_database < CLASS_database
     end
     
     methods(Static)
-        
-        % ======================================================================
-        %> @brief Populates DetectorInfo_T table with manually scored event labels obtained from
-        %> WSC .SCO files
-        %> @param DBstruct A structure containing database accessor fields:
-        %> @li @c name Name of the database to use (string)
-        %> @li @c user Database user (string)
-        %> @li @c password Password for @c user (string)
-        % =================================================================
-        function populate_SCO_DetectorInfo_T(DBstruct)
-            %need to add the SCO table information as it is not in the detection.inf
-            %file since it is not incorporated into the SEV
-            %a detection.inf line would look like this for a .SCO method
-            %none SCO_Central_Apnea 0 none SCO_Central_Apnea
-            
-            %add SEV to the path
-            
-            % #Matlab_filename   Label Number_of_channels_required Dialog_name Batch_mode_score
-            SCO_labels = {'SCO_Central_Apnea'
-                'SCO_Hypopnea'
-                'SCO_LM'
-                'SCO_LMA'
-                'SCO_PLM'
-                'SCO_Mixed_Apnea'
-                'SCO_Obs_Apnea'
-                'SCO_SaO2'
-                'SCO_Arousal'
-                'SCO_RESPIRATORY_EVENT'};
-            detectStruct.channel_labels ={'LAT/RAT'};
-            
-            detectStruct.configID = 1;
-            detectStruct.detectorID = [];
-            detectStruct.method_function = [];
-            detectStruct.method_label = [];
-            detectStruct.params = [];
-            
-            for k=1:numel(SCO_labels)
-                detectStruct.method_function = SCO_labels{k};
-                detectStruct.method_label = SCO_labels{k};
-                CLASS_database.insertDatabaseDetectorInfoRecord(DBstruct,detectStruct);
-            end
+        function staticOpen()
+            CLASS_database.close();
+            CLASS_database.openDB(CLASS_WSC_database.getDBStruct);
         end
-        
-        % @brief Export parts of WSC Diagnostics_T to tab delimited text
-        % file
-        % @param txt_filname Name of the file to write data to (it will be
-        % created or over written depending if it already exists or not).
-        function diagnostics2txt(txt_filename)
-            % Author: Hyatt Moore IV
-            % created 8/28/12
-            % modified 11/13/12
-            % modified 2/11/13 - updated for Eileen transfer
-            % modified 2/11/13 - updated for Eileen and Emmanuel transfer
-            %modified 2/13/13 - updated to handle the genetic polymorphisms
-            % modified 2/27/13 - update for Emmanuel and Eileen for later
-            %  txt_filename = fullfile(pwd,'diagnostics_for_Laurel.txt');
-            
-            CLASS_WSC_database.open();
-            fid = fopen(txt_filename,'w');
-            
-            
-            q=mym('select concat(studyinfo_t.patid,"_",studyinfo_t.studynum) as PatID_StudyNum, detectorid,withwake, RLS_A, RLS_B, (RLS_A=1 or rls_b=1) as RLS_AB, RLS_C, AHI4>=15 as has_OSA,plmi,plm_count,lmcount,periodicity,plm_to_lm_ratio,ratio_plm,ratio_lm  from studyinfo_t join plm_t using (patstudykey) left join diagnostics_t using (patstudykey) where detectorid in (142,143) order by detectorid, withwake, patstudykey');
-            
-            mym('CLOSE');            
-            
-            fields = fieldnames(q);
-            for f=1:numel(fields)
-                fprintf(fid,'%s\t',fields{f});
-            end
-            for p=1:numel(q.PatID_StudyNum)
-                fprintf(fid,'\n');
-                for f=1:numel(fields)
-                    if(iscell(q.(fields{f})))
-                        fprintf(fid,'%s\t',q.(fields{f}){p});
-                    else
-                        if(isnan(q.(fields{f})(p)))
-                            fprintf(fid,'\t');
-                        else
-                            fprintf(fid,'%0.2f\t',q.(fields{f})(p));
-                        end
-                    end
-                end
-            end
-            
-            fclose(fid);
-        end
-    
     end
     
     methods(Static, Access=private)
+        
+        
         % ======================================================================
         %> @brief Populates DetectorInfo_T table with manually scored event labels obtained from
         %> WSC .SCO files
@@ -985,6 +981,106 @@ classdef CLASS_WSC_database < CLASS_database
             loadStruct.rls_C.value = mat2cell(s.C,mat2cellConverter);
             loadStruct.rls_D.value = mat2cell(s.D,mat2cellConverter);
             loadStruct.rls_F.value = mat2cell(s.F,mat2cellConverter);            
+        end
+        
+        function dbStruct = getDBStruct()
+            dbStruct.name = CLASS_WSC_database.dbName;
+            dbStruct.user = CLASS_WSC_database.dbUser;
+            dbStruct.password = CLASS_WSC_database.dbPassword;
+        end
+
+
+        
+        % ======================================================================
+        %> @brief This builds the SNP mapping table (SNP_Mapping_T) from the SNP mapping text file.
+        %> Any previously existing table with the same name is first dropped.
+        %>
+        %>   - 'wsc_snps_mapping.txt' file must first be generated using the
+        %>   convertSNPFile2WSCFile.m script. The file contains 1 header row and 4
+        %>   columns:
+        %>   Header row is SNP MajorMajor(0) MajorMinor(1) MinorMinor(2)
+        %>
+        %>       major-major = 0
+        %>       major-minor = 1
+        %>       minor-minor = 2
+        %>
+        %> @note This is a helper function for create__Diagnostics_T and
+        %> is not designed for external use.  
+        function create_SNP_T(snpMappingFilename)
+            if(nargin==0 || isempty(snpMappingFilename)
+                [snpMappingFilename, pathname, ~] = uigetfile({'*.txt','Tab-delimited Text (*.txt)'},'Select SNP mapping file (e.g. wsc_snps_mapping.txt)','MultiSelect','off');
+            end
+
+            % Author: Hyatt Moore IV
+            % created 8/20/12
+            % updated 6/6/2013 - added risk allele column
+            % updated 10/09/2013 - added a field for rs11693221 (MEIS, 2)
+            %create the table now for the first time            
+            
+            if(isnumeric(snpMappingFilename) && ~snpMappingFilename)                
+                fprintf('No SNP mapping file entered or found.  The table SNP_T has not been (re)created.\n');
+            else
+                snpMappingFilename = fullfile(pathname,snpMappingFilename);
+                
+                CLASS_WSC_database.staticOpen();
+                
+                
+                %get the snp mapping data
+                fid = fopen(snpMappingFilename,'r');
+                snp_data=textscan(fid,'%s\t%s\t%s\t%s\t%s\n','headerlines',1,'delimiter','\t'); %updated to get risk allele column
+                fclose(fid);
+                
+                %extra information...
+                wsc_snps = [
+                    {'rs3923809','BTBD9','6'}
+                    {'rs9296249','BTBD9','6'}
+                    {'rs9357271','BTBD9','6'}
+                    {'rs3104767','TOX3/BC034767','16'}
+                    {'rs3104774','TOX3/BC034767','16'}
+                    {'rs3104788','TOX3/BC034767','16'}
+                    {'rs2300478','MEIS1','2'}
+                    {'rs6710341','MEIS1','2'}
+                    {'rs12469063','MEIS1','2'}
+                    {'rs11693221','MEIS1','2'}  %added this one
+                    {'rs6494696','MAP2K5/SKOR1','15'}
+                    {'rs6747972','no gene','2'}
+                    {'rs4626664','PTPRD','9'}
+                    {'rs1975197','PTPRD','9'}
+                    ];
+                
+                %prep the database table
+                tableName = 'SNP_Mapping_T';
+                
+                mym(['DROP TABLE IF EXISTS ',tableName]);
+                
+                mym(['CREATE TABLE IF NOT EXISTS ',tableName,'('...
+                    '  SNP VARCHAR(20) NOT NULL'...
+                    ', gene VARCHAR(20) default NULL'...
+                    ', chromosome tinyint unsigned default null'...
+                    ', MAJORMAJOR CHAR(2) DEFAULT NULL'...
+                    ', MAJORMINOR CHAR(2) DEFAULT NULL'...
+                    ', MINORMINOR CHAR(2) DEFAULT NULL'...
+                    ', RISKALLELE CHAR(1) DEFAULT NULL'...
+                    ', PRIMARY KEY (SNP)'...
+                    ')']);
+                
+                for k=1:numel(snp_data{1})
+                    snp_name = snp_data{1}{k};
+                    snp_index = find(strcmp(snp_name,wsc_snps(:,1)),1);
+                    if(isempty(snp_index))
+                        mym('insert into {S} (SNP, MAJORMAJOR,MAJORMINOR,MINORMINOR,RISKALLELE) values ("{S}","{S}","{S}","{S}","{S}")',tableName,snp_data{1}{k},snp_data{2}{k},snp_data{3}{k},snp_data{4}{k},snp_data{5}{k});
+                    else
+                        mym('insert into {S} (SNP, gene, chromosome,MAJORMAJOR,MAJORMINOR,MINORMINOR,RISKALLELE) values ("{S}","{S}",{Si},"{S}","{S}","{S}","{S}")',tableName,snp_data{1}{k},wsc_snps{snp_index,2},wsc_snps{snp_index,3},snp_data{2}{k},snp_data{3}{k},snp_data{4}{k},snp_data{5}{k});
+                    end
+                end
+                
+                %update - one that was missed in the convertSNPFile2WSCFile as wanted by our SNP paper
+                mym('update snp_mapping_t set riskallele="G" where snp="rs12469063"')
+                
+                mym('select * from {S}',tableName);
+                
+                mym('close');
+            end
         end
         
         

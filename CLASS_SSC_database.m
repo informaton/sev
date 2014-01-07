@@ -14,10 +14,10 @@ classdef CLASS_SSC_database < CLASS_database
     
     methods
         function obj = CLASS_SSC_database()
-            DBstruct.name = 'SSC_DB';
-            DBstruct.user = 'SSC_user';
-            DBstruct.password = 'SSC_password';
-            obj.DBstruct = DBstruct;            
+            dbStruct.name = 'SSC_DB';
+            dbStruct.user = 'SSC_user';
+            dbStruct.password = 'SSC_password';
+            obj.dbStruct = dbStruct;            
         end
         
         % ======== ABSTRACT implementations for SSC_database =========
@@ -58,15 +58,15 @@ classdef CLASS_SSC_database < CLASS_database
                 end
             end
             
-            obj.create_DB(obj.DBstruct);
+            obj.create_DB(obj.dbStruct);
             
             %% these functions create the named tables
             %these functions create the named tables
-            obj.create_StudyInfo_T(obj.DBstruct,EDF_pathname);           
+            obj.create_StudyInfo_T(obj.dbStruct,EDF_pathname);           
             obj.open();mym('describe studyinfo_t');           
             
-            obj.create_DetectorInfo_T(obj.DBstruct);
-            obj.populate_SCO_DetectorInfo_T(obj.DBstruct);
+            obj.create_DetectorInfo_T(obj.dbStruct);
+            obj.populate_SCO_DetectorInfo_T(obj.dbStruct);
             obj.open();mym('describe detectorinfo_t');
             
             obj.create_Diagnostics_T();
@@ -77,7 +77,7 @@ classdef CLASS_SSC_database < CLASS_database
             
             obj.open();mym('describe stagestats_t');
             
-            obj.create_Events_T(obj.DBstruct);
+            obj.create_Events_T(obj.dbStruct);
             opendb();mym('describe events_t');
             
             %% convert SCO to .evt files
@@ -91,7 +91,7 @@ classdef CLASS_SSC_database < CLASS_database
             %             renameFiles(SCO_Evt_pathname,'PLME','PLM');
             
             if(~isempty(evt_pathname))
-                obj.populate_Events_T(evt_pathname,obj.DBstruct);
+                obj.populate_Events_T(evt_pathname,obj.dbStruct);
             end
         end       
         
@@ -114,7 +114,7 @@ classdef CLASS_SSC_database < CLASS_database
             else
                 stats = stage2stats(STA_pathname,sta_exp);
             end            
-            CLASS_database.create_StageStats_T(stats,obj.DBstruct);            
+            CLASS_database.create_StageStats_T(stats,obj.dbStruct);            
         end
         
         % ======================================================================
