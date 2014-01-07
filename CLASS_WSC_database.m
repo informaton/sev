@@ -891,7 +891,7 @@ classdef CLASS_WSC_database < CLASS_database
             CLASS_database.openDB(CLASS_WSC_database.getDBStruct);
         end
         
-                % ======================================================================
+        % ======================================================================
         %> @brief This builds the SNP mapping table (SNP_Mapping_T) from the SNP mapping text file.
         %> Any previously existing table with the same name is first dropped.
         %>
@@ -949,7 +949,7 @@ classdef CLASS_WSC_database < CLASS_database
                     ];
                 
                 %prep the database table
-                tableName = 'SNP_Mapping_T';
+                tableName = 'snp_mapping_t';
                 
                 mym(['DROP TABLE IF EXISTS ',tableName]);
                 
