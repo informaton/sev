@@ -890,6 +890,98 @@ classdef CLASS_WSC_database < CLASS_database
             CLASS_database.close();
             CLASS_database.openDB(CLASS_WSC_database.getDBStruct);
         end
+        
+                % ======================================================================
+        %> @brief This builds the SNP mapping table (SNP_Mapping_T) from the SNP mapping text file.
+        %> Any previously existing table with the same name is first dropped.
+        %>
+        %>   - 'wsc_snps_mapping.txt' file must first be generated using the
+        %>   convertSNPFile2WSCFile.m script. The file contains 1 header row and 4
+        %>   columns:
+        %>   Header row is SNP MajorMajor(0) MajorMinor(1) MinorMinor(2)
+        %>
+        %>       major-major = 0
+        %>       major-minor = 1
+        %>       minor-minor = 2
+        %>
+        %> @note This is a helper function for create__Diagnostics_T and
+        %> is not designed for external use.  
+        function create_SNP_T(snpMappingFilename)
+            if(nargin==0 || isempty(snpMappingFilename)
+                [snpMappingFilename, pathname, ~] = uigetfile({'*.txt','Tab-delimited Text (*.txt)'},'Select SNP mapping file (e.g. wsc_snps_mapping.txt)','MultiSelect','off');
+            end
+
+            % Author: Hyatt Moore IV
+            % created 8/20/12
+            % updated 6/6/2013 - added risk allele column
+            % updated 10/09/2013 - added a field for rs11693221 (MEIS, 2)
+            %create the table now for the first time            
+            
+            if(isnumeric(snpMappingFilename) && ~snpMappingFilename)                
+                fprintf('No SNP mapping file entered or found.  The table SNP_T has not been (re)created.\n');
+            else
+                snpMappingFilename = fullfile(pathname,snpMappingFilename);
+                
+                CLASS_WSC_database.staticOpen();
+                
+                
+                %get the snp mapping data
+                fid = fopen(snpMappingFilename,'r');
+                snp_data=textscan(fid,'%s\t%s\t%s\t%s\t%s\n','headerlines',1,'delimiter','\t'); %updated to get risk allele column
+                fclose(fid);
+                
+                %extra information...
+                wsc_snps = [
+                    {'rs3923809','BTBD9','6'}
+                    {'rs9296249','BTBD9','6'}
+                    {'rs9357271','BTBD9','6'}
+                    {'rs3104767','TOX3/BC034767','16'}
+                    {'rs3104774','TOX3/BC034767','16'}
+                    {'rs3104788','TOX3/BC034767','16'}
+                    {'rs2300478','MEIS1','2'}
+                    {'rs6710341','MEIS1','2'}
+                    {'rs12469063','MEIS1','2'}
+                    {'rs11693221','MEIS1','2'}  %added this one
+                    {'rs6494696','MAP2K5/SKOR1','15'}
+                    {'rs6747972','no gene','2'}
+                    {'rs4626664','PTPRD','9'}
+                    {'rs1975197','PTPRD','9'}
+                    ];
+                
+                %prep the database table
+                tableName = 'SNP_Mapping_T';
+                
+                mym(['DROP TABLE IF EXISTS ',tableName]);
+                
+                mym(['CREATE TABLE IF NOT EXISTS ',tableName,'('...
+                    '  SNP VARCHAR(20) NOT NULL'...
+                    ', gene VARCHAR(20) default NULL'...
+                    ', chromosome tinyint unsigned default null'...
+                    ', MAJORMAJOR CHAR(2) DEFAULT NULL'...
+                    ', MAJORMINOR CHAR(2) DEFAULT NULL'...
+                    ', MINORMINOR CHAR(2) DEFAULT NULL'...
+                    ', RISKALLELE CHAR(1) DEFAULT NULL'...
+                    ', PRIMARY KEY (SNP)'...
+                    ')']);
+                
+                for k=1:numel(snp_data{1})
+                    snp_name = snp_data{1}{k};
+                    snp_index = find(strcmp(snp_name,wsc_snps(:,1)),1);
+                    if(isempty(snp_index))
+                        mym('insert into {S} (SNP, MAJORMAJOR,MAJORMINOR,MINORMINOR,RISKALLELE) values ("{S}","{S}","{S}","{S}","{S}")',tableName,snp_data{1}{k},snp_data{2}{k},snp_data{3}{k},snp_data{4}{k},snp_data{5}{k});
+                    else
+                        mym('insert into {S} (SNP, gene, chromosome,MAJORMAJOR,MAJORMINOR,MINORMINOR,RISKALLELE) values ("{S}","{S}",{Si},"{S}","{S}","{S}","{S}")',tableName,snp_data{1}{k},wsc_snps{snp_index,2},wsc_snps{snp_index,3},snp_data{2}{k},snp_data{3}{k},snp_data{4}{k},snp_data{5}{k});
+                    end
+                end
+                
+                %update - one that was missed in the convertSNPFile2WSCFile as wanted by our SNP paper
+                mym('update snp_mapping_t set riskallele="G" where snp="rs12469063"')
+                
+                mym('select * from {S}',tableName);
+                
+                mym('close');
+            end
+        end
     end
     
     methods(Static, Access=private)
@@ -991,97 +1083,7 @@ classdef CLASS_WSC_database < CLASS_database
 
 
         
-        % ======================================================================
-        %> @brief This builds the SNP mapping table (SNP_Mapping_T) from the SNP mapping text file.
-        %> Any previously existing table with the same name is first dropped.
-        %>
-        %>   - 'wsc_snps_mapping.txt' file must first be generated using the
-        %>   convertSNPFile2WSCFile.m script. The file contains 1 header row and 4
-        %>   columns:
-        %>   Header row is SNP MajorMajor(0) MajorMinor(1) MinorMinor(2)
-        %>
-        %>       major-major = 0
-        %>       major-minor = 1
-        %>       minor-minor = 2
-        %>
-        %> @note This is a helper function for create__Diagnostics_T and
-        %> is not designed for external use.  
-        function create_SNP_T(snpMappingFilename)
-            if(nargin==0 || isempty(snpMappingFilename)
-                [snpMappingFilename, pathname, ~] = uigetfile({'*.txt','Tab-delimited Text (*.txt)'},'Select SNP mapping file (e.g. wsc_snps_mapping.txt)','MultiSelect','off');
-            end
 
-            % Author: Hyatt Moore IV
-            % created 8/20/12
-            % updated 6/6/2013 - added risk allele column
-            % updated 10/09/2013 - added a field for rs11693221 (MEIS, 2)
-            %create the table now for the first time            
-            
-            if(isnumeric(snpMappingFilename) && ~snpMappingFilename)                
-                fprintf('No SNP mapping file entered or found.  The table SNP_T has not been (re)created.\n');
-            else
-                snpMappingFilename = fullfile(pathname,snpMappingFilename);
-                
-                CLASS_WSC_database.staticOpen();
-                
-                
-                %get the snp mapping data
-                fid = fopen(snpMappingFilename,'r');
-                snp_data=textscan(fid,'%s\t%s\t%s\t%s\t%s\n','headerlines',1,'delimiter','\t'); %updated to get risk allele column
-                fclose(fid);
-                
-                %extra information...
-                wsc_snps = [
-                    {'rs3923809','BTBD9','6'}
-                    {'rs9296249','BTBD9','6'}
-                    {'rs9357271','BTBD9','6'}
-                    {'rs3104767','TOX3/BC034767','16'}
-                    {'rs3104774','TOX3/BC034767','16'}
-                    {'rs3104788','TOX3/BC034767','16'}
-                    {'rs2300478','MEIS1','2'}
-                    {'rs6710341','MEIS1','2'}
-                    {'rs12469063','MEIS1','2'}
-                    {'rs11693221','MEIS1','2'}  %added this one
-                    {'rs6494696','MAP2K5/SKOR1','15'}
-                    {'rs6747972','no gene','2'}
-                    {'rs4626664','PTPRD','9'}
-                    {'rs1975197','PTPRD','9'}
-                    ];
-                
-                %prep the database table
-                tableName = 'SNP_Mapping_T';
-                
-                mym(['DROP TABLE IF EXISTS ',tableName]);
-                
-                mym(['CREATE TABLE IF NOT EXISTS ',tableName,'('...
-                    '  SNP VARCHAR(20) NOT NULL'...
-                    ', gene VARCHAR(20) default NULL'...
-                    ', chromosome tinyint unsigned default null'...
-                    ', MAJORMAJOR CHAR(2) DEFAULT NULL'...
-                    ', MAJORMINOR CHAR(2) DEFAULT NULL'...
-                    ', MINORMINOR CHAR(2) DEFAULT NULL'...
-                    ', RISKALLELE CHAR(1) DEFAULT NULL'...
-                    ', PRIMARY KEY (SNP)'...
-                    ')']);
-                
-                for k=1:numel(snp_data{1})
-                    snp_name = snp_data{1}{k};
-                    snp_index = find(strcmp(snp_name,wsc_snps(:,1)),1);
-                    if(isempty(snp_index))
-                        mym('insert into {S} (SNP, MAJORMAJOR,MAJORMINOR,MINORMINOR,RISKALLELE) values ("{S}","{S}","{S}","{S}","{S}")',tableName,snp_data{1}{k},snp_data{2}{k},snp_data{3}{k},snp_data{4}{k},snp_data{5}{k});
-                    else
-                        mym('insert into {S} (SNP, gene, chromosome,MAJORMAJOR,MAJORMINOR,MINORMINOR,RISKALLELE) values ("{S}","{S}",{Si},"{S}","{S}","{S}","{S}")',tableName,snp_data{1}{k},wsc_snps{snp_index,2},wsc_snps{snp_index,3},snp_data{2}{k},snp_data{3}{k},snp_data{4}{k},snp_data{5}{k});
-                    end
-                end
-                
-                %update - one that was missed in the convertSNPFile2WSCFile as wanted by our SNP paper
-                mym('update snp_mapping_t set riskallele="G" where snp="rs12469063"')
-                
-                mym('select * from {S}',tableName);
-                
-                mym('close');
-            end
-        end
         
         
         
