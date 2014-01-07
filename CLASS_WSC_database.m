@@ -907,7 +907,7 @@ classdef CLASS_WSC_database < CLASS_database
         %> @note This is a helper function for create__Diagnostics_T and
         %> is not designed for external use.  
         function create_SNP_T(snpMappingFilename)
-            if(nargin==0 || isempty(snpMappingFilename)
+            if(nargin==0 || isempty(snpMappingFilename))
                 [snpMappingFilename, pathname, ~] = uigetfile({'*.txt','Tab-delimited Text (*.txt)'},'Select SNP mapping file (e.g. wsc_snps_mapping.txt)','MultiSelect','off');
             end
 
