@@ -18,14 +18,14 @@ classdef CLASS_SSC_database < CLASS_database
     end
     
     methods
-        function obj = CLASS_WSC_database()
-            obj.dbStruct = CLASS_WSC_database.getDBStruct();
+        function obj = CLASS_SSC_database()
+            obj.dbStruct = CLASS_SSC_database.getDBStruct();
         end
         
         % ======== ABSTRACT implementations for SSC_database =========
         % ======================================================================
         %> @brief Create a mysql database and tables for the Stanford
-        %> sleep Cohort.  First creates SSC Database and GRANTs access to wsc_user
+        %> sleep Cohort.  First creates SSC Database and GRANTs access to ssc_user
         %> and then CREATEs the following tables:
         %> @li  StudyInfo_T
         %> @li  SSC_Diagnostics_T
@@ -122,9 +122,6 @@ classdef CLASS_SSC_database < CLASS_database
         % ======================================================================
         %> @brief Creates Diagnostic_T table for the SSC database and populates it 
         %> from the SSC datashseet file provided by Stanford Sleep Cohort.
-        %> @note The filename of the .xls was changed to have different
-        %> column order and be tab-delimited, and saved to 'wsc_datasheet.txt',
-        %> which must be in the same directory as this function. 
         %> @param obj Instance of CLASS_SSC_database
         %> @param diagnostics_xls_filename File name of .xls file with SSC subject information
         %> to populate Diagnostic_T table with (string).
@@ -141,7 +138,7 @@ classdef CLASS_SSC_database < CLASS_database
             obj.open();
             
             try
-                
+                ssc_filename = diagnostics_xls_filename;
                 worksheets = {'blood_work','psg_study_1','doctor_notes'};
                 hdr = {};
                 for w=1:numel(worksheets)
@@ -159,8 +156,7 @@ classdef CLASS_SSC_database < CLASS_database
                 
                 
             catch me
-                disp(me.message)
-                w
+                disp(me.message)   
             end
             
             tableName = 'Diagnostics_T';
@@ -284,9 +280,9 @@ classdef CLASS_SSC_database < CLASS_database
     
     methods(Static, Access=private)
         function dbStruct = getDBStruct()
-            dbStruct.name = CLASS_WSC_database.dbName;
-            dbStruct.user = CLASS_WSC_database.dbUser;
-            dbStruct.password = CLASS_WSC_database.dbPassword;
+            dbStruct.name = CLASS_SSC_database.dbName;
+            dbStruct.user = CLASS_SSC_database.dbUser;
+            dbStruct.password = CLASS_SSC_database.dbPassword;
         end 
     end
 end
