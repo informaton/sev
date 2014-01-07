@@ -1,4 +1,4 @@
-function STAGES = loadSTAGES(stages_filename,num_epochs)
+function STAGES = loadStages(stages_filename,num_epochs)
 %stages_filename is the filename of an ASCII tab-delimited file whose
 %second column contains a vector of scored sleep stages for each epoch of
 %a sleep study.

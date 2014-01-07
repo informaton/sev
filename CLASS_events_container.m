@@ -2382,8 +2382,7 @@ classdef CLASS_events_container < handle
                             remainder(r,:) = fread(fid,bytes_per_record-intro_size,'uint8');
                         end
                     end
-                    
-                    
+                                        
                     start_stop_matrix = [start_sample(:)+1,stop_sample(:)+1]; %add 1 because MATLAB is one based
                     dur_sec = (start_stop_matrix(:,2)-start_stop_matrix(:,1))/embla_samplerate;
                     epoch = ceil(start_stop_matrix(:,1)/embla_samplerate/seconds_per_epoch);
@@ -2423,111 +2422,8 @@ classdef CLASS_events_container < handle
             HDR.num_records = fread(fid,1,'int32'); %32 bytes read
         end
         
-        % =================================================================
-        %> @brief This function automates the file conversion process from
-        %> Embla formatted .nvt and .evt files and a single Wisconsin Sleep
-        %> Cohort multiplex .SCO format.
-        %> @param emblaStudyPath (optional) This is the parent directory of
-        %> Embla saved sleep studies.  Contents of this folder include
-        %> subfolders for each sleep study.  The emblaStudyPath is parsed for
-        %> subfolders and the events found in each subfolder are saved to a
-        %> .SCO file of same name as the subfolder in the outPath directory.
-        %> The user is prompted if emblaStudy does not exist or is not
-        %> entered.
-        %> @param outPath (optional) String name of the directory to store the output .SCO files.
-        %> The user is prompted if outPath does not exist or is not entered.
-        % =================================================================
-        function embla2sco(emblaStudyPath, outPath)
-            if(nargin<1 || ~exist(emblaStudyPath,'file'))
-                disp('Select Directory containing Embla PSG direcotories.  Typically Embla stores each study as a separate named directory.  Choose the directory that contains these named directories in them.');
-                emblaStudyPath =uigetdir(pwd,'Select Event directory (*.evt) to use or Cancel for none.');
-                if(isnumeric(emblaStudyPath) && ~emblaStudyPath)
-                    emblaStudyPath = [];
-                end                
-            end
-            
-            if(nargin<2 || ~exist(outPath,'file'))
-                disp('Select Directory (*.evt)');
-                outPath =uigetdir(pwd,'Select Event directory (*.evt) to use or Cancel for none.');
-                if(isnumeric(outPath) && ~outPath)
-                    outPath = [];
-                end
-            end
-            
-            if(exist(emblaStudyPath,'file') && exist(outPath,'file'))
-                pathnames = getPathnames(emblaStudyPath);
-                unknown_range = '0000';
-                
-                expressions =  {'^(?<studyname>\d{4})_(?<studydate>\d{1,2}-\d{1,2}-\d{4})';
-                    '^nonMatch(?<studyname>\d{1,3})'};
-                
-                studyStruct = getSevStruct();
-                studyStruct.samplerate = 256;
-                                
-                for e=1:numel(expressions)
-                    %matched files
-                    exp = regexp(pathnames,expressions{e},'names');
-                    for s=1:numel(exp)
-                        
-                        cur_exp = exp{s};
-                        
-                        if(~isempty(cur_exp))
-                            try
-                                studyname = strcat(unknown_range(1:end-numel(cur_exp.studyname)),cur_exp.studyname);
-                                srcFile = [pathnames{s},'.edf'];
-                                
-                                srcPath = fullfile(emblaStudyPath,pathnames{s});
-                                studyID = strcat('SSC_',studyname,'_1');
-                                
-                                fullSrcFile = fullfile(srcPath,srcFile);
-                                
-                                HDR = loadEDF(fullSrcFile);
-                                studyStruct.startDateTime = HDR.T0;
-                                
-                                num_epochs = ceil(HDR.duration_sec/studyStruct.standard_epoch_sec);
-                                stage_evt_file = fullfile(srcPath,'stage.evt');
-                                if(exist(stage_evt_file,'file'))
-                                    [eventStruct,src_samplerate] = CLASS_events_container.parseEmblaEvent(stage_evt_file,studyStruct.samplerate,studyStruct.samplerate);
-                                    studyStruct.samplerate = src_samplerate;
-                                    
-                                    if(num_epochs~=numel(eventStruct.epoch))
-                                        %                         fprintf(1,'different stage epochs found in %s\n',studyname);
-                                        fprintf(1,'%s\texpected epochs: %u\tencountered epochs: %u to %u\n',srcFile,num_epochs,min(eventStruct.epoch),max(eventStruct.epoch));
-                                        
-                                        new_stage = repmat(7,num_epochs,1);
-                                        new_epoch = (1:num_epochs)';
-                                        new_stage(eventStruct.epoch)=eventStruct.stage;
-                                        eventStruct.epoch = new_epoch;
-                                        eventStruct.stage = new_stage;
-                                    end
-                                    
-%                                     y = [eventStruct.epoch,eventStruct.stage];
-%                                     save(staFilename,'y','-ascii'); 
-                                    events_container_obj = CLASS_events_container.importEmblaEvtDir(srcPath,src_samplerate);
-                                    events_container_obj.setStageStruct(studyStruct);
-                                    scoFilename = fullfile(outPath,strcat(studyID,'.SCO'));
-                                    events_container_obj.save2sco(scoFilename);
-                                else
-                                    fprintf(1,'%s\tNo stage File found\n',srcFile);
-                                    
-                                end
-                                
-                            catch me
-                                showME(me);
-                                fprintf(1,'%s (%u) - Fail\n',srcFile,s);                                
-                            end
-                        end
-                    end                    
-                end     
-                
-                
-            else
-                fprintf('One or both of the paths were not found');
-            end
-            
-            
-            
-        end
+
+        
         
         function evtStruct = evtTxt2evtStruct(filenameIn)
         %This function takes an event file of SEV's evt.* format and
@@ -2848,145 +2744,11 @@ classdef CLASS_events_container < handle
         
         
         
-        %this function requires the use of loadSCOfile.m and is useful
-        %for batch processing...
-        % Usage:
-        % exportSCOtoEvt() prompts user for .SCO directory and evt output directory
-        % exportSCOtoEvt(sco_pathname) sco_pathname is the .SCO file containing
-        %    directory.  User is prompted for evt output directory
-        % exportSCOtoEvt(sco_pathname, evt_pathname) evt_pathname is the directory
-        %    where evt files are exported to.
-        function convertSCOtoEvt(sco_pathname, evt_pathname)
-            %this function requires the use of loadSCOfile.m and is useful
-            %for batch processing...
-            % Usage:
-            % exportSCOtoEvt() prompts user for .SCO directory and evt output directory
-            % exportSCOtoEvt(sco_pathname) sco_pathname is the .SCO file containing
-            %    directory.  User is prompted for evt output directory
-            % exportSCOtoEvt(sco_pathname, evt_pathname) evt_pathname is the directory
-            %    where evt files are exported to.
-            %
-            % Author: Hyatt Moore IV, Stanford University
-            % Date Created: 1/9/2012
-            % modified 2/6/2012: Checked if evt_pathname exists first and, if not,
-            % creates the directory before proceeding with export
-            
-            
-            if(nargin<1 || isempty(sco_pathname))
-                sco_pathname = uigetdir(pwd,'Select .SCO (and .STA) import directory');
-            end
-            if(nargin<2 || isempty(evt_pathname))
-                evt_pathname = uigetdir(sco_pathname,'Select .evt export directory');
-            end
-            
-            if(~exist(evt_pathname,'dir'))
-                mkdir(evt_pathname);
-            end
-            % sco_pathname = '/Users/hyatt4/Documents/Sleep Project/Data/Spindle_7Jun11';
-            % evt_pathname = '/Users/hyatt4/Documents/Sleep Project/Data/Spindle_7Jun11/output/events/sco';
-            
-            if(~isempty(sco_pathname) && ~isempty(evt_pathname))
-                
-                dirStruct = dir(fullfile(sco_pathname,'*.SCO'));
-                
-                if(~isempty(dirStruct))
-                    filecount = numel(dirStruct);
-                    filenames = cell(numel(dirStruct),1);
-                    [filenames{:}] = dirStruct.name;
-                end
-                
-                %example output file name
-                % evt.C1013_4 174933.SWA.0.txt
-                evt_filename_str = 'evt.%s.%s.0.txt'; %use this in conjunction with sprintf below for each evt output file
-                
-                %evt header example:
-                %    Event Label =	SWA
-                %    EDF Channel Label(number) = 	C3-M2 (3)
-                %    Start_time	Duration_seconds	Start_sample	Stop_sample	Epoch	Stage	freq	amplitude
-                evt_header_str = ['Event Label =\t%s\r\nEDF Channel Label(number) =\tUnset (0)\r\n',...
-                    'Start_time\tDuration_seconds\tStart_sample\tStop_sample\tEpoch\tStage\r\n'];
-                
-                %     timeFormat = 'HH:MM:SS';
-                % %     evt_content_str = ['%s',...
-                %      evt_content_str = [repmat('%c',1,numel(timeFormat)),...
-                %                         '\t%0.4f',...
-                %                         '\t%d',...
-                %                         '\t%d',...
-                %                         '\t%d',...
-                %                         '\t%d',...
-                %                         '\r\n'];
-                
-                for k=1:filecount
-                    sco_filename = filenames{k};
-                    study_name = strtok(sco_filename,'.'); %fileparts() would also work
-                    
-                    %example .STA filename:    A0097_4 174733.STA
-                    %         sta_filename = [sco_filename(1:end-3),'STA'];
-                    sta_filename = [study_name,'.STA'];
-                    try
-                        SCO = loadSCOfile(fullfile(sco_pathname,sco_filename));
-                    catch me
-                        showME(me);
-                        rethrow(me);
-                    end
-                    if(~isempty(SCO))
-                        
-                        STA = load(fullfile(sco_pathname,sta_filename),'-ASCII'); %for ASCII file type loading
-                        stages = STA(:,2); %grab the sleep stages
-                        
-                        %indJ contains the indices corresponding to the unique
-                        %labels in event_labels (i.e. SCO.labels = event_labels(indJ)
-                        SCO.label(strcmpi(SCO.label,'Obst. Apnea')) = {'Obs Apnea'};
-                        [event_labels,~,indJ] = unique(SCO.label);
-                        
-                        for j=1:numel(event_labels)
-                            try
-                                evt_label = strcat('SCO_',deblank(event_labels{j}));
-                                space_ind = strfind(evt_label,' ');  %remove blanks and replace tokenizing spaces
-                                evt_label(space_ind) = '_';  %with an underscore for database and file naming convention conformance
-                                evt_filename = fullfile(evt_pathname,sprintf(evt_filename_str,study_name,evt_label));
-                                evt_indices = indJ==j;
-                                start_stop_matrix = SCO.start_stop_matrix(evt_indices,:);
-                                
-                                duration_seconds = SCO.duration_seconds(evt_indices);
-                                epochs = SCO.epoch(evt_indices);
-                                
-                                evt_stages = stages(epochs);  %pull out the stages of interest
-                                
-                                start_time = char(SCO.start_time(evt_indices));
-                                
-                                %this must be here to take care of the text to file  problem
-                                %that pops up when we get different lengthed time
-                                %stamps (i.e. it is not guaranteed to be HH:MM:SS but
-                                %can be H:MM:SS too)
-                                evt_content_str = [repmat('%c',1,size(start_time,2)),...
-                                    '\t%0.2f',...
-                                    '\t%d',...
-                                    '\t%d',...
-                                    '\t%d',...
-                                    '\t%d',...
-                                    '\r\n'];
-                                
-                                % Start_time\tDuration_seconds\tStart_sample\tStop_sample\tEpoch\tStage'];
-                                evt_content = [start_time+0,duration_seconds,start_stop_matrix,epochs, evt_stages];
-                                fout = fopen(evt_filename,'w');
-                                fprintf(fout,evt_header_str, evt_label);
-                                fprintf(fout,evt_content_str,evt_content');
-                                fclose(fout);
-                            catch ME
-                                showME(ME);
-                                disp(['failed on ',study_name,' for event ',evt_label]);
-                            end
-                            
-                        end
-                    end
-                end
-            end
-        end
+
         
         function obj = importEmblaEvtDir(embla_path,embla_samplerate,desired_samplerate)
             obj = CLASS_events_container();
-            import_types = {'resp','desat','plm','biocals'}; 
+            import_types = {'resp','desat','plm'}; 
             if(nargin<2 || isempty(embla_samplerate))
                 stage_evt_file = fullfile(embla_path,'stage.evt');
                 if(exist(stage_evt_file,'file'))
@@ -3025,60 +2787,7 @@ classdef CLASS_events_container < handle
             end
         end
             
-        function import_evtFile2db(dbStruct,edf_sta_path,evt_path,samplerate)
-            %import the events into a database structure
-            
-            EvtFiles = getFilenames(evt_path,strcat('evt.*.txt'));
-            patstudy = strrep(strrep(EvtFiles,'SSC_',''),'evt.','');
-            
-            exp=regexp(patstudy,'(\w+_\d+).*||(\d+_\d+).*||([^\d]+\d+).*','tokens');
-            exp_cell = cell(size(exp));
-            for f=1:numel(exp)
-                exp_cell(f) = exp{f}{1};
-            end
-            uniquePat = unique(exp_cell);
-            for s=1:numel(uniquePat)
-                
-                %this is a hack created by the necessity of save2DB method in
-                %CLASS_events which calls on this global...
-                %                 STAFiles = getFilenames(edf_sta_path,'*.STA');
-                %                 if(strncmp(STAFiles{1},'SSC_',4))
-                %                     PatIDs = strrep(strrep(STAFiles,'.STA',''),'SSC_','');
-                %                 else
-                %                     PatIDs = strtok(STAFiles,' ');
-                %                 end
-                %
-                
-                %             for s=1:numel(STAFiles)
-                %                 cur_STA_filename = fullfile(edf_sta_path,STAFiles{s});
-                cur_STA_filename = dir(fullfile(edf_sta_path,strcat('*',uniquePat{s},'*.STA')));
-                
-                cur_STA_filename = fullfile(edf_sta_path,cur_STA_filename.name);
-                
-                if(exist(cur_STA_filename,'file'))
-                    EvtFiles = getFilenames(evt_path,strcat('evt.*',uniquePat{s},'*.txt'));
-                    
-                    sev_STAGES = loadSTAGES(cur_STA_filename);
-                    event_container = CLASS_events_container();
-                    event_container.setDefaultSamplerate(samplerate);  %this is required to handle the incorporation of new events added from elsewhere
-                    
-                    for f=1:numel(EvtFiles)
-                        evtFile = fullfile(evt_path,EvtFiles{f});
-                        cur_evt = event_container.loadEvtFile(evtFile);
-                        if(~isempty(cur_evt.events))
-                            curEvtObj = event_container.getCurrentChild();
-                            if(strcmpi(cur_evt.channel_label,'Unset'))
-                                curEvtObj.channel_name = 'External';
-                            else
-                                curEvtObj.channel_name = cur_evt.channel_label;
-                            end
-                        end
-                    end
-                    event_container.save2DB(dbStruct,uniquePat{s},sev_STAGES);
-                end
-            end
-        end
-        
+ 
     end
     
 end

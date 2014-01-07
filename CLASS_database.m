@@ -25,6 +25,14 @@ classdef CLASS_database < handle
         %> @param obj CLASS_database derived instance
         % =================================================================
         createDBandTables(obj)
+        
+        % ======================================================================
+        %> @brief Abstract method to create a mysql database table, Diagnostics_T. 
+        %> The method should be implemented in derived classes according to the 
+        %> database desired.
+        %> @param obj CLASS_database derived instance
+        % =================================================================
+        create_Diagnostics_T(obj);
     end
     
     methods
@@ -1606,6 +1614,94 @@ classdef CLASS_database < handle
             end
             
         end
+        
+                % ======================================================================
+        %> @brief Populates DetectorInfo_T table with manually scored event labels obtained from
+        %> WSC .SCO files
+        %> @param DBstruct A structure containing database accessor fields:
+        %> @li @c name Name of the database to use (string)
+        %> @li @c user Database user (string)
+        %> @li @c password Password for @c user (string)
+        % =================================================================
+        function populate_SCO_DetectorInfo_T(DBstruct)
+            %need to add the SCO table information as it is not in the detection.inf
+            %file since it is not incorporated into the SEV
+            %a detection.inf line would look like this for a .SCO method
+            %none SCO_Central_Apnea 0 none SCO_Central_Apnea
+            
+            %add SEV to the path
+            
+            % #Matlab_filename   Label Number_of_channels_required Dialog_name Batch_mode_score
+            SCO_labels = {'SCO_Central_Apnea'
+                'SCO_Hypopnea'
+                'SCO_LM'
+                'SCO_LMA'
+                'SCO_PLM'
+                'SCO_Mixed_Apnea'
+                'SCO_Obs_Apnea'
+                'SCO_SaO2'
+                'SCO_Arousal'
+                'SCO_RESPIRATORY_EVENT'
+                'SCO_desat'};
+            detectStruct.channel_labels ={'LAT/RAT'};
+            
+            detectStruct.configID = 1;
+            detectStruct.detectorID = [];
+            detectStruct.method_function = [];
+            detectStruct.method_label = [];
+            detectStruct.params = [];
+            
+            for k=1:numel(SCO_labels)
+                detectStruct.method_function = SCO_labels{k};
+                detectStruct.method_label = SCO_labels{k};
+                CLASS_database.insertDatabaseDetectorInfoRecord(DBstruct,detectStruct);
+            end
+        end
+        
+        % @brief Export parts of WSC Diagnostics_T to tab delimited text
+        % file
+        % @param txt_filname Name of the file to write data to (it will be
+        % created or over written depending if it already exists or not).
+        function diagnostics2txt(txt_filename)
+            % Author: Hyatt Moore IV
+            % created 8/28/12
+            % modified 11/13/12
+            % modified 2/11/13 - updated for Eileen transfer
+            % modified 2/11/13 - updated for Eileen and Emmanuel transfer
+            %modified 2/13/13 - updated to handle the genetic polymorphisms
+            % modified 2/27/13 - update for Emmanuel and Eileen for later
+            %  txt_filename = fullfile(pwd,'diagnostics_for_Laurel.txt');
+            
+            CLASS_WSC_database.open();
+            fid = fopen(txt_filename,'w');
+            
+            
+            q=mym('select concat(studyinfo_t.patid,"_",studyinfo_t.studynum) as PatID_StudyNum, detectorid,withwake, RLS_A, RLS_B, (RLS_A=1 or rls_b=1) as RLS_AB, RLS_C, AHI4>=15 as has_OSA,plmi,plm_count,lmcount,periodicity,plm_to_lm_ratio,ratio_plm,ratio_lm  from studyinfo_t join plm_t using (patstudykey) left join diagnostics_t using (patstudykey) where detectorid in (142,143) order by detectorid, withwake, patstudykey');
+            
+            mym('CLOSE');            
+            
+            fields = fieldnames(q);
+            for f=1:numel(fields)
+                fprintf(fid,'%s\t',fields{f});
+            end
+            for p=1:numel(q.PatID_StudyNum)
+                fprintf(fid,'\n');
+                for f=1:numel(fields)
+                    if(iscell(q.(fields{f})))
+                        fprintf(fid,'%s\t',q.(fields{f}){p});
+                    else
+                        if(isnan(q.(fields{f})(p)))
+                            fprintf(fid,'\t');
+                        else
+                            fprintf(fid,'%0.2f\t',q.(fields{f})(p));
+                        end
+                    end
+                end
+            end
+            
+            fclose(fid);
+        end
+    
         
     end
     

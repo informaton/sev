@@ -82,7 +82,7 @@ if(nargout>1)
 
     signal = cell(numel(channels),1);
     bytes_per_sample = 2;
-    for k = 1:numel(channels)
+    for k = 1:numel(channels)        
         cur_channel = channels(k);
         if(cur_channel>0 && cur_channel<=HDR.num_signals)
             physical_dimension = HDR.physical_dimension{cur_channel};% ns * 8 ascii : ns * physical dimension (e.g. uV or degreeC)')
