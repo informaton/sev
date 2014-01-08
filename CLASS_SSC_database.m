@@ -100,28 +100,6 @@ classdef CLASS_SSC_database < CLASS_database
         end       
         
         % ======================================================================
-        %> @brief Creates StageStats_T table and populates it for SSC using
-        %> stage files found in the directory provided.
-        %> @param obj Instance of CLASS_SSC_database
-        %> @param STA_pathname Directory containing .STA hypnograms, the staging
-        %> files for SSC sleep studies (string)
-        %> @note If StageStats_T already exists, it is first dropped and
-        %> then created again.
-        % =================================================================
-        function create_StageStats_T(obj,STA_pathname)
-            if(nargin<2 || isempty(STA_pathname))
-                STA_pathname =uigetdir(pwd,'Select Stage Directory (*.STA) to use');
-            end            
-            sta_exp = '(?<PatID>[a-zA-Z0-9]+)_(?<StudyNum>\d+)[^\.]+\.STA';            
-            if(isempty(STA_pathname))
-                stats = stage2stats([],sta_exp);
-            else
-                stats = stage2stats(STA_pathname,sta_exp);
-            end            
-            CLASS_database.create_StageStats_T(stats,obj.dbStruct);            
-        end
-        
-        % ======================================================================
         %> @brief This builds the Diagnostics table for the Stanford Sleep Cohort using a
         %> .txt file created with Emmanuel after first outputting the diagnostics_t
         %> table as created with create_SSC_Diagnostics_T.m
