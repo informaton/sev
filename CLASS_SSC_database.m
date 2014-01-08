@@ -72,7 +72,8 @@ classdef CLASS_SSC_database < CLASS_database
             obj.populate_SCO_DetectorInfo_T(obj.dbStruct);
             obj.open();mym('describe detectorinfo_t');
             
-            obj.create_Diagnostics_T(pwd);
+            %             obj.create_Diagnostics_T(pwd);
+            obj.create_Diagnostics_T_from_file(pwd);
             obj.open();mym('describe diagnostics_t');
             
             STA_pathname = EDF_pathname;
@@ -129,7 +130,7 @@ classdef CLASS_SSC_database < CLASS_database
         %> @note  The created table Diagnostics_T is added to the SSC_DB database.  Any previously existing
         %> table with the same name is first dropped.
         % =================================================================
-        function create_SSC_Diagnostics_T_from_file(obj,ssc_filename)
+        function create_Diagnostics_T_from_file(obj,ssc_filename)
             %
             % Author: Hyatt Moore IV
             % created 11/13/12
