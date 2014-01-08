@@ -459,7 +459,7 @@ classdef CLASS_WSC_database < CLASS_database
                 
                 TStr = sprintf('%s PRIMARY KEY (PATSTUDYKEY))',TStr);
                 
-                mym(TStr);
+                mym(lower(TStr));
                 
                 %Excel stores dates as the number of days elapsed from 1/1/1900 - where
                 %this date has a value of 00001.  And I need to subtract 2, in order to get
