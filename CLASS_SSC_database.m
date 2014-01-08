@@ -72,7 +72,7 @@ classdef CLASS_SSC_database < CLASS_database
             obj.populate_SCO_DetectorInfo_T(obj.dbStruct);
             obj.open();mym('describe detectorinfo_t');
             
-            obj.create_Diagnostics_T();
+            obj.create_Diagnostics_T(pwd);
             obj.open();mym('describe diagnostics_t');
             
             STA_pathname = EDF_pathname;
