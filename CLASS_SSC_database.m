@@ -82,7 +82,7 @@ classdef CLASS_SSC_database < CLASS_database
             obj.open();mym('describe stagestats_t');
             
             obj.create_Events_T(obj.dbStruct);
-            opendb();mym('describe events_t');
+            obj.open();mym('describe events_t');
             
             %% convert SCO to .evt files
             % directory to export SCO events to
