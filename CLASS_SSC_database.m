@@ -166,7 +166,7 @@ classdef CLASS_SSC_database < CLASS_database
                 
                 
                 
-                tableName = lower('Diagnostics_T');
+                tableName = 'diagnostics_t';
                 
                 %table create string
                 TStr = sprintf('CREATE TABLE IF NOT EXISTS %s (patstudykey smallint unsigned default not null, patid char(4) default not null, studynum tinyint unsigned default 1, visitsequence tinyint unsigned default 1,',tableName);
@@ -208,12 +208,10 @@ classdef CLASS_SSC_database < CLASS_database
                     end
                     
                 catch me
-                    
-                    disp(me.message);
-                    me.stack
+                    showME(me);
                 end
                 TStr = sprintf('%s PRIMARY KEY (PATSTUDYKEY))',TStr);
-                
+                mym(TStr);
                 
                 %Excel stores dates as the number of days elapsed from 1/1/1900 - where
                 %this date has a value of 00001.  And I need to subtract 2, in order to get
