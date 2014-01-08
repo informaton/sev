@@ -203,12 +203,11 @@ classdef CLASS_SSC_database < CLASS_database
                 
             if(ispc)
                 ssc_txt_filename(ssc_txt_filename=='\') = '/';
-                loadStr = sprintf('load data local infile "%s" into table %s LINES TERMINATED BY "\r" ignore 1 lines %s',ssc_txt_filename,tableName,strrep(makeWhereInString(column_names,'string'),'"',''));
-                mym(loadStr);
-            else
-                mym(sprintf('load data local infile "%s" into table %s %s',ssc_txt_filename,tableName,strrep(makeWhereInString(column_names,'string'),'"','')));
-                mym('select * from diagnostics_t');
             end
+            loadStr = sprintf('load data local infile "%s" into table %s LINES TERMINATED BY "\r" ignore 1 lines %s',ssc_txt_filename,tableName,strrep(makeWhereInString(column_names,'string'),'"',''));
+            mym(loadStr);
+            mym('select * from diagnostics_t');
+            
         end
         
         % ======================================================================
