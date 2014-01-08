@@ -185,7 +185,7 @@ classdef CLASS_SSC_database < CLASS_database
                                     column.(name).table_format = 'bool default null';
                                     column.(name).sprint_format = '%u';
                                 case {'float','pct','index'}
-                                    column.(name).table_format = 'DECIMAL (6,3) UNSIGNED DEFUALT NULL';
+                                    column.(name).table_format = 'DECIMAL (6,3) UNSIGNED DEFAULT NULL';
                                     column.(name).sprint_format = '%0.3f';
                                     
                                 case 'string'
