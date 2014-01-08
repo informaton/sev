@@ -121,6 +121,114 @@ classdef CLASS_SSC_database < CLASS_database
         end
         
         % ======================================================================
+        %> @brief This builds the Diagnostics table for the Stanford Sleep Cohort using a
+        %> .txt file created with Emmanuel after first outputting the diagnostics_t
+        %> table as created with create_SSC_Diagnostics_T.m
+        %> The created table Diagnostics_T is added to the SSC_DB database.  Any previously existing
+        %> table with the same name is first dropped.        
+        %> @note  The created table Diagnostics_T is added to the SSC_DB database.  Any previously existing
+        %> table with the same name is first dropped.
+        % =================================================================
+        function create_SSC_Diagnostics_T_from_file(obj,ssc_filename)
+            %
+            % Author: Hyatt Moore IV
+            % created 11/13/12
+            
+            %create the table now for the first time
+            if(nargin==1 || isempty(ssc_filename))
+                msg = 'Select ssc_DiagnosticsEM.xls file';
+                [ssc_filename, pathname, ~] = uigetfile({'ssc_DiagnosticsEM.xls','Diagnostic input file';'*.xls','Excel worksheets (*.xls)'},msg,'MultiSelect','off');
+                
+                if(isnumeric(ssc_filename) && ~ssc_filename)
+                    ssc_filename = [];
+                else
+                    ssc_filename = fullfile(pathname,ssc_filename);
+                end
+            end
+            
+            if(~isempty(ssc_filename))
+                try
+                    [~,~,raw] =xlsread(ssc_filename);
+                    data = raw;
+                    hdr = raw(1,:);
+                    
+                    column_names = lower(hdr);
+                    ext_exp = '^.*_(?<type>[a-zA-Z]+)';
+                    exp = regexp(column_names,ext_exp,'names');
+                catch me
+                    showME(me);
+                end
+
+            end
+                
+            
+            tableName = 'diagnostics_t';
+            
+            %table create string
+            TStr = sprintf('CREATE TABLE IF NOT EXISTS %s (',tableName);
+            try
+                for n=1:numel(column_names)
+                    name = column_names{n};
+                    if(isempty(exp{n}))
+                        col_type = '';
+                    else
+                        col_type = exp{n}.type;
+                    end
+                    
+                    if(~strcmpi(col_type,'ignore'))
+                        switch col_type
+                            case {'flag','bool'}
+                                column.(name).table_format = 'bool default null';
+                                column.(name).sprint_format = '%u';
+                            case {'float','pct','index'}
+                                column.(name).table_format = 'DECIMAL (6,3) UNSIGNED DEFAULT NULL';
+                                column.(name).sprint_format = '%0.3f';
+                                
+                            case 'string'
+                                column.(name).table_format = 'VARCHAR(100) default null';
+                                column.(name).sprint_format = '%s';
+                            case 'date'
+                                column.(name).table_format = 'DATE';
+                                column.(name).sprint_format = '%s';
+                            case 'smallint'
+                                column.(name).table_format = 'SMALLINT UNSIGNED DEFAULT NULL';
+                                column.(name).sprint_format = '%u';
+                            otherwise
+                                if(strcmpi(name,'gender'))
+                                    column.(name).table_format = 'ENUM(''M'',''F'') DEFAULT NULL';
+                                    column.(name).sprint_format = '"%c"';
+                                else
+                                    column.(name).table_format = 'SMALLINT UNSIGNED DEFAULT NULL';
+                                    column.(name).sprint_format = '%u';
+                                end
+                        end
+                        TStr = sprintf('%s %s %s,',TStr,name,column.(name).table_format);
+                    else
+                        disp([name,' ignored']);
+                    end
+                end
+                
+            catch me
+                
+                disp(me.message);
+                me.stack
+            end
+            
+            TStr = sprintf('%s PRIMARY KEY (PATSTUDYKEY))',TStr);
+            
+            
+            obj.open();
+            mym(['DROP TABLE IF EXISTS ',tableName]);
+            mym(TStr);
+            windows_filename = strrep(fullfile(pwd,ssc_filename),'xls','txt');
+            windows_filename(windows_filename=='\') = '/';
+            loadStr = sprintf('load data local infile "%s" into table %s LINES TERMINATED BY "\r" ignore 1 lines %s',windows_filename,tableName,strrep(makeWhereInString(column_names,'string'),'"',''));
+            mym(loadStr);
+            mym(sprintf('load data local infile "%s" into table %s %s',strrep(fullfile(pwd,ssc_filename),'xls','txt'),tableName,strrep(makeWhereInString(column_names,'string'),'"','')));
+            mym('select * from diagnostics_t');
+        end
+        
+        % ======================================================================
         %> @brief Creates Diagnostic_T table for the SSC database and populates it 
         %> from the SSC datashseet file provided by Stanford Sleep Cohort.
         %> @param obj Instance of CLASS_SSC_database
@@ -148,7 +256,7 @@ classdef CLASS_SSC_database < CLASS_database
             end
             if(~isempty(path_with_diagnostics_xls_file))
                 
-                worksheets = {'blood_work','psg_study_1','doctor_notes'};
+                worksheets = {'demographics','blood_work','psg_study_1','doctor_notes'};
                 hdr = {};
                 for w=1:numel(worksheets)
                     sheet = worksheets{w};
@@ -165,10 +273,10 @@ classdef CLASS_SSC_database < CLASS_database
                 
                 
                 
-                tableName = lower('Diagnostics_T');
+                tableName = 'Diagnostics_T';
                 
                 %table create string
-                TStr = sprintf('CREATE TABLE IF NOT EXISTS %s (patstudykey smallint unsigned default not null, patid char(4) default not null, studynum tinyint unsigned default 1, visitsequence tinyint unsigned default 1,',tableName);
+                TStr = sprintf('CREATE TABLE IF NOT EXISTS %s (patstudykey smallint unsigned not null, patid char(4) not null, studynum tinyint unsigned default 1, visitsequence tinyint unsigned default 1,',tableName);
                 try
                     for n=1:numel(column_names)
                         name = column_names{n};
@@ -184,7 +292,7 @@ classdef CLASS_SSC_database < CLASS_database
                                     column.(name).table_format = 'bool default null';
                                     column.(name).sprint_format = '%u';
                                 case {'float','pct','index'}
-                                    column.(name).table_format = 'DECIMAL (6,3) UNSIGNED DEFUALT NULL';
+                                    column.(name).table_format = 'DECIMAL (6,3) UNSIGNED DEFAULT NULL';
                                     column.(name).sprint_format = '%0.3f';
                                     
                                 case 'string'
@@ -197,8 +305,13 @@ classdef CLASS_SSC_database < CLASS_database
                                     column.(name).table_format = 'SMALLINT UNSIGNED DEFAULT NULL';
                                     column.(name).sprint_format = '%u';
                                 otherwise
-                                    column.(name).table_format = 'SMALLINT UNSIGNED DEFAULT NULL';
-                                    column.(name).sprint_format = '%u';
+                                    if(strcmpi(name,'gender'))
+                                        column.(name).table_format = 'ENUM(''M'',''F'') DEFAULT NULL';
+                                        column.(name).sprint_format = '"%c"';
+                                    else
+                                        column.(name).table_format = 'SMALLINT UNSIGNED DEFAULT NULL';
+                                        column.(name).sprint_format = '%u';
+                                    end
                             end
                             TStr = sprintf('%s %s %s,',TStr,name,column.(name).table_format);
                         else
@@ -211,8 +324,13 @@ classdef CLASS_SSC_database < CLASS_database
                     disp(me.message);
                     me.stack
                 end
+                
                 TStr = sprintf('%s PRIMARY KEY (PATSTUDYKEY))',TStr);
                 
+                
+                openDB(dbStruct);
+                mym(['DROP TABLE IF EXISTS ',tableName]);
+                mym(TStr);
                 
                 %Excel stores dates as the number of days elapsed from 1/1/1900 - where
                 %this date has a value of 00001.  And I need to subtract 2, in order to get
@@ -262,7 +380,7 @@ classdef CLASS_SSC_database < CLASS_database
                                             value = ['"',datestr(value+excel_pivot_year,'yyyy-mm-dd'),'"'];
                                         end
                                     catch me
-                                        showME(me);
+                                        me
                                     end
                                     
                                 elseif(strcmpi(column.(name).table_format,'VARCHAR(100) default null'))
