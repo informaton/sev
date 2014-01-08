@@ -139,8 +139,9 @@ classdef CLASS_SSC_database < CLASS_database
             obj.open();
             
             if(nargin<2 || isempty(path_with_diagnostics_xls_file))
-                disp('Select directory with SSC diagnostic .xls files (blood_work, psg_study_1, doctor_notes)');
-                path_with_diagnostics_xls_file =uigetdir(evt_pathname,'Select .EDF directory to use');
+                msg = 'Select directory with SSC diagnostic .xls files (blood_work, psg_study_1, doctor_notes)';
+                disp(msg);
+                path_with_diagnostics_xls_file =uigetdir(pwd,msg);
                 if(isnumeric(path_with_diagnostics_xls_file) && ~path_with_diagnostics_xls_file)
                     path_with_diagnostics_xls_file = [];
                 end
