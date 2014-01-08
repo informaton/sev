@@ -211,6 +211,7 @@ classdef CLASS_SSC_database < CLASS_database
                     showME(me);
                 end
                 TStr = sprintf('%s PRIMARY KEY (PATSTUDYKEY))',TStr);
+                disp(TStr);
                 mym(TStr);
                 
                 %Excel stores dates as the number of days elapsed from 1/1/1900 - where
