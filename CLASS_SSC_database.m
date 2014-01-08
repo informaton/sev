@@ -72,7 +72,7 @@ classdef CLASS_SSC_database < CLASS_database
             obj.populate_SCO_DetectorInfo_T(obj.dbStruct);
             obj.open();mym('describe detectorinfo_t');
             
-            obj.create_Diagnostics_T();
+            obj.create_Diagnostics_T(pwd);
             obj.open();mym('describe diagnostics_t');
             
             STA_pathname = EDF_pathname;
@@ -247,8 +247,9 @@ classdef CLASS_SSC_database < CLASS_database
             obj.open();
             
             if(nargin<2 || isempty(path_with_diagnostics_xls_file))
-                disp('Select directory with SSC diagnostic .xls files (blood_work, psg_study_1, doctor_notes)');
-                path_with_diagnostics_xls_file =uigetdir(evt_pathname,'Select .EDF directory to use');
+                msg = 'Select directory with SSC diagnostic .xls files (blood_work, psg_study_1, doctor_notes)';
+                disp(msg);
+                path_with_diagnostics_xls_file =uigetdir(pwd,msg);
                 if(isnumeric(path_with_diagnostics_xls_file) && ~path_with_diagnostics_xls_file)
                     path_with_diagnostics_xls_file = [];
                 end
@@ -273,7 +274,7 @@ classdef CLASS_SSC_database < CLASS_database
                 
                 
                 
-                tableName = 'Diagnostics_T';
+                tableName = 'diagnostics_t';
                 
                 %table create string
                 TStr = sprintf('CREATE TABLE IF NOT EXISTS %s (patstudykey smallint unsigned not null, patid char(4) not null, studynum tinyint unsigned default 1, visitsequence tinyint unsigned default 1,',tableName);
@@ -320,13 +321,12 @@ classdef CLASS_SSC_database < CLASS_database
                     end
                     
                 catch me
-                    
-                    disp(me.message);
-                    me.stack
+                    showME(me);
                 end
                 
                 TStr = sprintf('%s PRIMARY KEY (PATSTUDYKEY))',TStr);
-                
+                disp(TStr);
+                mym(TStr);
                 
                 openDB(dbStruct);
                 mym(['DROP TABLE IF EXISTS ',tableName]);
