@@ -221,12 +221,16 @@ classdef CLASS_SSC_database < CLASS_database
             obj.open();
             mym(['DROP TABLE IF EXISTS ',tableName]);
             mym(TStr);
-            windows_filename = strrep(fullfile(pwd,ssc_filename),'xls','txt');
-            windows_filename(windows_filename=='\') = '/';
-            loadStr = sprintf('load data local infile "%s" into table %s LINES TERMINATED BY "\r" ignore 1 lines %s',windows_filename,tableName,strrep(makeWhereInString(column_names,'string'),'"',''));
-            mym(loadStr);
-            mym(sprintf('load data local infile "%s" into table %s %s',strrep(fullfile(pwd,ssc_filename),'xls','txt'),tableName,strrep(makeWhereInString(column_names,'string'),'"','')));
-            mym('select * from diagnostics_t');
+            ssc_txt_filename = strrep(ssc_filename,'xls','txt');
+                
+            if(ispc)
+                ssc_txt_filename(ssc_txt_filename=='\') = '/';
+                loadStr = sprintf('load data local infile "%s" into table %s LINES TERMINATED BY "\r" ignore 1 lines %s',ssc_txt_filename,tableName,strrep(makeWhereInString(column_names,'string'),'"',''));
+                mym(loadStr);
+            else
+                mym(sprintf('load data local infile "%s" into table %s %s',ssc_txt_filename,tableName,strrep(makeWhereInString(column_names,'string'),'"','')));
+                mym('select * from diagnostics_t');
+            end
         end
         
         % ======================================================================
