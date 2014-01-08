@@ -169,7 +169,7 @@ classdef CLASS_SSC_database < CLASS_database
                 tableName = 'diagnostics_t';
                 
                 %table create string
-                TStr = sprintf('CREATE TABLE IF NOT EXISTS %s (patstudykey smallint unsigned default not null, patid char(4) default not null, studynum tinyint unsigned default 1, visitsequence tinyint unsigned default 1,',tableName);
+                TStr = sprintf('CREATE TABLE IF NOT EXISTS %s (patstudykey smallint unsigned not null, patid char(4) not null, studynum tinyint unsigned default 1, visitsequence tinyint unsigned default 1,',tableName);
                 try
                     for n=1:numel(column_names)
                         name = column_names{n};
