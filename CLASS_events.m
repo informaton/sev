@@ -920,58 +920,60 @@ classdef CLASS_events < handle
                 event_start_stop = obj.start_stop_matrix;
                 filename = [filename,'.',obj.label,'.',num2str(obj.configID),'.txt'];
                 fid = fopen(filename,'w');
-                hdr = {obj.label,...
-                    [obj.channel_name,' (',num2str(obj.channel_number),')']};
-                fprintf(fid,'#Event Label =\t%s\r\n#EDF Channel Label(number) = \t%s\r\n',hdr{1},hdr{2});
-                fprintf(fid,'#Start_time\tDuration_seconds\tStart_sample\tStop_sample\tEpoch\tStage\tCycle');
-                
-                starts = obj.start_stop_matrix(:,1);
-                
-                %subtract 1 below, since the 1st sample technically starts at
-                %           %t0 and thus the first sample in matlab would otherwise be listed as 1/fs seconds after t0
-                start_offset_sec = (starts-1)/obj.samplerate; %add the seconds here
-                
-                start_times = datenum([zeros(numel(start_offset_sec),numel(t0)-1),start_offset_sec(:)])+datenum(t0);
-                start_times = datestr(start_times,'HH:MM:SS.FFF');
-                
-%                 start_epochs = sample2epoch(starts,studyStruct.standard_epoch_sec,obj.samplerate);
-                start_epochs = sample2epoch(starts,30,obj.samplerate);
-                start_stages = stageStruct.line(start_epochs);
-                start_cycle = stageStruct.cycles(start_epochs);
-                
-                duration = (event_start_stop(:,2)-event_start_stop(:,1)+1)/obj.samplerate;
-                %             y = [obj.start_stop_matrix, duration(:)];
-                y = [duration(:),obj.start_stop_matrix,start_epochs(:),start_stages(:),start_cycle(:)];
-                
-                if(~isempty(obj.paramStruct))
-                    paramNames = fieldnames(obj.paramStruct);
-                    if(~iscell(paramNames))
-                        paramNames = {paramNames};
-                    end;
-                    paramValues = zeros(size(y,1),numel(paramNames));
-                    for k = 1:numel(paramNames)
-                        fprintf(fid,'\t%s',paramNames{k});
-                        paramValues(:,k) = obj.paramStruct.(paramNames{k})(:);
+                if(fid<=0)
+                    fprintf('The file, %s, could not be opened for writing\n',filename);
+                else
+                    hdr = {obj.label,...
+                        [obj.channel_name,' (',num2str(obj.channel_number),')']};
+                    fprintf(fid,'#Event Label =\t%s\r\n#EDF Channel Label(number) = \t%s\r\n',hdr{1},hdr{2});
+                    fprintf(fid,'#Start_time\tDuration_seconds\tStart_sample\tStop_sample\tEpoch\tStage\tCycle');
+                    
+                    starts = obj.start_stop_matrix(:,1);
+                    
+                    %subtract 1 below, since the 1st sample technically starts at
+                    %           %t0 and thus the first sample in matlab would otherwise be listed as 1/fs seconds after t0
+                    start_offset_sec = (starts-1)/obj.samplerate; %add the seconds here
+                    
+                    start_times = datenum([zeros(numel(start_offset_sec),numel(t0)-1),start_offset_sec(:)])+datenum(t0);
+                    start_times = datestr(start_times,'HH:MM:SS.FFF');
+                    
+                    %                 start_epochs = sample2epoch(starts,studyStruct.standard_epoch_sec,obj.samplerate);
+                    start_epochs = sample2epoch(starts,30,obj.samplerate);
+                    start_stages = stageStruct.line(start_epochs);
+                    start_cycle = stageStruct.cycles(start_epochs);
+                    
+                    duration = (event_start_stop(:,2)-event_start_stop(:,1)+1)/obj.samplerate;
+                    %             y = [obj.start_stop_matrix, duration(:)];
+                    y = [duration(:),obj.start_stop_matrix,start_epochs(:),start_stages(:),start_cycle(:)];
+                    
+                    if(~isempty(obj.paramStruct))
+                        paramNames = fieldnames(obj.paramStruct);
+                        if(~iscell(paramNames))
+                            paramNames = {paramNames};
+                        end;
+                        paramValues = zeros(size(y,1),numel(paramNames));
+                        for k = 1:numel(paramNames)
+                            fprintf(fid,'\t%s',paramNames{k});
+                            paramValues(:,k) = obj.paramStruct.(paramNames{k})(:);
+                        end
+                        
+                        y = [y,paramValues];
                     end
                     
-                    y = [y,paramValues];
+                    fprintf(fid,'\r\n');
+                    
+                    
+                    %t0 is a date vector
+                    %             A date vector contains six elements, specifying year, month, day, hour,
+                    %  	minute, and second.
+                    format_str = [repmat('%c',1,size(start_times,2)),'\t',repmat('%0.4f\t',1,size(y,2)),'\n'];
+                    
+                    fprintf(fid,format_str,[start_times+0,y]');
+                    fclose(fid);
                 end
-                
-                fprintf(fid,'\r\n');
-                
-                
-                %t0 is a date vector
-                %             A date vector contains six elements, specifying year, month, day, hour,
-                %  	minute, and second.
-                format_str = [repmat('%c',1,size(start_times,2)),'\t',repmat('%0.4f\t',1,size(y,2)),'\n'];
-                
-                fprintf(fid,format_str,[start_times+0,y]');
-                fclose(fid);
             end
             
         end
-        
-
         
         % --------------------------------------------------------------------
 
