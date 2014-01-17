@@ -402,9 +402,7 @@ classdef CLASS_database < handle
             % modified 12.3.2012 to add nrem/rem cycle as field and primary key
             % modified 10.22.12 - check that patstudykey is not empty before continuing
             % with try to load database data
-            if(nargin>=2)
-                CLASS_database.openDB(dbStruct);
-            end
+            CLASS_database.openDB(dbStruct);
             
             TableName = 'StageStats_T';
             TableName = lower(TableName);
@@ -774,16 +772,16 @@ classdef CLASS_database < handle
         % ======================================================================
         %> @brief Populates StageStats_T the database identified by dbStruct
         %> and the provided @e stats structure 
+        %> @param stats An array of structures containing stage statistics.
         %> @param dbStruct A structure containing database accessor fields:
         %> @li @c name Name of the database to use (string)
         %> @li @c user Database user (string)
         %> @li @c password Password for @c user (string)
-        %> @param stats An array of structures containing stage statistics.
         %> @note @e stats can be built using the stage2stats.m file.
         %> Add comment to wiki as an issue if this file is not found with
         %> the SEV package.
         % =================================================================
-        function populate_StageStats_T(dbStruct,stats)
+        function populate_StageStats_T(stats,dbStruct)
             %stats is a cell of stage structures as output by stage2stats.m file
             
             % Written by Hyatt Moore IV
