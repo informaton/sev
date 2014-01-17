@@ -55,7 +55,7 @@ classdef CLASS_WSC_database < CLASS_database
             
             % make the database for the WSC
             obj.create_DB(obj.dbStruct);
-            system(sprintf('mysqldump -u%s -p%s %s < %s',obj.dbUser,obj.dbPassword,obj.dbName,studyinfo_dumpfile,'-echo'));
+            system(sprintf('mysqldump -u%s -p%s %s < %s',obj.dbUser,obj.dbPassword,obj.dbName,studyinfo_dumpfile),'-echo');
             
             obj.open();mym('describe studyinfo_t');           
             
@@ -103,7 +103,7 @@ classdef CLASS_WSC_database < CLASS_database
                 obj.populate_Events_T(evt_pathname,obj.dbStruct);
             end
             
-            system(sprintf('mysqldump -u%s -p%s %s < %s',obj.dbUser,obj.dbPassword,obj.dbName,plm_dumpfile,'-echo'));
+            system(sprintf('mysqldump -u%s -p%s %s < %s',obj.dbUser,obj.dbPassword,obj.dbName,plm_dumpfile),'-echo');
 
             
         end
