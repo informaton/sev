@@ -92,7 +92,7 @@ classdef CLASS_WSC_database < CLASS_database
             CLASS_WSC_database.create_SNP_T();
             
             STA_pathname = EDF_pathname;
-            obj.create_StageStats_T(STA_pathname);
+            obj.create_and_populate_StageStats_T(STA_pathname);
             
             obj.open();mym('describe stagestats_t');
             

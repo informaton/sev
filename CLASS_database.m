@@ -55,7 +55,7 @@ classdef CLASS_database < handle
         %> @note If StageStats_T already exists, it is first dropped and
         %> then created again.
         % =================================================================
-        function create_StageStats_T(obj,STA_pathname)
+        function create_and_populate_StageStats_T(obj,STA_pathname)
             if(nargin<2 || isempty(STA_pathname))
                 STA_pathname =uigetdir(pwd,'Select Stage Directory (*.STA) to use');
             end            
@@ -65,7 +65,8 @@ classdef CLASS_database < handle
             else
                 stats = CLASS_database.stage2stats(STA_pathname,sta_exp);
             end            
-            CLASS_database.static_create_StageStats_T(stats,obj.dbStruct);            
+            CLASS_database.static_create_StageStats_T(obj.dbStruct);            
+            CLASS_database.populate_StageStats_T(stats,obj.dbStruct);
         end
         
     end
@@ -379,7 +380,7 @@ classdef CLASS_database < handle
         %> @note If StageStats_T already exists, it is first dropped and
         %> then created again.
         % =================================================================
-        function static_create_StageStats_T(stats,dbStruct)
+        function static_create_StageStats_T(dbStruct)
             %stats is a cell of stage structures as output by stage2stats.m file
             % TableName is the table name to load the cell of structures into
             % if DB information is not supplied (args 3-5) then it is assumed that the
@@ -414,54 +415,7 @@ classdef CLASS_database < handle
                 ', PRIMARY KEY (PatStudyKey, Stage, cycle)'...
                 ')']);
             
-            %fragmentation count is the number of times one stage is left for another
-            
-            preInsertStr = ['INSERT INTO ',TableName, ' VALUES('];
-            
-            %starts the transaction
-            % mym('START TRANSACTION');
-            
-            %This may work faster ...
-            mym('SET autocommit=0');
-            for k=1:numel(stats)
-                %only need to do this query once, since each entry (1..numel(stats{k})
-                %will have the same PatID and StudyNum field values
-                if(~isempty(stats{k}))
-                    %     PatStudyKey = num2str(mym(['SELECT PatStudyKey FROM StudyInfo_T WHERE PatID=''',stats{k}(1).PatID,''' AND StudyNum=''',stats{k}(1).StudyNum,''' LIMIT 1']));
-                    x = mym(['SELECT PatStudyKey FROM studyinfo_t WHERE PatID=''',stats{k}(1).PatID,''' AND StudyNum=''',stats{k}(1).StudyNum,''' LIMIT 1']);
-                    PatStudyKey = num2str(x.PatStudyKey);
-                    if(~isempty(PatStudyKey))
-                        numStages = numel(stats{k});
-                        if(numStages>0)
-                            numCycles = numel(stats{k}(1).Stage);
-                            for curStage=1:numel(stats{k})
-                                for curCycle = 1:numCycles
-                                    try
-                                        InsertStr = [preInsertStr,PatStudyKey,...
-                                            ',''',num2str(stats{k}(curStage).Stage(curCycle)),''',',...
-                                            num2str(stats{k}(curStage).Cycle(curCycle)),',',...
-                                            num2str(stats{k}(curStage).Duration(curCycle)),',',...
-                                            num2str(stats{k}(curStage).Count(curCycle)),',',....
-                                            num2str(stats{k}(curStage).Pct_study(curCycle)),',',...
-                                            num2str(stats{k}(curStage).Pct_sleep(curCycle)),',',...
-                                            num2str(stats{k}(curStage).Fragmentation_count(curCycle)),',',...
-                                            num2str(stats{k}(curStage).Latency(curCycle)),...
-                                            ')'];
-                                        mym(InsertStr);
-                                    catch me
-                                        showME(me);
-                                    end
-                                end
-                            end
-                        end
-                    end
-                end
-            end
-            mym('COMMIT');
-            mym('SET autocommit = 1');
-            if(nargin>2)
-                mym('CLOSE');
-            end
+        
         end
         
         % ======================================================================

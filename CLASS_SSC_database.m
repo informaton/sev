@@ -77,7 +77,7 @@ classdef CLASS_SSC_database < CLASS_database
             obj.open();mym('describe diagnostics_t');
             
             STA_pathname = EDF_pathname;
-            obj.create_StageStats_T(STA_pathname);
+            obj.create_and_populate_StageStats_T(STA_pathname);
             
             obj.open();mym('describe stagestats_t');
             
