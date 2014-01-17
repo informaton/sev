@@ -49,7 +49,7 @@ classdef CLASS_database < handle
         % ======================================================================
         %> @brief Creates StageStats_T table and populates it for WSC using
         %> stage files found in the directory provided.
-        %> @param obj Instance of CLASS_WSC_database
+        %> @param obj Instance of CLASS_database
         %> @param STA_pathname Directory containing .STA hypnograms, the staging
         %> files for WSC sleep studies (string)
         %> @note If StageStats_T already exists, it is first dropped and
@@ -67,6 +67,19 @@ classdef CLASS_database < handle
             end            
             CLASS_database.static_create_StageStats_T(obj.dbStruct);            
             CLASS_database.populate_StageStats_T(stats,obj.dbStruct);
+        end
+        
+        % ======================================================================
+        %> @brief Dumps the identified table to a text file using the same
+        %> name and a '.txt' extension.
+        %> @param obj Instance of CLASS_database
+        %> @param tableName Name of the table (as a string) which will be
+        %> dumped as a tab-delimited text file with one record per row.
+        % ======================================================================
+        function dumpTable2Text(obj, tableName)
+            outFile = fullfile(pwd,strcat(tableName,'.txt'));
+            obj.open();
+            mym('select * from {S} INTO OUTFILE ''{S}''',tableName,outFile);            
         end
         
     end

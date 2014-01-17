@@ -22,6 +22,92 @@ classdef CLASS_WSC_database < CLASS_database
             obj.dbStruct = CLASS_WSC_database.getDBStruct();
         end
         
+        % ======================================================================
+        %> @brief Streamlined version for creating a mysql database which uses
+        %> mysqldump system calls to import the studyinfo_t and plm_t
+        %> tables in creating the Wisconsin Sleep Cohort.  
+        %> First creates WSC Database and GRANTs access to wsc_user
+        %> and then CREATEs the following tables:
+        %> @li  StudyInfo_T - Imported now using input filename
+        %> @li  WSC_Diagnostics_T
+        %> @li  StageStats_T
+        %> @li  Events_T
+        %> @li  Medications_T
+        %> @li  DetectorInfo_T
+        %> @li  SNP_T
+        %> @param obj Instance of CLASS_WSC_database
+        %> @param EDF_pathname Directory containing cohort of sleep studies
+        %> in European Data Format, .EDF (string).
+        %> @param evt_pathname Directory containing SEV format event
+        %> files, .evt.*.txt (string)
+        %> @param importTableNames An optional cell of mysqldump table
+        %> dumps.  The corresponding files must be in the current directory
+        %> For example: importTableNames = {'studyinfo_t','plm_t'} then the
+        %files studyinfo_t.sql and plm_t.sql must exist in the working
+        %directory to be loaded using mysqldump prior to call.
+        % =================================================================
+        function createDBandLiteTables(obj, EDF_pathname,evt_pathname, studyinfo_dumpfile, plm_dumpfile)
+            % modified: 7/27/12
+            %       - changed ordering so that studyinfo_t is created prior to
+            %       diagnostics_t.  Diagnostics_t creation requires patstudykey and
+            %       visitsequence fields to be pulled from studyinfo_t using (patid,
+            %       studynum)
+            
+            % make the database for the WSC
+            obj.create_DB(obj.dbStruct);
+            system(sprintf('mysqldump -u%s -p%s %s < %s',obj.dbUser,obj.dbPassword,obj.dbName,studyinfo_dumpfile,'-echo');
+            
+            obj.open();mym('describe studyinfo_t');           
+            
+            obj.create_DetectorInfo_T(obj.dbStruct);
+            obj.populate_SCO_DetectorInfo_T(obj.dbStruct);
+            obj.open();mym('describe detectorinfo_t');
+            
+            obj.create_Diagnostics_T();
+            obj.open();mym('describe diagnostics_t');
+            
+            %% gather the snp data
+            %             snp_filenames_cell = {'wsc_snps_corrected.txt'
+            %                 'wsc_snp_rs11693221_corrected.txt'};
+            
+            obj.update_Diagnostics_T_for_SNP();            
+            
+            %add PLM fields
+            %obj.update_Diagnostics_T_for_PLM();
+
+            % this builds the medication table using WSC meidcation list received from Simon Warby (most likely)
+            % meds_filename = 'wsc_medication_listing.txt';
+            obj.create_Medications_T();
+            
+            CLASS_WSC_database.create_SNP_T();
+            
+            STA_pathname = EDF_pathname;
+            obj.create_and_populate_StageStats_T(STA_pathname);
+            
+            obj.open();mym('describe stagestats_t');
+            
+            obj.create_Events_T(obj.dbStruct);
+            obj.open();mym('describe events_t');
+            
+            %% convert SCO to .evt files
+            % directory to export SCO events to
+            % SCO_Evt_pathname = fullfile(EDF_pathname,'Output/SCOevents');
+
+            % SCO_pathname = EDF_pathname;
+            % SCO_Evt_pathname = fullfile(SCO_pathname,'_SCO_Evt');
+            % exportSCOtoEvt(SCO_pathname,SCO_Evt_pathname);            
+            %             renameFiles(SCO_Evt_pathname,'Obst_Apnea','Obs_Apnea');
+            %             renameFiles(SCO_Evt_pathname,'PLME','PLM');
+            
+            if(~isempty(evt_pathname))
+                obj.populate_Events_T(evt_pathname,obj.dbStruct);
+            end
+            
+            system(sprintf('mysqldump -u%s -p%s %s < %s',obj.dbUser,obj.dbPassword,obj.dbName,plm_dumpfile,'-echo');
+
+            
+        end
+        
         % ======== ABSTRACT implementations for WSC_database =========
         % ======================================================================
         %> @brief Create a mysql database and tables for the Wisconsin
@@ -65,6 +151,7 @@ classdef CLASS_WSC_database < CLASS_database
             
             %% these functions create the named tables
             %these functions create the named tables
+            
             obj.create_StudyInfo_T(obj.dbStruct);           
             obj.populate_StudyInfo_T(obj.dbStruct,EDF_pathname,'WSC');           
             obj.open();mym('describe studyinfo_t');           
