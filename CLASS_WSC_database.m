@@ -104,7 +104,6 @@ classdef CLASS_WSC_database < CLASS_database
                 obj.populate_Events_T(evt_pathname,obj.dbStruct);
             end
             
-            obj.create_
             system(sprintf('mysql -u%s -p%s %s < %s',obj.dbUser,obj.dbPassword,obj.dbName,plm_dumpfile),'-echo');
 
             
