@@ -150,6 +150,7 @@ classdef CLASS_database < handle
             mym('open','localhost',dbStruct.user,dbStruct.password);
             
             %make the database to use
+            mym(['DROP DATABASE IF EXISTS ',dbStruct.name]);
             mym(['CREATE DATABASE IF NOT EXISTS ',dbStruct.name]);
             
             mym('CLOSE');            
