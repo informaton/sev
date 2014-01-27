@@ -10,7 +10,7 @@ function varargout = batch_run(varargin)
 
 % Edit the above text to modify the response to help batch_run
 
-% Last Modified by GUIDE v2.5 08-Jan-2013 09:47:30
+% Last Modified by GUIDE v2.5 27-Jan-2014 09:42:13
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -213,60 +213,152 @@ set(handles.edit_edf_directory,'string',pathname);
 checkPathForEDFs(handles);
 
 
-function checkPathForEDFs(handles)
+function playlist = getPlaylist(handles,ply_filename)
+
+if(nargin==2)
+    if(strcmpi(ply_filename,'-gui'))
+        
+        %make an educated guess regarding the file to be loaded
+        fileGuess = get(handles.edit_selectPlaylist,'string');
+        if(~exist(fileGuess,'file'))
+            fileGuess = get(handles.edit_edf_directory,'string');
+        end
+        
+        [ply_filename, pathname, ~] = uigetfile({'*.ply','.EDF play list (*.ply)'},'Select batch mode play list',fileGuess,'MultiSelect','off');
+        
+        %did the user press cancel
+        if(isnumeric(ply_filename) && ~ply_filename)
+            ply_filename = [];
+        else
+            ply_filename = fullfile(pathname,ply_filename);
+        end
+    end
+else
+    
+    if(strcmpi('on',get(handles.radio_processList,'enable')) && get(handles.radio_processList,'value'))
+        ply_filename = get(handles.edit_selectPlaylist,'string');
+    else
+        ply_filename = [];  %just in case this is called unwantedly
+    end
+end
+
+
+
+if(exist(ply_filename,'file'))
+    fid = fopen(ply_filename);
+    data = textscan(fid,'%[^\r\n]');
+    playlist = data{1};
+    fclose(fid);
+else
+    playlist = [];
+end
+
+%update the gui
+if(isempty(playlist))
+    set(handles.radio_processAll,'value',1);
+    set(handles.edit_selectPlaylist,'string','<click to select play list>');
+else
+    set(handles.radio_processList,'value',1);
+    set(handles.edit_selectPlaylist,'string',ply_filename);    
+end
+
+checkPathForEDFs(handles,playlist);
+
+function filtered_file_struct = filterPlaylist(file_struct,file_filter_list)
+
+if(~isempty(file_filter_list))
+    filename_cell = cell(numel(file_struct),1);
+    [filename_cell{:}] = file_struct.name;
+    [~,intersect_indices] = intersect(file_filter_list,filename_cell); %need to handle case sensitivity
+    filtered_file_struct = file_struct(intersect_indices);
+else
+   filtered_file_struct = file_struct;  %i.e. nothing to filter 
+end
+
+
+function checkPathForEDFs(handles,playlist)
 %looks in the path for EDFs
 global GUI_TEMPLATE;
 
-path = get(handles.edit_edf_directory,'string');
-if(~exist(path,'file'))
-    EDF_message = 'Directory does not exist. ';
-    num_edfs = 0;
+if(nargin<2)
+    getPlaylist(handles); 
 else
-    %pc's do not have a problem with case; unfortunately the other side
-    %does
-    if(ispc)
-        edf_file_list = dir(fullfile(path,'*.EDF'));
+    
+    
+    path = get(handles.edit_edf_directory,'string');
+    if(~exist(path,'file'))
+        EDF_message = 'Directory does not exist. ';
+        num_edfs = 0;
     else
-        edf_file_list = [dir(fullfile(path, '*.EDF'));dir(fullfile(path, '*.edf'))]; %dir(fullfile(path, '*.EDF'))];
-    end
-    num_edfs = numel(edf_file_list);
-    bytes_cell = cell(num_edfs,1);
-    [bytes_cell{:}]=edf_file_list.bytes;
-    total_bytes = sum(cell2mat(bytes_cell))/1E6;
-    EDF_message = [num2str(num_edfs),' EDF files (',num2str(total_bytes,'%0.2f'),' MB) found in the current directory. '];
-end;
-
-if(num_edfs==0)
-    EDF_message = [EDF_message, 'Please choose a different directory'];
-    set(handles.push_run,'enable','off');
-    EDF_labels = 'No Channels Available';
-    set(get(handles.panel_synth_CHANNEL,'children'),'enable','off');
-    set(get(handles.panel_events,'children'),'enable','off');
-    set(get(handles.panel_psd,'children'),'enable','off');
-    set(get(handles.panel_artifact,'children'),'enable','off');
-else
-    set(get(handles.panel_synth_CHANNEL,'children'),'enable','on');
-    set(handles.edit_synth_CHANNEL_name,'enable','off');
-    set(handles.push_run,'enable','on');
-    set(get(handles.panel_events,'children'),'enable','on');
-%     set(get(handles.panel_psd,'children'),'enable','on');
-    set(handles.pop_spectral_method,'enable','on');
-    set(handles.push_add_psd,'enable','on');
-    set(get(handles.panel_artifact,'children'),'enable','on');
+        %pc's do not have a problem with case; unfortunately the other side
+        %does
+        if(ispc)
+            edf_file_list = dir(fullfile(path,'*.EDF'));
+        else
+            edf_file_list = [dir(fullfile(path, '*.EDF'));dir(fullfile(path, '*.edf'))]; %dir(fullfile(path, '*.EDF'))];
+        end
         
-    first_edf_filename = edf_file_list(1).name;
-    HDR = loadEDF(fullfile(path,first_edf_filename));
-    EDF_labels = HDR.label;
-end;
+        num_edfs_all = numel(edf_file_list);
+        
 
-GUI_TEMPLATE.EDF.labels = EDF_labels;
-
-set(handles.text_edfs_to_process,'string',EDF_message);
-
-%adjust all popupmenu selection data/strings for changed EDF labels
-set(...
-    findobj(handles.figure1,'-regexp','tag','.*channel.*'),...
-    'string',EDF_labels);
+        
+        if(~isempty(playlist))  
+            edf_file_list = filterPlaylist(edf_file_list,playlist);
+        end
+        num_edfs = numel(edf_file_list);
+        bytes_cell = cell(num_edfs,1);
+        [bytes_cell{:}]=edf_file_list.bytes;
+        total_bytes = sum(cell2mat(bytes_cell))/1E6;
+        if(~isempty(playlist))
+            EDF_message = [num2str(num_edfs),' EDF files (',num2str(total_bytes,'%0.2f'),' MB) found in the current play list. '];
+        else
+            EDF_message = [num2str(num_edfs),' EDF files (',num2str(total_bytes,'%0.2f'),' MB) found in the current directory. '];
+        end
+    end;
+    
+    if(num_edfs==0)
+        
+        if(num_edfs_all==0)
+            EDF_message = [EDF_message, 'Please choose a different directory'];
+            set(get(handles.bg_panel_playlist,'children'),'enable','off');
+            
+        else
+            EDF_message = [EDF_message, 'Please select a different play list or use ''All'''];
+        end
+        
+        set(handles.push_run,'enable','off');
+        EDF_labels = 'No Channels Available';
+        set(get(handles.panel_synth_CHANNEL,'children'),'enable','off');
+        set(get(handles.panel_events,'children'),'enable','off');
+        set(get(handles.panel_psd,'children'),'enable','off');
+        set(get(handles.panel_artifact,'children'),'enable','off');
+        
+    else
+        set(get(handles.panel_synth_CHANNEL,'children'),'enable','on');
+        set(handles.edit_synth_CHANNEL_name,'enable','off');
+        set(handles.push_run,'enable','on');
+        set(get(handles.panel_events,'children'),'enable','on');
+        %     set(get(handles.panel_psd,'children'),'enable','on');
+        set(handles.pop_spectral_method,'enable','on');
+        set(handles.push_add_psd,'enable','on');
+        set(get(handles.panel_artifact,'children'),'enable','on');
+        set(get(handles.bg_panel_playlist,'children'),'enable','on');
+        set(handles.edit_selectPlaylist,'enable','inactive');
+        
+        first_edf_filename = edf_file_list(1).name;
+        HDR = loadEDF(fullfile(path,first_edf_filename));
+        EDF_labels = HDR.label;
+    end;
+    
+    GUI_TEMPLATE.EDF.labels = EDF_labels;
+    
+    set(handles.text_edfs_to_process,'string',EDF_message);
+    
+    %adjust all popupmenu selection data/strings for changed EDF labels
+    set(...
+        findobj(handles.figure1,'-regexp','tag','.*channel.*'),...
+        'string',EDF_labels);
+end
 
 function edit_edf_directory_Callback(hObject, eventdata, handles)
 % hObject    handle to edit_edf_directory (see GCBO)
@@ -602,8 +694,8 @@ end
 BATCH_PROCESS.artifact_settings = artifact_settings;
 
 pathname = get(handles.edit_edf_directory,'string');
-
-batch_process(pathname,BATCH_PROCESS);
+playlist = getPlaylist(handles);
+batch_process(pathname,BATCH_PROCESS,playlist);
 % warndlg({'you are starting the batch mode with the following channels',BATCH_PROCESS.PSD_settings});
 
 %goal two - run the batch mode with knowledge of the PSD channel only...
@@ -783,7 +875,7 @@ function menu_event_callback(hObject,event_data,h_pop_channels,h_push_settings)
 global GUI_TEMPLATE;
 choice = get(hObject,'value');
 set(h_pop_channels,'visible','off');
-for k=1:GUI_TEMPLATE.detection.reqd_indices(choice)    
+for k=1:min(GUI_TEMPLATE.detection.reqd_indices(choice),2)    
     set(h_pop_channels(k),'visible','on','enable','on','string',GUI_TEMPLATE.EDF.labels);
 end
 
@@ -827,8 +919,13 @@ disp('Cancelling batch job');
 set(hObject,'userdata',user_cancelled);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%
-function batch_process(pathname, BATCH_PROCESS)
+function batch_process(pathname, BATCH_PROCESS,playlist)
 %this function executes the batch job with the specified parameters
+
+%default to all - i.e. process all .edf's found in pathname
+if(nargin<3)
+    playlist = [];
+end
 global MARKING;
 
 
@@ -860,8 +957,11 @@ if(pathname)
         file_list = [dir(fullfile(pathname, '*.EDF'));dir(fullfile(pathname, '*.edf'))]; %dir(fullfile(path, '*.EDF'))];
     end
     
-    MARKING.STATE.batch_process_running = true;
+    if(~isempty(playlist))
+        file_list = filterPlaylist(file_list, playlist);        
+    end
     
+    MARKING.STATE.batch_process_running = true;
     
     %reference sev.m - sev_OpeningFcn (line ~192)
     BATCH_PROCESS.output_path.current = fullfile(BATCH_PROCESS.output_path.parent);
@@ -1785,3 +1885,71 @@ catch ME
     end
 end
     
+
+
+% --- Executes on selection change in menu_playlist.
+function menu_playlist_Callback(hObject, eventdata, handles)
+% hObject    handle to menu_playlist (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: contents = cellstr(get(hObject,'String')) returns menu_playlist contents as cell array
+%        contents{get(hObject,'Value')} returns selected item from menu_playlist
+
+
+% --- Executes during object creation, after setting all properties.
+function menu_playlist_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to menu_playlist (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: popupmenu controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+% --- Executes during object creation, after setting all properties.
+function edit_selectPlaylist_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to edit_selectPlaylist (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+% --- Executes when selected object is changed in bg_panel_playlist.
+function bg_panel_playlist_SelectionChangeFcn(hObject, eventdata, handles)
+% hObject    handle to the selected object in bg_panel_playlist 
+% eventdata  structure with the following fields (see UIBUTTONGROUP)
+%	EventName: string 'SelectionChanged' (read only)
+%	OldValue: handle of the previously selected object or empty if none was selected
+%	NewValue: handle of the currently selected object
+% handles    structure with handles and user data (see GUIDATA)
+if(eventdata.NewValue==handles.radio_processList)
+    playlist = getPlaylist(handles);
+    if(isempty(playlist))
+        playlist = getPlaylist(handles,'-gui');
+    end
+    handles.user.playlist = playlist;
+    guidata(hObject,handles);
+    
+end
+
+
+% --- If Enable == 'on', executes on mouse press in 5 pixel border.
+% --- Otherwise, executes on mouse press in 5 pixel border or over edit_selectPlaylist.
+function edit_selectPlaylist_ButtonDownFcn(hObject, eventdata, handles)
+% hObject    handle to edit_selectPlaylist (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+[playlist,ply_filename] = getPlaylist(handles,'-gui');
+
+handles.user.playlist = playlist;
+guidata(hObject,handles);

@@ -2734,12 +2734,14 @@ classdef CLASS_events_container < handle
                 %                     o-deal/
                 
             end
+            
             detection_struct.mfile = mfile;
             detection_struct.evt_label = evt_label;
             detection_struct.num_reqd_indices = num_reqd_indices;
             detection_struct.param_gui = param_gui;
             detection_struct.batch_mode_label = batch_mode_label;
             detection_struct.params = params; %for storage of parameters as necessary
+            
         end %end loadDetectionMethodsInf
         
         

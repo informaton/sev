@@ -60,7 +60,7 @@ classdef CLASS_SSC_database < CLASS_database
                 end
             end
             
-            obj.create_DB(obj.dbStruct);
+            obj.create_DB();
             
             %% these functions create the named tables
             %these functions create the named tables

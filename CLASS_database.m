@@ -39,12 +39,41 @@ classdef CLASS_database < handle
     methods
         % ======================================================================
         %> @brief Abstract method to open the database associated with the
-        %derived class.
+        %> derived class.
         %> @param obj CLASS_database derivded instance.
         % =================================================================
         function open(obj)
             obj.openDB(obj.dbStruct);
         end  
+        
+        % ======================================================================
+        %> @brief Builds a mysql database and sets up permissions to modify
+        %> for the designated user.
+        %> @param obj Instance of CLASS_database
+        % =================================================================
+        function create_DB(obj)
+            % Author: Hyatt Moore IV
+            % Created 12/27/11
+            %
+            % Last Modified 1/5/12
+            mym('open','localhost','root')
+            
+            %setup a user for this person
+            mym(['GRANT ALL ON ',obj.dbStruct.name,'.* TO ''',obj.dbStruct.user,'''@''localhost'' IDENTIFIED BY ''',obj.dbStruct.password,'''']);
+            mym('close');
+            
+            
+            
+            %login as the new user ...
+            mym('open','localhost',obj.dbStruct.user,obj.dbStruct.password);
+            
+            %make the database to use
+            mym(['DROP DATABASE IF EXISTS ',obj.dbStruct.name]);
+            mym(['CREATE DATABASE IF NOT EXISTS ',obj.dbStruct.name]);
+            
+            mym('CLOSE');            
+            
+        end
         
         % ======================================================================
         %> @brief Creates StageStats_T table and populates it for WSC using
@@ -125,37 +154,7 @@ classdef CLASS_database < handle
             end
         end
         
-        % ======================================================================
-        %> @brief Builds a mysql database and sets up permissions to modify
-        %> for the designated user.
-        %> @param dbStruct A structure containing database accessor fields:
-        %> @li @c name Name of the database to use (string)
-        %> @li @c user Database user (string)
-        %> @li @c password Password for @c user (string)
-        % =================================================================
-        function create_DB(dbStruct)
-            % Author: Hyatt Moore IV
-            % Created 12/27/11
-            %
-            % Last Modified 1/5/12
-            mym('open','localhost','root')
-            
-            %setup a user for this person
-            mym(['GRANT ALL ON ',dbStruct.name,'.* TO ''',dbStruct.user,'''@''localhost'' IDENTIFIED BY ''',dbStruct.password,'''']);
-            mym('close');
-            
-            
-            
-            %login as the new user ...
-            mym('open','localhost',dbStruct.user,dbStruct.password);
-            
-            %make the database to use
-            mym(['DROP DATABASE IF EXISTS ',dbStruct.name]);
-            mym(['CREATE DATABASE IF NOT EXISTS ',dbStruct.name]);
-            
-            mym('CLOSE');            
-            
-        end
+
         
         % ======================================================================
         %> @brief This creates a DetectorInfo_T table based on the provided
@@ -457,13 +456,11 @@ classdef CLASS_database < handle
             
             if(nargin<3 || isempty(montage_suite))
                 montage_suite = 'Unknown';
-            end
-            
+            end            
             
             if(nargin<2)
                 edf_directory = uigetdir(pwd,'Select Study (.EDF) directory');
-            end
-            
+            end            
             
             if(~isempty(edf_directory))
                 edf_files = getFilenames(edf_directory,'*.EDF');
