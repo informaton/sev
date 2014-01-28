@@ -104,6 +104,8 @@ classdef CLASS_WSC_database < CLASS_database
                 obj.populate_Events_T(evt_pathname,obj.dbStruct);
             end
             
+            obj.create_Bloodiron_T();
+
             system(sprintf('mysql -u%s -p%s %s < %s',obj.dbUser,obj.dbPassword,obj.dbName,plm_dumpfile),'-echo');
 
             
@@ -200,6 +202,8 @@ classdef CLASS_WSC_database < CLASS_database
             if(~isempty(evt_pathname))
                 obj.populate_Events_T(evt_pathname,obj.dbStruct);
             end
+            
+            obj.create_Bloodiron_T();
         end       
         
         % ======================================================================
@@ -616,7 +620,7 @@ classdef CLASS_WSC_database < CLASS_database
         %> measures taken by Jason (string)
         %> @note Blood_T is overwritten in the case it already exists (i.e.
         %> first dropped, then created)
-        function create_Blood_T(obj,blood_xls_filename)
+        function create_Bloodiron_T(obj,blood_xls_filename)
             %
             % Author: Hyatt Moore IV
             % created 7/31/12
@@ -629,6 +633,8 @@ classdef CLASS_WSC_database < CLASS_database
             
             %Default values originally used with Jason            
             if(nargin<2 || isempty(diagnostics_xls_filename))
+                %                 xls_filename = 'all_available_WSC_with_patids_testdates_and_priority-ling1-jl-12-10b.xls'; %provided by Jason on 12/14/2012
+                %                 wsc_blood_filename = fullfile(data_path,xls_filename);
                 [blood_xls_filename, pathname, filterindex] = uigetfile({'*.xls','Microsoft Excel (*.xls)';'*.xlsx','Microsoft Excel (*.xlsx)'},'Select WSC Blood data file');
                 
                 if(isnumeric(blood_xls_filename) && ~blood_xls_filename)
@@ -637,6 +643,7 @@ classdef CLASS_WSC_database < CLASS_database
                     blood_xls_filename = fullfile(pathname,blood_xls_filename);
                 end
             end
+            
             %             data_path = '/Volumes/Macintosh HD 2/Sleep/PLM/DataFiles';
             % Important columns to get are serum iron, ferritin, ln ferritin, transferrin, TSAT, CRP mean, ln CRP, and TIBC.
             %             xls_filename = 'all_available_WSC_with_patids_testdates_and_priority-ling1-jl-12-10.xls'; %provided by Jason on 12/12/2012
