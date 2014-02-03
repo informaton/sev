@@ -54,7 +54,7 @@ classdef CLASS_WSC_database < CLASS_database
             %       studynum)
             
             % make the database for the WSC
-            obj.create_DB();
+            obj.create_DB(obj.dbStruct);
             
             system(sprintf('mysql -u%s -p%s %s < %s',obj.dbUser,obj.dbPassword,obj.dbName,studyinfo_dumpfile),'-echo');
             
@@ -658,8 +658,8 @@ classdef CLASS_WSC_database < CLASS_database
                 
                 mym(['CREATE TABLE IF NOT EXISTS ',tableName,'('...
                     ' PatStudyKey SMALLINT UNSIGNED NOT NULL'...
-                    ', serum_iron DECIMAL (6,3) UNSIGNED'...
-                    ', serum_iron_new DECIMAL (6,3) UNSIGNED'...
+                    ', serumiron DECIMAL (6,3) UNSIGNED'...
+                    ', serumiron_new DECIMAL (6,3) UNSIGNED'...
                     ', ferritin DECIMAL (6,2) UNSIGNED'...
                     ', ln_ferritin DECIMAL (6,3) UNSIGNED'...
                     ', ferritin_mod DECIMAL (6,2) UNSIGNED'...
@@ -674,7 +674,6 @@ classdef CLASS_WSC_database < CLASS_database
                     ', any_cvd BOOL default true'...
                     ', any_vascular BOOL default true'...
                     ', hbp BOOL default true'...
-                    ', has_good_iron_sample BOOL default true'...
                     ', PRIMARY KEY (PatStudyKey)'...
                     ')']);
 
@@ -700,7 +699,6 @@ classdef CLASS_WSC_database < CLASS_database
                     'any_cvd';
                     'any_vascular';
                     'hbp';
-                    'has_good_iron_sample';  %add this below when it exists...
                     };
                 
                 fields_fmt = {'%u';
@@ -717,7 +715,6 @@ classdef CLASS_WSC_database < CLASS_database
                     '%0.3f';
                     '%0.3f';
                     '%0.3f';
-                    '%u';
                     '%u';
                     '%u';
                     '%u'};
@@ -740,7 +737,6 @@ classdef CLASS_WSC_database < CLASS_database
                 fields_in{15} = 'any_cvd';
                 fields_in{16} = 'any_vascular';
                 fields_in{17} = 'hbp';
-                fields_in{18} = 'have serum';
 
                 
                 columnNames = '';
