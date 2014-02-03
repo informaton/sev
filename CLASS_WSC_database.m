@@ -725,21 +725,21 @@ classdef CLASS_WSC_database < CLASS_database
                 fields_in = fields_out;
                 fields_in{1} = 'patstudykey';
                 fields_in{2} = 'serum_iron';
-                fields_in(3) = 'serum_iron_new';
+                fields_in{3} = 'serum_iron_new';
                 fields_in{4} = 'ferritin_mean';
                 fields_in{5} = 'ln_ferritin';
-                fields_in(6) = 'ferritin_mod';
-                fields_in(7) = 'ln_ferritin_mod';
-                fields_in(8) = 'transferrin';
+                fields_in{6} = 'ferritin_mod';
+                fields_in{7} = 'ln_ferritin_mod';
+                fields_in{8} = 'transferrin';
                 fields_in{9} = 'tsat';
                 fields_in{10} = 'tibc';
                 fields_in{11} = 'tsat_new';
                 fields_in{12} = 'tibc_new';
                 fields_in{13} = 'crp_mean';
                 fields_in{14} = 'ln_crp';
-                fields_in(15) = 'any_cvd';
-                fields_in(16) = 'any_vascular';
-                fields_in(17) = 'hbp';
+                fields_in{15} = 'any_cvd';
+                fields_in{16} = 'any_vascular';
+                fields_in{17} = 'hbp';
                 fields_in{18} = 'have serum';
 
                 
