@@ -1281,13 +1281,13 @@ if(pathname)
 assignin('base','files_completed',files_completed);
 
 try
-%     matlabpool open
+     matlabpool open
 catch me
    showME(me)  
 end
-%     parfor i = 1:file_count
+    parfor i = 1:file_count
 
-    for i = 1:file_count
+%     for i = 1:file_count
       tStart = tic;
       configID = [];
       detectorID = [];
@@ -1642,7 +1642,9 @@ end
           files_skipped(i) = true;
       end %end if not batch_process.cancelled
     end; %end for all files
-%     matlabpool close;
+    
+    matlabpool close;
+    
     num_files_completed = sum(files_completed);
     num_files_skipped = sum(files_skipped);
 %     waitHandle = findobj('tag','waitbarTag');
