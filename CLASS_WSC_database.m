@@ -54,7 +54,7 @@ classdef CLASS_WSC_database < CLASS_database
             %       studynum)
             
             % make the database for the WSC
-            obj.create_DB(obj.dbStruct);
+            obj.create_DB();
             
             system(sprintf('mysql -u%s -p%s %s < %s',obj.dbUser,obj.dbPassword,obj.dbName,studyinfo_dumpfile),'-echo');
             
