@@ -71,7 +71,7 @@ set(handles.menu_assign,'string',channel_names);
 handles.save_settings_filename = 'DBase_dlg.mat';
 
 DBfilename = 'database.inf';
-handles.DBase = loadDatabaseStructFromInf(DBfilename);
+handles.DBase = CLASS_database.loadDatabaseStructFromInf(DBfilename);
 handles.DB = [];
 
 set(handles.table_detectconfig,'columnformat',{'char','char'},'units','normalized');

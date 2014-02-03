@@ -523,7 +523,7 @@ classdef CLASS_database < handle
             TableName = lower(TableName);
             
             
-            openDB(dbStruct);
+            CLASS_database.openDB(dbStruct);
             mym('SET autocommit = 0');
             mym(['DROP TABLE IF EXISTS ',TableName]);
             mym(['CREATE TABLE IF NOT EXISTS ',TableName,'('...
@@ -1232,6 +1232,8 @@ classdef CLASS_database < handle
         %> @li @c user Database user (string)
         %> @li @c password Password for @c user (string)
         function database_struct = loadDatabaseStructFromInf(inf_filename,optional_choice)
+            %Hyatt Moore, IV (< June, 2013)
+
             database_struct = [];
             if(exist(inf_filename,'file'))
                 fid = fopen(inf_filename,'r');
