@@ -658,33 +658,48 @@ classdef CLASS_WSC_database < CLASS_database
                 
                 mym(['CREATE TABLE IF NOT EXISTS ',tableName,'('...
                     ' PatStudyKey SMALLINT UNSIGNED NOT NULL'...
-                    ', serum DECIMAL (6,3) UNSIGNED'...
+                    ', serumiron DECIMAL (6,3) UNSIGNED'...
+                    ', serumiron_new DECIMAL (6,3) UNSIGNED'...
                     ', ferritin DECIMAL (6,2) UNSIGNED'...
                     ', ln_ferritin DECIMAL (6,3) UNSIGNED'...
+                    ', ferritin_mod DECIMAL (6,2) UNSIGNED'...
+                    ', ln_ferritin_mod DECIMAL (6,3) UNSIGNED'...
+                    ', transferrin DECIMAL (6,3) UNSIGNED'...
                     ', tsat DECIMAL (6,3) UNSIGNED'...
                     ', tibc DECIMAL (6,3) UNSIGNED'...
                     ', tsat_new DECIMAL (6,3) UNSIGNED'...
                     ', tibc_new DECIMAL (6,3) UNSIGNED'...
                     ', crp DECIMAL (10,2) UNSIGNED'...
                     ', ln_crp DECIMAL (6,3) UNSIGNED'...
+                    ', any_cvd BOOL default true'...
+                    ', any_vascular BOOL default true'...
+                    ', hbp BOOL default true'...
                     ', has_good_iron_sample BOOL default true'...
                     ', PRIMARY KEY (PatStudyKey)'...
                     ')']);
-                
+
                 [num,txt,raw]=xlsread(blood_xls_filename);
+                
                 
                 hdr = raw(1,:);
                 
                 fields_out = {'patstudykey';
-                    'serum';
+                    'serumiron';
+                    'serumiron_new';
                     'ferritin';
                     'ln_ferritin';
+                    'ferritin_mod';
+                    'ln_ferritin_mod';
+                    'transferrin';
                     'tsat';
                     'tibc';
                     'tsat_new';
                     'tibc_new';
                     'crp';
                     'ln_crp';
+                    'any_cvd';
+                    'any_vascular';
+                    'hbp';
                     'has_good_iron_sample';  %add this below when it exists...
                     };
                 
@@ -699,20 +714,34 @@ classdef CLASS_WSC_database < CLASS_database
                     '%0.3f';
                     '%0.3f';
                     '%0.3f';
+                    '%0.3f';
+                    '%0.3f';
+                    '%0.3f';
+                    '%u';
+                    '%u';
+                    '%u';
                     '%u'};
                 
                 fields_in = fields_out;
                 fields_in{1} = 'patstudykey';
                 fields_in{2} = 'serum_iron';
-                fields_in{3} = 'ferritin_mean';
-                fields_in{4} = 'ln ferritin';
-                fields_in{5} = 'tsat';
-                fields_in{6} = 'tibc';
-                fields_in{7} = 'tsat_new';
-                fields_in{8} = 'tibc_new';
-                fields_in{9} = 'crp_mean';
-                fields_in{10} = 'ln_crp';
-                fields_in{11} = 'have serum';
+                fields_in(3) = 'serum_iron_new';
+                fields_in{4} = 'ferritin_mean';
+                fields_in{5} = 'ln_ferritin';
+                fields_in(6) = 'ferritin_mod';
+                fields_in(7) = 'ln_ferritin_mod';
+                fields_in(8) = 'transferrin';
+                fields_in{9} = 'tsat';
+                fields_in{10} = 'tibc';
+                fields_in{11} = 'tsat_new';
+                fields_in{12} = 'tibc_new';
+                fields_in{13} = 'crp_mean';
+                fields_in{14} = 'ln_crp';
+                fields_in(15) = 'any_cvd';
+                fields_in(16) = 'any_vascular';
+                fields_in(17) = 'hbp';
+                fields_in{18} = 'have serum';
+
                 
                 columnNames = '';
                 
