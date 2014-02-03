@@ -111,6 +111,8 @@ classdef CLASS_database < handle
             mym('select * from {S} INTO OUTFILE ''{S}''',tableName,outFile);            
         end
         
+
+        
     end
     
     methods(Static)
@@ -569,9 +571,6 @@ classdef CLASS_database < handle
                     filecount = numel(dirStruct);
                     filenames = cell(numel(dirStruct),1);
                     [filenames{:}] = dirStruct.name;
-                
-                
-                
                 
                     %PTSD_format...
                     if(strmatch('PTSD',dbStruct.name))
@@ -1112,6 +1111,7 @@ classdef CLASS_database < handle
             fclose(fid);
         end
         
+        
         % ======================================================================
         %> @brief Outputs mym query output statment to the console or string output.
         %> @param q The mym query result to be displayed
@@ -1518,6 +1518,8 @@ classdef CLASS_database < handle
             end
         end
         
+        
+            
         % @brief Export parts of WSC Diagnostics_T to tab delimited text
         % file
         % @param txt_filname Name of the file to write data to (it will be
@@ -1561,8 +1563,46 @@ classdef CLASS_database < handle
             
             fclose(fid);
         end
-    
         
+        function exportQuery2File(query, filename, optional_delim)
+            if(isstruct(query))
+                q = query;
+            else
+                q = mym(query);
+            end
+            fields = fieldnames(q);
+            fid = fopen(filename,'w');
+            
+            if(fid<=0)
+                fprintf('File could not be opened for writing!');
+            else
+                if(nargin<3)
+                    delim='\t';
+                else
+                    delim =optional_delim;
+                end
+                for f=1:numel(fields)
+                    fprintf(fid,strcat('%s',delim),fields{f});
+                end
+                
+                
+                for p=1:numel(q.patstudykey)
+                    fprintf(fid,'\n');
+                    for f=1:numel(fields)
+                        if(iscell(q.(fields{f})))
+                            fprintf(fid,strcat('%s',delim),q.(fields{f}){p});
+                        else
+                            if(isnan(q.(fields{f})(p)))
+                                fprintf(fid,delim);
+                            else
+                                fprintf(fid,strcat('%0.2f',delim),q.(fields{f})(p));
+                            end
+                        end
+                    end
+                end
+                fclose(fid);
+            end            
+        end
     end
     
 end

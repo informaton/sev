@@ -68,18 +68,20 @@ if(exist(filename,'file'))
     x{3}(x{3}==0)=300; %make the default be 1.5 second duration.
     x{3}(isnan(x{3}))=300; %make the default be 1.5 second duration - typical case for Leg Movement to not have a value listed...
 
-    EDF_filename = [filename(1:end-3),'EDF'];
+%     EDF_filename = [filename(1:end-3),'EDF'];
 
-    if(exist(EDF_filename,'file'))
-        HDR = loadHDR(EDF_filename);
-        samplerate = mode(HDR.samplerate);
-        conversion_factor=100/samplerate;
-    else
-        samplerate = 100;
-        conversion_factor = 1;
-    end
-    
-    SCO.start_stop_matrix = floor([x{2},x{2}+x{3}]*conversion_factor/2); %remove any problems with the 0.5 indexing that can occur here
+%     if(exist(EDF_filename,'file'))
+%         HDR = loadHDR(EDF_filename);
+%         samplerate = max(HDR.samplerate);
+%         conversion_factor=100/samplerate;
+%     else
+%         samplerate = 100;
+%         conversion_factor = 1;
+%     end
+
+    samplerate = 100;
+    conversion_factor = 1;
+    SCO.start_stop_matrix = floor([x{2},x{2}+x{3}]*conversion_factor); %remove any problems with the 0.5 indexing that can occur here
 
 
     SCO.duration_seconds = x{3}/samplerate;
