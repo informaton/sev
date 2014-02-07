@@ -269,7 +269,7 @@ function filtered_file_struct = filterPlaylist(file_struct,file_filter_list)
 if(~isempty(file_filter_list))
     filename_cell = cell(numel(file_struct),1);
     [filename_cell{:}] = file_struct.name;
-    [~,~,intersect_indices] = intersect(file_filter_list,filename_cell); %need to handle case sensitivity
+    [~,~,intersect_indices] = intersect(file_filter_list,filename_cell);  %need to handle case sensitivity
     filtered_file_struct = file_struct(intersect_indices);
 else
    filtered_file_struct = file_struct;  %i.e. nothing to filter 
