@@ -8,5 +8,9 @@ function filenames = getPathnames(path)
     directory_flag = cells2mat(dirPull.isdir);
     names = cells2cell(dirPull.name);
     filenames = names(directory_flag);
+    unused_dir = strncmp(filenames,'.',1)|strncmp(filenames,'..',2);
+    if(~isempty(unused_dir))
+        filenames(unused_dir) = [];
+    end
 end 
 

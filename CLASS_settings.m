@@ -94,15 +94,24 @@ classdef  CLASS_settings < handle
             end;
             
             while(file_open)
+                try
                 curline = fgetl(fid);
                 if(~ischar(curline))
                     file_open = false;
                 else
                     tok = regexp(curline,pat,'tokens');
-                    if(~isempty(tok) && ~strcmpi(tok{1},'-last'))
+                    if(numel(tok)>1 && ~strcmpi(tok{1},'-last') && isempty(strfind(tok{1}{1},'#')))
+                        %hack/handle the empty case
+                        if(numel(tok)==2)
+                            tok{3} = {''};
+                        end
                         pstruct = CLASS_settings.tokens2struct(pstruct,tok);
                     end
                 end;
+                catch me
+                    showME(me);
+                    fclose(fid);
+                end  
             end;
         end
         

@@ -1215,10 +1215,27 @@ classdef CLASS_database < handle
             end
             if(mym_status~=0)
                 mym('close');
-            end
-            
+            end            
         end
-        
+                
+        % ======================================================================
+        %> @brief Retrieves cohort descriptor data as a struct from
+        %> the .inf filename provided.
+        %> @param inf_filename Full filename (i.e. path included) of text
+        %> file containing cohort descriptor data as tab-delimited entries.
+        %> @retval cohortSstruct A structure containing database accessor fields:
+        %> @li @c name Name of the database to use (string)
+        %> @li @c user Database user (string)
+        %> @li @c password Password for @c user (string)
+        function cohortStruct = loadCohortStruct(struct_filename)
+            %Hyatt Moore, IV (< June, 2013)
+            cohortStruct = [];
+            if(exist(struct_filename,'file'))
+                fid = fopen(struct_filename,'r');
+                cohortStruct = CLASS_settings.loadStruct(fid);
+                fclose(fid);              
+            end
+        end        
         
         % ======================================================================
         %> @brief Retrieves database access data as a struct from
@@ -1252,6 +1269,7 @@ classdef CLASS_database < handle
                 end
             end
         end
+        
         
         %> @brief Calculates cycle vector from .STA files and creates a .STA2 file 
         %> (i.e. a new file with a .STA2 extension) which has a third column for the stage cycle:
