@@ -1,5 +1,6 @@
 #MATLAB_filename   Label Number_of_channels_required Dialog_name Batch_mode_score
 detection_handj  handj 10 plist_editor_dlg handj
+detection_nasalpres_amplitude_HK nasalpres_amplitude_HK 5 plist_editor_dlg nasalpres_amplitude_HK
 detection_ocular_dualthreshold eog_dualthresh 1 plist_editor_dlg eog_dual
 detection_ocular_gopal eog_gopal 1 plist_editor_dlg eog_gopal
 detection_ocular_quadrants eog_quadrants 2 plist_editor_dlg eog_quads
