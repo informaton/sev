@@ -24,7 +24,7 @@ function SCO = loadSCOfile(filename)
 %  correctly as well.  The mode sample rate from the EDF hdr is used for
 %  converting 
 % modified 12/15/12 
-%  3. last argument to textscan schanged to a regular expression since new
+%  3. last argument to textscan has changed to a regular expression since new
 %  files had extra columns at the end which are causing problems with the
 %  imports.
 

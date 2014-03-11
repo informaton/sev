@@ -20,6 +20,9 @@ end;
 if(nargin>2)
     disp('Too many input arguments in loadEDF.  Extra input arguments are ignored');
 end;
+
+%handle filenames with unicode characters in them
+filename = char(unicode2native(filename,'utf-8'));
 fid = fopen(filename,'r');
 precision = 'uint8';
 

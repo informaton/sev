@@ -4,15 +4,18 @@
 function fullfilename = uigetfullfile(filter_cell,display_message,multiselect_option)
 
 if(nargin<3 || (~strcmpi(multiselect_option,'on') || ~strcmpi(multiselect_option,'off')))
-    multiselect_option = 'off';
-    [filename, pathname, ~] = uigetfile(filter_cell,display_message,'MultiSelect',multiselect_option);
-    
-    if(isnumeric(filename) && ~filename)
-        fullfilename = [];
-    else
-        fullfilename = fullfile(pathname,filename);
-    end
-    if(~exist(fullfilename,'file'))
-        fullfilename = [];
-    end
+    [filename, pathname, ~] = uigetfile(filter_cell,display_message);
+else
+    [filename, pathname, ~] = uigetfile(filter_cell,display_message,'MultiSelect',multiselect_option);    
+end
+
+if(isnumeric(filename) && ~filename)
+    fullfilename = [];
+else
+    fullfilename = fullfile(pathname,filename);
+end
+if(~exist(fullfilename,'file'))
+    fullfilename = [];
+end
+
 end

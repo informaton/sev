@@ -1,16 +1,22 @@
-function filenames = getPathnames(path)
 %filenames = getPathnames(path)
 % 
-% directory wrapper to get just filenames in the given directory
+% directory wrapper to get names of any subdirectories contained in pathname (i.e. a directory)
+function [pathnames, fullpathnames] = getPathnames(srcPathname)
 
 %Hyatt Moore, IV (< June, 2013)
-    dirPull = dir(fullfile(path));
+    dirPull = dir(fullfile(srcPathname));
     directory_flag = cells2mat(dirPull.isdir);
     names = cells2cell(dirPull.name);
-    filenames = names(directory_flag);
-    unused_dir = strncmp(filenames,'.',1)|strncmp(filenames,'..',2);
+    pathnames = names(directory_flag);
+    unused_dir = strncmp(pathnames,'.',1)|strncmp(pathnames,'..',2);
     if(~isempty(unused_dir))
-        filenames(unused_dir) = [];
+        pathnames(unused_dir) = [];
+    end
+    if(nargout>1)
+        fullpathnames = cell(size(pathnames));
+        for f=1:numel(fullpathnames)
+            fullpathnames{f} = fullfile(srcPathname, pathnames{f});
+        end
     end
 end 
 
