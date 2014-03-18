@@ -183,81 +183,88 @@ classdef CLASS_channel < handle
         % =================================================================
         function obj = filter(obj, filterStructIn)
           
-          if(isempty(filterStructIn))
-              
-              obj.filterStruct = filterStructIn;
-              obj.filter_data = [];
-              obj.show_filtered = false;              
-          else
-              %check if I have a filterStruct already and then only update if
-              %it is different,
-              numNewFilters = numel(filterStructIn);
-              numOldFilters = numel(obj.filterStruct);
-%               firstDifference = numel(obj.filterStruct)+1; % will be 1 if obj.filterStruct is empty, which is what we want
-              filterdifferences = false(numNewFilters,1);
-              %check if we have the same filterStruct coming is as already
-              %an instance variable of our class.  If so, we do not want to
-              %repeat our work.  
-              if(~isempty(obj.filterStruct))
-                  if(numNewFilters<numOldFilters)
-                      filterdifferences = true;
-                  else
-                      if(numNewFilters>numOldFilters)
-                          filterdifferences(numOldFilters+1) = true; %there is guaranteed to be a difference the newest filter addition
-                      end
-                      for k=1:min(numNewFilters,numOldFilters)
-                          if(~isequal(obj.filterStruct(k),filterStructIn(k)))
-                              filterdifferences(k) = true;
-                          end
-                      end
-                  end
-              
-              %if no obj.filterStruct, then use the new one coming in.
-              else
-                  filterdifferences = true; %just set to the first one
-              end
-              firstDifference = find(filterdifferences,1,'first');
-              
-              %if it is empty, then there is nothing different and no need
-              %to filter again.
-              if(~isempty(firstDifference))
-                  if(firstDifference<=numel(obj.filterStruct))
-                      firstDifference = 1;
-                      obj.filter_data = [];
-                  end
-                  obj.show_filtered = true;
-                  obj.filterStruct = filterStructIn;
-                  for k=firstDifference:numNewFilters %just handle the new cases, or starting from number 1;
-                      filterS = obj.filterStruct(k);
-                      if(obj.channel_index==filterS.src_channel_index)
-                          
-                          %handle the case where parameters are passed in
-                          %from previous settings
-                          if(~isempty(filterS.params)) 
-                              filterS.params.samplerate = obj.samplerate; %needed at times in filters where the data is sent directly - otherwise a blank argument is passed to the function which then loads the data itself
-                              if(isempty(filterS.ref_channel_index))
-                                  obj.filter_data =feval([filterS.filter_path(2:end),'.',filterS.m_file],obj.getData(),filterS.params);
-                              else
-                                  obj.filter_data =feval([filterS.filter_path(2:end),'.',filterS.m_file],obj.getData(),filterS.ref_data,filterS.params);
-                              end
-                          else
-                              if(isempty(filterS.ref_channel_index))
-                                  obj.filter_data =feval([filterS.filter_path(2:end),'.',filterS.m_file],obj.channel_index);
-                              else
-                                  obj.filter_data =feval([filterS.filter_path(2:end),'.',filterS.m_file],obj.channel_index,filterS.ref_channel_index);
-                              end
-                          end
-                          
-                          %make sure we stay with row vectors for
-                          %consistency throughout gsev
-                          if(size(obj.filter_data,2)>size(obj.filter_data,1))
-                              obj.filter_data = obj.filter_data';
-                          end
-                      end
-                  end
-              end
-          end
-        end;
+            try
+                if(isempty(filterStructIn))
+                    
+                    obj.filterStruct = filterStructIn;
+                    obj.filter_data = [];
+                    obj.show_filtered = false;
+                else
+                    %check if I have a filterStruct already and then only update if
+                    %it is different,
+                    numNewFilters = numel(filterStructIn);
+                    numOldFilters = numel(obj.filterStruct);
+                    %               firstDifference = numel(obj.filterStruct)+1; % will be 1 if obj.filterStruct is empty, which is what we want
+                    filterdifferences = false(numNewFilters,1);
+                    %check if we have the same filterStruct coming is as already
+                    %an instance variable of our class.  If so, we do not want to
+                    %repeat our work.
+                    if(~isempty(obj.filterStruct))
+                        if(numNewFilters<numOldFilters)
+                            filterdifferences = true;
+                        else
+                            if(numNewFilters>numOldFilters)
+                                filterdifferences(numOldFilters+1) = true; %there is guaranteed to be a difference the newest filter addition
+                            end
+                            for k=1:min(numNewFilters,numOldFilters)
+                                if(~isequal(obj.filterStruct(k),filterStructIn(k)))
+                                    filterdifferences(k) = true;
+                                end
+                            end
+                        end
+                        
+                        %if no obj.filterStruct, then use the new one coming in.
+                    else
+                        filterdifferences = true; %just set to the first one
+                    end
+                    firstDifference = find(filterdifferences,1,'first');
+                    
+                    %if it is empty, then there is nothing different and no need
+                    %to filter again.
+                    if(~isempty(firstDifference))
+                        if(firstDifference<=numel(obj.filterStruct))
+                            firstDifference = 1;
+                            obj.filter_data = [];
+                        end
+                        obj.show_filtered = true;
+                        obj.filterStruct = filterStructIn;
+                        for k=firstDifference:numNewFilters %just handle the new cases, or starting from number 1;
+                            filterS = obj.filterStruct(k);
+                            if(obj.channel_index==filterS.src_channel_index)
+                                
+                                %handle the case where parameters are passed in
+                                %from previous settings
+                                if(~isempty(filterS.params))
+                                    filterS.params.samplerate = obj.samplerate; %needed at times in filters where the data is sent directly - otherwise a blank argument is passed to the function which then loads the data itself
+                                    if(isempty(filterS.ref_channel_index))
+                                        obj.filter_data =feval([filterS.filter_path(2:end),'.',filterS.m_file],obj.getData(),filterS.params);
+                                    else
+                                        obj.filter_data =feval([filterS.filter_path(2:end),'.',filterS.m_file],obj.getData(),filterS.ref_data,filterS.params);
+                                    end
+                                else
+                                    if(isempty(filterS.ref_channel_index))
+                                        obj.filter_data =feval([filterS.filter_path(2:end),'.',filterS.m_file],obj.getData());
+                                    else
+                                        obj.filter_data =feval([filterS.filter_path(2:end),'.',filterS.m_file],obj.channel_index,filterS.ref_channel_index);
+                                    end
+                                end
+                                
+                                %make sure we stay with row vectors for
+                                %consistency throughout gsev
+                                if(size(obj.filter_data,2)>size(obj.filter_data,1))
+                                    obj.filter_data = obj.filter_data';
+                                end
+                            end
+                        end
+                    end
+                end
+            catch me
+                showME(me);
+                obj.show_filtered = false;
+                obj.filterStruct = [];
+                rethrow(me);
+            end
+        end
         
         % =================================================================
         %> @brief assign class color property.

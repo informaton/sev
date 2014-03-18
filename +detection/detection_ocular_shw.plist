@@ -9,7 +9,7 @@
 	<key>moving_window_sec</key>
 	<real>0.200000</real>
 	<key>threshold_uv</key>
-	<real>70.000000</real>
+	<real>50.000000</real>
 	<key>merge_within_sec</key>
 	<real>0.050000</real>
 </dict>

@@ -904,11 +904,32 @@ classdef CLASS_channels_container < handle
                ME.stack(1).line
                ME.stack(1).file
                EDF_HDR = [];
+           end           
+       end       
+       
+       % =================================================================
+       %> @brief Load a single channel as defined by the input arguments
+       %> @param obj instance of CLASS_channel class.
+       %> @param channelData Row vector of channel's sample values
+       %> @param samplerate Sampling frequency used for the data.
+       %> @param channelLabel Label to describe the channel (string)
+       %> @retval obj instance of CLASS_channel class.
+       % =================================================================
+       function HDR = loadGenericChannel(obj,channelData,samplerate,channelLabel)
+           try
+               EDF_index = -1;
+               obj.addChannel(channelData,channelLabel,EDF_index,samplerate);
+               HDR.duration_sec = numel(channelData)/samplerate;
+               HDR.T0 = [2020 7 31 00 00 00];
+               HDR.label = {channelLabel};
+               HDR.fs = samplerate;
+               HDR.samplerate = samplerate;
+               HDR.duration_samples = numel(channelData);
+           catch ME
+               showME(ME);
+               HDR = [];
            end
-           
        end
-       
-       
        
        % =================================================================
        %> @brief

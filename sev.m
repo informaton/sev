@@ -144,6 +144,7 @@ set(ch,'backgroundcolor',figColor);
 
 ch = findobj(hObject,'-regexp','tag','text.*');
 
+ch(strcmp(get(ch,'type'),'uimenu'))=[];
 set(ch,'backgroundcolor',figColor);
 
 ch = findobj(hObject,'-regexp','tag','axes.*');

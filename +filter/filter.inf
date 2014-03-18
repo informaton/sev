@@ -22,6 +22,7 @@ filter_subtract_channel substract_channel 1 none SubtractAChannel
 nlfilter_delay nlfilter_delay 0 plist_editor_dlg Delay
 nlfilter_min_past nlfilter_min_past 0 plist_editor_dlg NLFilterMinPast
 nlfilter_max_future nlfilter_max_future 0 plist_editor_dlg NLFilterMaxFuture
+nlfilter_median_baseline_remover median_baseline_remover 0 plist_editor_dlg NLFilterMedianBaselineRemoval
 nlfilter_median nlfilter_median 0 plist_editor_dlg NLFilterMedian
 nlfilter_std nlfilter_std 0 plist_editor_dlg std
 nlfilter_quickrms nlfilter_quick_rms 0 plist_editor_dlg RMS

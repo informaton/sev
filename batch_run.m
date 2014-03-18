@@ -10,7 +10,7 @@ function varargout = batch_run(varargin)
 
 % Edit the above text to modify the response to help batch_run
 
-% Last Modified by GUIDE v2.5 27-Jan-2014 09:42:13
+% Last Modified by GUIDE v2.5 18-Mar-2014 14:14:18
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -60,7 +60,8 @@ else
         handles.menu_synth_CHANNEL_channel1,handles.edit_synth_CHANNEL_name});
     
     set(handles.menu_event_method,'string',GUI_TEMPLATE.detection.labels,'callback',...
-        {@menu_event_callback,[handles.menu_event_channel1,handles.menu_event_channel2],handles.push_event_settings});
+        {@menu_event_callback,[handles.menu_event_channel1,handles.menu_event_channel2],handles.push_event_settings,handles.buttonEventSelectSources});
+    
     
     userdata.channel_h = handles.menu_psd_channel;
     userdata.settings_h = handles.push_psd_settings;
@@ -69,7 +70,7 @@ else
         'enable','off','string',GUI_TEMPLATE.spectrum_labels);
     
     set(handles.menu_artifact_method,'string',GUI_TEMPLATE.detection.labels,'callback',...
-        {@menu_event_callback,[handles.menu_artifact_channel1,handles.menu_artifact_channel2],handles.push_artifact_settings});
+        {@menu_event_callback,[handles.menu_artifact_channel1,handles.menu_artifact_channel2],handles.push_artifact_settings,handles.buttonArtifactSelectSources});
     
     set(handles.push_psd_settings,'enable','off','userdata',MARKING.SETTINGS.PSD);
     
@@ -174,9 +175,11 @@ elseif(resized_panel_h==handles.panel_synth_CHANNEL)
 else
     hc1=uicontrol(GUI_TEMPLATE.channel1,'parent',resized_panel_h);
     hc2=uicontrol(GUI_TEMPLATE.channel2,'parent',resized_panel_h);
+    buttonEventSelectSources = uicontrol(GUI_TEMPLATE.buttonEventSelectSources,'parent',resized_panel_h);
+    
     h_check_save_img = uicontrol(GUI_TEMPLATE.check_save_image,'parent',resized_panel_h);
     h_params=uicontrol(GUI_TEMPLATE.push_parameter_settings,'parent',resized_panel_h);
-    uicontrol(GUI_TEMPLATE.evt_method,'parent',resized_panel_h,'callback',{@menu_event_callback,[hc1,hc2],h_params});
+    uicontrol(GUI_TEMPLATE.evt_method,'parent',resized_panel_h,'callback',{@menu_event_callback,[hc1,hc2],h_params,buttonEventSelectSources});
 end;
 
 
@@ -274,7 +277,6 @@ if(~isempty(file_filter_list))
 else
    filtered_file_struct = file_struct;  %i.e. nothing to filter 
 end
-
 
 function checkPathForEDFs(handles,playlist)
 %looks in the path for EDFs
@@ -551,8 +553,15 @@ if(iscell(event_method_values))
 end;
 
 event_settings_handles = flipud(findobj(handles.panel_events,'-regexp','tag','settings'));
+
 if(iscell(event_settings_handles))
     event_settings_handles = cell2mat(event_settings_handles);
+end
+
+
+event_multipleChannelsources_userdata = get(flipud(findobj(handles.panel_events,'-regexp','tag','buttonEventSelectSources')),'userdata');
+if(iscell(event_multipleChannelsources_userdata))
+    event_settings_handles = cell2mat(event_multipleChannelsources_userdata);
 end
 
 event_save_image_choices = get(flipud(findobj(handles.panel_events,'-regexp','tag','images')),'value');
@@ -733,6 +742,8 @@ channel1 = get(handles.menu_event_channel1);
 channel2 = get(handles.menu_event_channel2);
 check_save_image = get(handles.check_event_export_images);
 push_parameter_settings = get(handles.push_event_settings);
+buttonEventSelectSources = get(handles.buttonEventSelectSources);
+buttonArtifactSelectSources = get(handles.buttonEventSelectSources);
 
 evt_method = get(handles.menu_event_method);
 
@@ -781,6 +792,18 @@ channel2 = rmfield(channel2,'BeingDeleted');
 channel2.position = channel2.Position;
 channel2 = rmfield(channel2,'Position');
 
+buttonEventSelectSources = rmfield(buttonEventSelectSources,'Type');
+buttonEventSelectSources = rmfield(buttonEventSelectSources,'Extent');
+buttonEventSelectSources = rmfield(buttonEventSelectSources,'BeingDeleted');
+buttonEventSelectSources.position = buttonEventSelectSources.Position;
+buttonEventSelectSources = rmfield(buttonEventSelectSources,'Position');
+
+buttonArtifactSelectSources = rmfield(buttonArtifactSelectSources,'Type');
+buttonArtifactSelectSources = rmfield(buttonArtifactSelectSources,'Extent');
+buttonArtifactSelectSources = rmfield(buttonArtifactSelectSources,'BeingDeleted');
+buttonArtifactSelectSources.position = buttonArtifactSelectSources.Position;
+buttonArtifactSelectSources = rmfield(buttonArtifactSelectSources,'Position');
+
 push_parameter_settings = rmfield(push_parameter_settings,'Type');
 push_parameter_settings = rmfield(push_parameter_settings,'Extent');
 push_parameter_settings = rmfield(push_parameter_settings,'BeingDeleted');
@@ -802,6 +825,8 @@ GUI_TEMPLATE.channel2 = channel2;
 GUI_TEMPLATE.evt_method = evt_method;
 GUI_TEMPLATE.push_parameter_settings = push_parameter_settings;
 GUI_TEMPLATE.num_synth_channels = 0;  %number of synthesized channels is zero at first
+GUI_TEMPLATE.buttonEventSelectSources = buttonEventSelectSources;
+GUI_TEMPLATE.buttonArtifactSelectSources = buttonArtifactSelectSources;
 
 add_button_pos = get(handles.push_add_event,'position');
 
@@ -867,17 +892,11 @@ if(~isempty(pBatchStruct))
     userdata.rocStruct = rocStruct;
     set(hObject,'userdata',userdata);
 end
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%
 
-
-function menu_event_callback(hObject,event_data,h_pop_channels,h_push_settings)
+function menu_event_callback(hObject,event_data,h_pop_channels,h_push_settings,h_buttonSelectSource)
 global GUI_TEMPLATE;
 choice = get(hObject,'value');
-set(h_pop_channels,'visible','off');
-for k=1:min(GUI_TEMPLATE.detection.reqd_indices(choice),2)    
-    set(h_pop_channels(k),'visible','on','enable','on','string',GUI_TEMPLATE.EDF.labels);
-end
 
 settings_gui = GUI_TEMPLATE.detection.param_gui{choice};
 
@@ -885,6 +904,7 @@ userdata.choice = choice;
 userdata.pBatchStruct = [];
 userdata.rocStruct = [];
 set(h_push_settings,'userdata',userdata);
+
 if(strcmp(settings_gui,'none'))
     set(h_push_settings,'enable','off','callback',[]);
 else
@@ -896,6 +916,37 @@ else
         set(h_push_settings,'enable','on','callback',settings_gui);
     end
 end
+
+set(h_pop_channels,'visible','off');
+
+nReqdIndices = GUI_TEMPLATE.detection.reqd_indices(choice);
+if(nReqdIndices<=2)
+    set(h_buttonSelectSource,'visible','off','enable','off');
+    for k=1:nReqdIndices
+        set(h_pop_channels(k),'visible','on','enable','on','string',GUI_TEMPLATE.EDF.labels);
+    end
+else
+    userdata.nReqdIndices = nReqdIndices;
+    if(~isfield(userdata,'selectedIndices'))
+        userdata.selectedIndices = 1:nReqdIndices;
+    end
+    set(h_buttonSelectSource,'visible','on','enable','on','userdata',userdata,'callback', @buttonSelectSources_Callback);
+end
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%
+% --- Executes on button press of buttonSelectSource
+function buttonSelectSources_Callback(hObject, eventdata)
+global GUI_TEMPLATE;
+userdata = get(hObject,'userdata');
+
+selectedIndices = channelSelector(userdata.nReqdIndices,GUI_TEMPLATE.EDF.labels,userdata.selectedIndices);
+if(~isempty(selectedIndices))
+    set(hObject,'userdata',userdata);
+    guidata(hObject);  %is this necessary?
+end
+
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -931,8 +982,6 @@ global MARKING;
 
 %why does this need to be persistent?  
 persistent log_fid; 
-
-
 
 % BATCH_PROCESS.output_path =
 %        parent: 'output'
@@ -1955,3 +2004,10 @@ function edit_selectPlaylist_ButtonDownFcn(hObject, eventdata, handles)
 
 handles.user.playlist = playlist;
 guidata(hObject,handles);
+
+
+% --- Executes on button press in buttonArtifactSelectSources.
+function buttonArtifactSelectSources_Callback(hObject, eventdata, handles)
+% hObject    handle to buttonArtifactSelectSources (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)

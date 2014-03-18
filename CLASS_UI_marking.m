@@ -386,6 +386,7 @@ classdef CLASS_UI_marking < handle
                %import section
             set(handles.menu_file_load_sco,'callback',@obj.menu_file_load_sco_callback);
             set(handles.menu_file_load_Evt_File,'callback',@obj.menu_file_load_evt_file_callback);
+            set(handles.menu_file_load_text_channel,'callback',@obj.menu_file_load_text_channel_callback);
             set(handles.menu_file_load_events_container,'callback',@obj.menu_file_load_events_container_callback);
             set(handles.menu_file_import_Evt_database,'callback',@obj.menu_file_import_evt_database_callback);
                %export section
@@ -540,6 +541,14 @@ cropFigure2Axes(f,axes1_copy);
         end
         
         % --------------------------------------------------------------------
+        % =================================================================
+        %> @brief Import events stored in .SCO format
+        %> @param obj instance of CLASS_events class.
+        %> @param hObject handle to menu_file_load_sco_callback (see GCBO)
+        %> @param eventdata  reserved - to be defined in a future version
+        %> of MATLAB           
+        %> @retval obj instance of CLASS_events class.
+        % =================================================================
         function menu_file_load_sco_callback(obj,hObject, eventdata)
             % hObject    handle to menu_file_load_sco (see GCBO)
             % eventdata  reserved - to be defined in a future version of MATLAB
@@ -566,10 +575,44 @@ cropFigure2Axes(f,axes1_copy);
             
         end
         
+        % =================================================================
+        %> @brief Loads generic text file data as channel data.
+        %> @param obj instance of CLASS_events class.
+        %> @param hObject handle to menu_file_load_text_channel_callback (see GCBO)
+        %> @param eventdata  reserved - to be defined in a future version
+        %> of MATLAB           
+        %> @retval obj instance of CLASS_events class.
+        % =================================================================
+        function menu_file_load_text_channel_callback(obj, hObject, eventdata)
+            global CHANNELS_CONTAINER;
+            msg = 'Select a text file with channel data (column format) to be loaded into SEV';
+            fullfile = uigetfullfile({'*.txt','*.*'},msg);
+            if(~isempty(fullfile))
+                data = load(fullfile,'ascii');
+                fs = 100;
+                [~,filename,~]= fileparts(fullfile);
+                HDR = CHANNELS_CONTAINER.loadGenericChannel(data,fs,filename);
+                
+                obj.setDateTimeFromHDR(HDR);
+                stages_filename = [];                
+                obj.loadSTAGES(stages_filename,obj.num_epochs);
+                obj.display_samples = 1:obj.getSamplesPerEpoch();
+                obj.setAxesResolution(); %calls refreshAxes()  %calls set epoch;
+                
+                CHANNELS_CONTAINER.align_channels_on_axes();
+                CHANNELS_CONTAINER.setChannelSettings();
+                    
+                enableFigureHandles(obj.figurehandle.sev);
+                set(obj.texthandle.src_filename,'string',obj.SETTINGS.VIEW.src_edf_filename);
+                obj.STATE.single_study_running = true;
+            end
+            obj.sev_loading_file_flag = false;        
+        end
+        
         % --------------------------------------------------------------------
         % =================================================================
         %> @brief update the SEV with a range of events that were previously saved
-        %> using the save to .mat menu item.
+        %> using the save to evt menu item (.txt or .mat).
         %> @param obj instance of CLASS_events class.
         %> @param hObject handle to menu_file_load_evt_file_callback (see GCBO)
         %> @param eventdata  reserved - to be defined in a future version
@@ -740,7 +783,11 @@ cropFigure2Axes(f,axes1_copy);
             % associated with the ref_channel_index
             if(~isempty(filter_struct))
                 obj.showBusy();
-                CHANNELS_CONTAINER.filter(filter_struct);
+                try
+                    CHANNELS_CONTAINER.filter(filter_struct);
+                catch me
+                    showME(me);
+                end
                 obj.refreshAxes();
             end
             
@@ -1498,8 +1545,8 @@ cropFigure2Axes(f,axes1_copy);
         
         
         function new_channels_loaded_flag = load_EDFchannels_callback(obj,varargin)
-%             new_channels_loaded_flag is true if new channels were
-%             loaded/added and otherwise false
+            %   new_channels_loaded_flag is true if new channels were
+            %   loaded/added and otherwise false
             global CHANNELS_CONTAINER
             EDF_filename = fullfile(obj.SETTINGS.VIEW.src_edf_pathname,obj.SETTINGS.VIEW.src_edf_filename);
             
@@ -1674,6 +1721,7 @@ cropFigure2Axes(f,axes1_copy);
             set(handles.menu_file,'enable','on');
             set(handles.menu_file_export,'enable','on');
             set(handles.menu_file_import,'enable','on');
+            set(handles.menu_file_load_text_channel,'enable','on');
             
             set(handles.menu_tools,'enable','on');
             set(handles.menu_tools_roc_directory,'enable','on');

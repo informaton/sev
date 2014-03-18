@@ -1,17 +1,10 @@
-function output = nlfilter_median(src_index,optional_params)
+function output = nlfilter_median(sig,optional_params)
 %returns the moving median for a specified window length (win_length) over
-%the signal vector s
-%output is a vector with the same length as s. 
+%the signal vector sig
+%output is a vector with the same length as sig. 
 %written by Hyatt Moore IV,
 %updated May 10, 2012
-global CHANNELS_CONTAINER;
-if(numel(src_index)>20)
-    sig = src_index;
-else
-    sig = CHANNELS_CONTAINER.getData(src_index);
-end
-% this allows direct input of parameters from outside function calls, which
-%can be particularly useful in the batch job mode
+% updates March 17, 2014
 if(nargin==2 && ~isempty(optional_params))
     params = optional_params;
 else
