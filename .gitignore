@@ -7,5 +7,7 @@
 
 *.c~
 
+*.plist
+
 _sev.parameters.txt
 palidromes.txt
