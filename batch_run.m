@@ -546,34 +546,41 @@ event_method_values = get(flipud(findobj(handles.panel_events,'-regexp','tag','m
 event_channel1_values = get(flipud(findobj(handles.panel_events,'-regexp','tag','channel1')),'value');
 event_channel2_values = get(flipud(findobj(handles.panel_events,'-regexp','tag','channel2')),'value');
 
-if(iscell(event_method_values))
-    event_method_values = cell2mat(event_method_values);
-    event_channel1_values = cell2mat(event_channel1_values);
-    event_channel2_values = cell2mat(event_channel2_values);
-end;
+event_multichannel_data = get(flipud(findobj(handles.panel_events,'tag','buttonEventSelectSources')),'userdata');
+event_multichannel_enabled = get(flipud(findobj(handles.panel_events,'tag','buttonEventSelectSources')),'enable');
+
 
 event_settings_handles = flipud(findobj(handles.panel_events,'-regexp','tag','settings'));
-
-if(iscell(event_settings_handles))
-    event_settings_handles = cell2mat(event_settings_handles);
-end
-
-
-event_multipleChannelsources_userdata = get(flipud(findobj(handles.panel_events,'-regexp','tag','buttonEventSelectSources')),'userdata');
-if(iscell(event_multipleChannelsources_userdata))
-    event_settings_handles = cell2mat(event_multipleChannelsources_userdata);
-end
-
 event_save_image_choices = get(flipud(findobj(handles.panel_events,'-regexp','tag','images')),'value');
-if(iscell(event_save_image_choices))
+
+if(iscell(event_method_values))
+    event_method_values = cell2mat(event_method_values);
+    
+    event_channel1_values = cell2mat(event_channel1_values);
+    event_channel2_values = cell2mat(event_channel2_values);
+    
+    event_multichannel_data = cell2mat(event_multichannel_data);
+    event_multichannel_enabled = cell2mat(event_multichannel_enabled);
+    
+    event_settings_handles = cell2mat(event_settings_handles);
     event_save_image_choices = cell2mat(event_save_image_choices);
-end
+else
+    event_multichannel_enabled = {event_multichannel_enabled};
+    
+end;
+
+
+
+
 
 selected_events = event_method_values>1;
 event_method_values = event_method_values(selected_events);
 event_settings_handles = event_settings_handles(selected_events);
 event_channel_values = [event_channel1_values(selected_events),event_channel2_values(selected_events)];
 event_save_image_choices = event_save_image_choices(selected_events);
+
+event_multichannel_data = event_multichannel_data(selected_events);
+event_multichannel_enabled = event_multichannel_enabled(selected_events);
 
 num_selected_events = sum(selected_events);
 event_settings = cell(num_selected_events,1);
@@ -583,7 +590,12 @@ for k = 1:num_selected_events
     num_reqd_channels = detection_inf.reqd_indices(selected_method);
     eventStruct.numConfigurations = 1;
     eventStruct.save2img = event_save_image_choices(k);
-    eventStruct.channel_labels = EDF_labels(event_channel_values(k,1:num_reqd_channels));
+
+    if(strcmpi(event_multichannel_enabled(k),'on'))
+        eventStruct.channel_labels = EDF_labels(event_multichannel_data(k).selectedIndices);        
+    else
+        eventStruct.channel_labels = EDF_labels(event_channel_values(k,1:num_reqd_channels));
+    end
     
     eventStruct.channel_configs = cell(size(eventStruct.channel_labels));
     
@@ -1329,14 +1341,16 @@ if(pathname)
 %     end
 assignin('base','files_completed',files_completed);
 
-try
-     matlabpool open
-catch me
-   showME(me)  
-end
-    parfor i = 1:file_count
+%MATLAB pool open ?
 
-%     for i = 1:file_count
+try
+%     matlabpool open
+catch me
+    showME(me)
+end
+%     parfor i = 1:file_count
+
+     for i = 1:file_count
       tStart = tic;
       configID = [];
       detectorID = [];
@@ -1692,7 +1706,7 @@ end
       end %end if not batch_process.cancelled
     end; %end for all files
     
-    matlabpool close;
+%     matlabpool close;
     
     num_files_completed = sum(files_completed);
     num_files_skipped = sum(files_skipped);
