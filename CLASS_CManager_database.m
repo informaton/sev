@@ -1,10 +1,12 @@
 %> @file CLASS_CManager_database.m
 %> @brief Cohort database development class for managing and organizing data from 
 %> various sleep cohorts.
+%> use makeAll() to create and update database and tables for first use.
+%> use updateDBandTables() to subsequently update tables.
 % ======================================================================
 %> @brief The class is designed for database development, functionality, and 
 %> interaction with SEV and the various cohort database it interacts with
-%> @note: A MySQL database must be installed on the local host for class
+%> @note A MySQL database must be installed on the local host for class
 %> instantiations to operate correctly.
 % ======================================================================
 classdef CLASS_CManager_database < CLASS_database
@@ -22,15 +24,19 @@ classdef CLASS_CManager_database < CLASS_database
         end
         
         %this must be defined as it is an abstract method...
-        function create_Diagnostics_T(~)
-            
-        end
+        function create_Diagnostics_T(~)            
+        end        
         
+        %> @brief makeAll runs createDBandTables and updateDBandTables
         function makeAll(obj)
             obj.createDBandTables();
             obj.updateDBandTables();
         end
         
+        %> @brief createDBandTables - creates the database and three tables
+        %> - FileStudyinfo_T
+        %> - CohortInfo_T
+        %> - DatabaseInfo_T
         function createDBandTables(obj)
             obj.create_DB();
             obj.create_FileStudyInfo_T();
@@ -38,20 +44,202 @@ classdef CLASS_CManager_database < CLASS_database
             obj.create_DatabaseInfo_T();            
         end
         
+        %> @brief updateDBandTables calls the update function for the three tables
+        %> - CohortInfo_T
+        %> - DatabaseInfo_T
+        %> - FileStudyinfo_T
+        %> @note Order of update (as listed above) is important as file
+        %> studyinfo_t table uses cohortinfo_t entries to locate source files.
         function updateDBandTables(obj)
            obj.update_CohortInfo_T();
            obj.update_FileStudyInfo_T();
            obj.update_DatabaseInfo_T();           
         end        
         
+        %> @brief create_FileStudyInfo_T creates the filestudyinfo_t table.
+        %> FileStudyinfo Table fields:        
+        %> - uuid universal ID (primary, foreign key, can be empty?)
+        %> - cohortID unique key of the cohort database each record is related to.
+        %> - dbID Database Info's primary key (primary, foreign key; default is 0 which means the study is not in a database).
+        %> - fileID primary key for each record
+        %> - patstudykey the primary key of this record in the associated database; there is a problem with how to identify these if they are not in a database.  I see two solutions: (1.)  Build the indexing database first and then build the suboordinate, cohort databases next with the requirement that they use the same patstudykey values for their own entries.  (2.)  Leave the patstudykey blank and instead use the filename and cohort name, combined, as the primary key.
+        %> - datetimelastupdated Date/time last updated. (e.g. 2014-01-27, 16:49)
+        %> - datetimefirstadded Date/time Added (e.g. 2014-01-27, 16:49)
+        %> - src_is_tiered 
+        %> - src_sub_foldername 
+        %> - src_has_edf_file Does it come with an .edf file
+        %> - src_edf_filename name of the .edf (e.g. R0017_2 080612.EDF)
+        %> - src_has_other_psg_file Does it come with a psg file that is
+        %> not .edf
+        %> - src_other_psg_filename name of the non .edf file (e.g. R0017_2 080612.SAN)
+        %> - src_has_sta_file Has stage file? (yes/no - or use empty stage filename)
+        %> - src_sta_filename Stage file name (empty for none)
+        %> - src_has_evt_file event file exists (yes/no - or use empty event filename)
+        %> - src_evt_filename event file name (empty for none)
+        %> - src_has_sco_file 
+        %> - src_sco_filename 
+        %> - src_has_xml_file 
+        %> - src_xml_filename 
+        %> - working_is_tiered 
+        %> - working_sub_foldername 
+        %> - working_has_edf_file 
+        %> - working_src_edf_filename
+        %> - working_has_sta_file
+        %> - working_sta_filename
+        %> - working_has_sco_file
+        %> - working_sco_filename
+        function create_FileStudyInfo_T(obj) 
+            obj.open();            
+            TableName = 'filestudyInfo_T';
+            TableName = lower(TableName);
+            mym(['DROP TABLE IF EXISTS ',TableName]);
+            
+            mym(['CREATE TABLE IF NOT EXISTS ',TableName,'(',...
+                '  uID INT UNSIGNED DEFAULT NULL ',...
+                ', cohortID SMALLINT UNSIGNED NOT NULL',...
+                ', dbID SMALLINT UNSIGNED DEFAULT NULL',...
+                ', fileID INT UNSIGNED NOT NULL AUTO_INCREMENT',...
+                ', patstudykey SMALLINT UNSIGNED DEFAULT NULL',...
+                ', datetimelastupdated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',...
+                ', datetimefirstadded TIMESTAMP NOT NULL',...
+                ', patid varchar(30) DEFAULT NULL',...
+                ', src_is_tiered BOOL DEFAULT FALSE',...
+                ', src_sub_foldername VARCHAR(70) NULL',...
+                ', src_has_edf_file BOOL DEFAULT FALSE',...
+                ', src_edf_filename VARCHAR(70) DEFAULT NULL',...
+                ', src_has_sta_file BOOL DEFAULT FALSE',...
+                ', src_sta_filename VARCHAR(70) DEFAULT NULL',...
+                ', src_has_evt_file BOOL DEFAULT FALSE',...
+                ', src_evt_filename VARCHAR(70) DEFAULT NULL',...
+                ', src_has_sco_file BOOL DEFAULT FALSE',...
+                ', src_sco_filename VARCHAR(70) DEFAULT NULL',...
+                ', src_has_xml_file BOOL DEFAULT FALSE',...
+                ', src_xml_filename VARCHAR(70) DEFAULT NULL',...                
+                ', working_is_tiered BOOL DEFAULT FALSE',...
+                ', working_sub_foldername VARCHAR(70) NULL',...
+                ', working_has_edf_file BOOL DEFAULT FALSE',...
+                ', working_src_edf_filename VARCHAR(70) DEFAULT NULL',...
+                ', working_has_sta_file BOOL DEFAULT FALSE',...
+                ', working_sta_filename VARCHAR(70) DEFAULT NULL',...
+                ', working_has_sco_file BOOL DEFAULT FALSE',...
+                ', working_sco_filename VARCHAR(70) DEFAULT NULL',...                
+                ', PRIMARY KEY (fileID)',...                
+                ')']);
+            obj.close();
+        end
+        
+        %> @brief create_CohortInfo_T creates the cohortinfo_t table
+        %> CohortInfo_T table fields include
+        %> - cohortID Primary key with constraint that name and projectname
+        %> are unique
+        %> - name Name of the cohort (e.g. SSC)
+        %> - projectname name of the specific project (e.g. APOE)
+        %> - location Geographic location where sleep studies were
+        %> performed.
+        %> - src_foldername 
+        %> - src_foldertype Either <b>tier</b> or <b>flat</b>
+        %> - src_psg_foldername Folder name containing the original source
+        %> (src) files for the cohort.
+        %> - src_psg_extension filename extension of the psg (e.g. <b>.edf</b>)
+        %> - src_stage_foldername stage foldername; used when folder type is <i>tier</i>
+        %> - src_events_foldername events foldername; used when folder type is <i>tier</i>
+        %> - src_xml_foldername xml foldername; used when folder type is <i>tier</i>
+        %> - src_sco_foldername sco foldername; used when folder type is <i>tier</i>
+        %> - working_foldername Folder name containing the files as
+        %transfomred by *transformation_script*.  
+        %> - working_foldertype Either <b>tier</b> or <b>flat</b>; default
+        %> is <b>flat</b>
+        %> - working_edf_foldername EDF foldername; used when folder type is <i>tier</i>
+        %> - working_sta_foldername STA foldername; used when folder type is <i>tier</i>
+        %> - working_sco_foldername SCO foldername; used when folder type is <i>tier</i>
+        %> - patient_description_file
+        %> - transformation_script Name of file used to transcode src files
+        %> to working files.
+        %> - Montage_suite PSG montage used by cohort. enumerated ''Grass'',''Gamma'',''Twin'',''Embla Sandman'',''Woodward'',''Unknown'',''Various'') default is ''Unknown'''
+        %> - pointofcontact Name and email of point of contact
+        %> - notes Free form text.
+        %> - reference Free form text
+        %> - website Free form text
+        %> - timeframe Free form text
+        %> @note The fields should be listed in the cohort.str text file
+        %> for updating; see @update_CohortInfo_T
+        function create_CohortInfo_T(obj)            
+            obj.open();
+            TableName = 'cohortInfo_T';
+            TableName = lower(TableName);
+            mym(['DROP TABLE IF EXISTS ',TableName]);
+            
+            mym(['CREATE TABLE IF NOT EXISTS ',TableName,'(',...
+                ' cohortID SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT',...
+                ', name VARCHAR(30) NOT NULL DEFAULT "whoRwe"',...
+                ', projectname VARCHAR(30) DEFAULT NULL',...                
+                ', location VARCHAR(30) DEFAULT "somewhere"',...                
+                ', src_foldername varchar(128) DEFAULT NULL',...
+                ', src_foldertype ENUM(''tier'',''flat'')',...
+                ', src_psg_foldername varchar(128) DEFAULT NULL',...
+                ', src_psg_extension varchar(4) DEFAULT NULL',...                
+                ', src_stage_foldername varchar(128) DEFAULT NULL',...
+                ', src_events_foldername varchar(128) DEFAULT NULL',...
+                ', src_xml_foldername varchar(128) DEFAULT NULL',...
+                ', src_sco_foldername varchar(128) DEFAULT NULL',...                   
+                ', working_foldername varchar(128) DEFAULT NULL',...
+                ', working_foldertype ENUM(''tier'',''flat'')',...
+                ', working_edf_foldername varchar(128) DEFAULT NULL',...
+                ', working_sta_foldername varchar(128) DEFAULT NULL',...
+                ', working_sco_foldername varchar(128) DEFAULT NULL',...
+                ', patient_description_file varchar(128) DEFAULT NULL',...                
+                ', transformation_script VARCHAR(128) DEFAULT NULL',...
+                ', Montage_suite ENUM(''Grass'',''Gamma'',''Twin'',''Embla Sandman'',''Woodward'',''Unknown'',''Various'') DEFAULT ''Unknown''',...
+                ', pointofcontact VARCHAR(128) DEFAULT NULL',...
+                ', notes VARCHAR(1024) DEFAULT NULL',...
+                ', reference VARCHAR(512) DEFAULT NULL',...
+                ', website VARCHAR(512) DEFAULT NULL',...
+                ', timeframe VARCHAR(256) DEFAULT NULL',...                
+                ', PRIMARY KEY (cohortID)',...
+                ', CONSTRAINT UNIQUE (name, projectname)',...                
+                ')']);
+            obj.close();
+        end
+        
+        %> @brief create_DatabaseInfo_T create the database info table.
+        %> Database Info Table fields include
+        %> # 1.  DBid - data base info's primary key (e.g. 0, 1, 2, etc)
+        %> # 2.  Cohort name (e.g. WSC, SSC, SSC-APOE)
+        %> # 3.  Montage type (e.g. grass, twin, sandman, unknown)
+        %> # 4.  EDF/file pathname (e.g. /data1/SSC/APOE)
+        %> # 5.  Transformation script (e.g. /data1/exportScripts/SSC_APOE_convert.m; alternatively, we could store the script itself as a field entry)
+        %> # 6.  Point of Contact (e.g. Eileen Leary; Robin Stubbs; Oscar Carrillo)
+        %> # 7.  Notes (e.g. The files are from China; Ling lin started the development work and is a good contact for following up with collaborator fang han)
+        %> # 8.  Database accessor fields (Database name, user name, password)
+        function create_DatabaseInfo_T(obj)
+            obj.open();
+            TableName = 'DatabaseInfo_T';
+            TableName = lower(TableName);
+            mym(['DROP TABLE IF EXISTS ',TableName]);
+            
+            mym(['CREATE TABLE IF NOT EXISTS ',TableName,'(',...
+                ' dbID SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT',...
+                ', name varchar(20) not null',...
+                ', user varchar(20) not null',...
+                ', password varchar(20) not null',...
+                ', creationScript varchar(70) default NULL',...
+                ', PRIMARY KEY (dbID)',...
+                ', CONSTRAINT UNIQUE (name, user, password) ',...
+                ')']);
+            
+            obj.close();
+        end
+        
+        
+        %> @brief obtain updates based on the cohort information avaialbe
+        %> in the cohortinfo_t table.
+        %> @note A file is not updated until it has been assigned to a
+        %> cohort as entered in the update_CohortInfo_T call.
         function update_FileStudyInfo_T(obj) 
-           %obtain updates based on the cohort information that i have.
-           %Note: A file is not updated until it has been assigned to a
-           %cohort as entered in the update_CohortInfo_T call.
+
            obj.open();
            TableName = lower('FileStudyInfo_T');           
            cohort_q= mym('select * from cohortinfo_t');           
-           summary = '';
            for c = 1:numel(cohort_q.cohortID)
                cohortID = cohort_q.cohortID(c);
                database_q = mym('select dbid from databaseinfo_t where name="{S}_DB"',cohort_q.name{c});
@@ -61,8 +249,7 @@ classdef CLASS_CManager_database < CLASS_database
                files_found = false;
                
                %This is an APOE example, where the EDF's and files are all
-               %subfolders of the root foldername
-               
+               %subfolders of the root foldername               
                if(exist(cohort_q.root_foldername{c},'dir'))                   
                    folder_found = true;
                    folderNames = getPathnames(cohort_q.root_foldername{c});
@@ -182,6 +369,11 @@ classdef CLASS_CManager_database < CLASS_database
            end
         end
         
+        
+        %> @brief update_CohortInfo_T Updates the cohort table based on the
+        %> input text file.
+        %> @param filename Optional cohort structure file (*.str) which
+        %> describes each cohort using tab delimited key value pairs.
         function update_CohortInfo_T(obj,filename)
             TableName = lower('CohortInfo_T');
             
@@ -222,108 +414,13 @@ classdef CLASS_CManager_database < CLASS_database
             end         
         end
 
-        % Studyinfo Table fields:
-        % 1 UID - universal ID (primary, foreign key, can be empty?)
-        % 2 DBid - Database Info's primary key (primary, foreign key; default is 0 which means the study is not in a database).
-        % 3 Patstudykey - the primary key of this record in the associated database; there is a problem with how to identify these if they are not in a database.  I see two solutions: (1.)  Build the indexing database first and then build the suboordinate, cohort databases next with the requirement that they use the same patstudykey values for their own entries.  (2.)  Leave the patstudykey blank and instead use the filename and cohort name, combined, as the primary key.
-        % 4 Filename - name of the .edf (e.g. R0017_2 080612.EDF)
-        % 5 Date/time Added (e.g. 2014-01-27, 16:49)
-        % 6 Stage file exists (yes/no - or use empty stage filename)
-        % 7 event file exists (yes/no - or use empty event filename)
-        % 8 Stage file name (empty for none)
-        % 9 event file name (empty for none)
-        function create_FileStudyInfo_T(obj) 
-            obj.open();            
-            TableName = 'filestudyInfo_T';
-            TableName = lower(TableName);
-            mym(['DROP TABLE IF EXISTS ',TableName]);
-            
-            mym(['CREATE TABLE IF NOT EXISTS ',TableName,'(',...
-                '  uID INT UNSIGNED DEFAULT NULL ',...
-                ', cohortID SMALLINT UNSIGNED NOT NULL',...
-                ', dbID SMALLINT UNSIGNED DEFAULT NULL',...
-                ', fileID INT UNSIGNED NOT NULL AUTO_INCREMENT',...
-                ', patstudykey SMALLINT UNSIGNED DEFAULT NULL',...
-                ', datetimelastupdated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',...
-                ', datetimefirstadded TIMESTAMP NOT NULL',...
-                ', patid varchar(30) DEFAULT NULL',...
-                ', sub_foldername VARCHAR(70) NULL',...
-                ', has_edf_file BOOL DEFAULT FALSE',...
-                ', edf_filename VARCHAR(70) DEFAULT NULL',...
-                ', has_sta_file BOOL DEFAULT FALSE',...
-                ', sta_filename VARCHAR(70) DEFAULT NULL',...
-                ', has_evt_file BOOL DEFAULT FALSE',...
-                ', evt_filename VARCHAR(70) DEFAULT NULL',...
-                ', has_sco_file BOOL DEFAULT FALSE',...
-                ', sco_filename VARCHAR(70) DEFAULT NULL',...
-                ', has_xml_file BOOL DEFAULT FALSE',...
-                ', xml_filename VARCHAR(70) DEFAULT NULL',...                
-                ', PRIMARY KEY (fileID)',...                
-                ')']);
-            obj.close();
-        end
-        
-        function create_CohortInfo_T(obj)
-            obj.open();
-            TableName = 'cohortInfo_T';
-            TableName = lower(TableName);
-            mym(['DROP TABLE IF EXISTS ',TableName]);
-            
-            mym(['CREATE TABLE IF NOT EXISTS ',TableName,'(',...
-                ' cohortID SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT',...
-                ', name VARCHAR(30) NOT NULL DEFAULT "whoRwe"',...
-                ', projectname VARCHAR(30) DEFAULT NULL',...                
-                ', location VARCHAR(30) DEFAULT "somewhere"',...                
-                ', root_foldername varchar(128) DEFAULT NULL',...
-                ', all_foldername varchar(128) DEFAULT NULL',...
-                ', edf_foldername varchar(128) DEFAULT NULL',...
-                ', stage_foldername varchar(128) DEFAULT NULL',...
-                ', events_foldername varchar(128) DEFAULT NULL',...
-                ', xml_foldername varchar(128) DEFAULT NULL',...
-                ', sco_foldername varchar(128) DEFAULT NULL',...   
-                ', patient_description_file varchar(128) DEFAULT NULL',...                
-                ', transformation_script VARCHAR(128) DEFAULT NULL',...
-                ', Montage_suite ENUM(''Grass'',''Gamma'',''Twin'',''Embla Sandman'',''Woodward'',''Unknown'',''Various'') DEFAULT ''Unknown''',...
-                ', pointofcontact VARCHAR(128) DEFAULT NULL',...
-                ', notes VARCHAR(512) DEFAULT NULL',...
-                ', reference VARCHAR(256) DEFAULT NULL',...
-                ', website VARCHAR(128) DEFAULT NULL',...
-                ', timeframe VARCHAR(128) DEFAULT NULL',...                
-                ', PRIMARY KEY (cohortID)',...
-                ', CONSTRAINT UNIQUE (name, projectname)',...                
-                ')']);
-            
-            obj.close();
-        end
 
-        % Database Info Table fields
-        % 1.  DBid - data base info's primary key (e.g. 0, 1, 2, etc)
-        % 2.  Cohort name (e.g. WSC, SSC, SSC-APOE)
-        % 3.  Montage type (e.g. grass, twin, sandman, unknown)
-        % 4.  EDF/file pathname (e.g. /data1/SSC/APOE)
-        % 5.  Transformation script (e.g. /data1/exportScripts/SSC_APOE_convert.m; alternatively, we could store the script itself as a field entry)
-        % 6.  Point of Contact (e.g. Eileen Leary; Robin Stubbs; Oscar Carrillo)
-        % 7.  Notes (e.g. The files are from China; Ling lin started the development work and is a good contact for following up with collaborator fang han)
-        % 8.  Database accessor fields (Database name, user name, password)
-        function create_DatabaseInfo_T(obj)
-            obj.open();
-            TableName = 'DatabaseInfo_T';
-            TableName = lower(TableName);
-            mym(['DROP TABLE IF EXISTS ',TableName]);
-            
-            mym(['CREATE TABLE IF NOT EXISTS ',TableName,'(',...
-                ' dbID SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT',...
-                ', name varchar(20) not null',...
-                ', user varchar(20) not null',...
-                ', password varchar(20) not null',...
-                ', creationScript varchar(70) default NULL',...
-                ', PRIMARY KEY (dbID)',...
-                ', CONSTRAINT UNIQUE (name, user, password) ',...
-                ')']);
-            
-            obj.close();
-        end
         
+        %> @brief update_DatabaseInfo_T Updates the database info table based on the
+        %> input text file.  The database info table contains the database
+        %> access information for each cohort.
+        %> @param filename Optional database information file (*.inf) which
+        %> contains cohort specific database access entries.
         function update_DatabaseInfo_T(obj, filename)
             TableName = lower('DatabaseInfo_T');
             
@@ -378,50 +475,35 @@ classdef CLASS_CManager_database < CLASS_database
                 cur_folder = foldername{f};
                 switch(cur_extension)
                     case 'edf'
-                        edf_file = getFilenames(cur_folder,strcat(studyName,'.EDF'));
-                        if(isempty(edf_file))
-                            edf_file = getFilenames(cur_folder,strcat(studyName,'.edf'));
-                        end
+                        edf_file = getFilenamesi(cur_folder,strcat(studyName,'.EDF'));
                         if(~isempty(edf_file))
                             cohortStudy.has_edf_file = true;
                             cohortStudy.edf_filename = edf_file{1};
                             files_found = true;
                         end
                     case 'stage'
-                        sta_file = getFilenames(cur_folder,strcat(studyName,'.STA'));
-                        if(isempty(sta_file))
-                            sta_file = getFilenames(cur_folder,strcat(studyName,'.sta'));
-                        end                        
+                        sta_file = getFilenamesi(cur_folder,strcat(studyName,'.STA'));                        
                         if(~isempty(sta_file))
                             cohortStudy.has_sta_file = true;
                             cohortStudy.sta_filename = sta_file{1};
                             files_found = true;
                         end
                     case 'sco'                        
-                        sco_file = getFilenames(cur_folder,strcat(studyName,'.SCO'));
-                        if(isempty(sco_file))
-                            sco_file = getFilenames(cur_folder,strcat(studyName,'.sco'));
-                        end                        
+                        sco_file = getFilenamesi(cur_folder,strcat(studyName,'.SCO'));
                         if(~isempty(sco_file))
                             cohortStudy.has_sco_file = true;
                             cohortStudy.sco_filename = sco_file{1};
                             files_found = true;
                         end
                     case 'xml'
-                        xml_file = getFilenames(cur_folder,strcat(studyName,'.XML'));
-                        if(isempty(xml_file))
-                            xml_file = getFilenames(cur_folder,strcat(studyName,'.xml'));
-                        end
+                        xml_file = getFilenamesi(cur_folder,strcat(studyName,'.XML'));                        
                         if(~isempty(xml_file))
                             cohortStudy.has_xml_file = true;
                             cohortStudy.xml_filename = xml_file{1};
                             files_found = true;
                         end
                     case 'events'
-                        evt_file = getFilenames(cur_folder,strcat(studyName,'.evt'));
-                        if(isempty(evt_file))
-                            evt_file = getFilenames(cur_folder,strcat(studyName,'.evt'));
-                        end
+                        evt_file = getFilenamesi(cur_folder,strcat(studyName,'.evt'));                        
                         if(~isempty(evt_file))
                             cohortStudy.has_evt_file = true;
                             cohortStudy.evt_filename = evt_file{1};
