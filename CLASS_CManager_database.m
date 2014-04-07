@@ -373,13 +373,16 @@ classdef CLASS_CManager_database < CLASS_database
                            if(files_found)
                                try
                                    if(look4WorkFiles)
-                                       curStudy = CLASS_CManager_database.updateCohortStudySrcStruct(curStudy,working_foldername);                                                                  
+                                       curStudy = CLASS_CManager_database.updateCohortStudySrcStruct(curStudy,working_foldername);
+                                       CLASS_CManager_database.insertRecordFromStruct(TableName,curStudy,mappingStruct)
+                                   else
+                                       CLASS_CManager_database.insertRecordFromStruct(TableName,curStudy)
                                    end
 
-                                   CLASS_CManager_database.insertRecordFromStruct(TableName,curStudy,mappingStruct)
+                                   
                                catch me
                                    showME(me);
-                                   fprintf('Failed on %s\n',cur_folder);
+                                   fprintf('Failed on %s\n',cur_name);
                                end
                            else
                                fprintf('No files found for %s: %s!\n',cur_folder,cur_name);
