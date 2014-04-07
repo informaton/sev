@@ -95,11 +95,11 @@ classdef  CLASS_settings < handle
             
             while(file_open)
                 try
-                curline = strtrim(fgetl(fid)); %remove leading and trailing white space
+                curline = fgetl(fid); %remove leading and trailing white space
                 if(~ischar(curline))
                     file_open = false;
                 else
-                    tok = regexp(curline,pat,'tokens');
+                    tok = regexp(strtrim(curline),pat,'tokens');
                     if(numel(tok)>1 && ~strcmpi(tok{1},'-last') && isempty(strfind(tok{1}{1},'#')))
                         %hack/handle the empty case
                         if(numel(tok)==2)
