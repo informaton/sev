@@ -158,7 +158,7 @@ classdef CLASS_CManager_database < CLASS_database
         %> - working_is_tiered 
         %> - working_sub_foldername 
         %> - working_has_edf_file 
-        %> - working_src_edf_filename
+        %> - working_edf_filename
         %> - working_has_sta_file
         %> - working_sta_filename
         %> - working_has_sco_file
@@ -193,7 +193,7 @@ classdef CLASS_CManager_database < CLASS_database
                 ', working_is_tiered BOOL DEFAULT FALSE',...
                 ', working_sub_foldername VARCHAR(70) NULL',...
                 ', working_has_edf_file BOOL DEFAULT FALSE',...
-                ', working_src_edf_filename VARCHAR(70) DEFAULT NULL',...
+                ', working_edf_filename VARCHAR(70) DEFAULT NULL',...
                 ', working_has_sta_file BOOL DEFAULT FALSE',...
                 ', working_sta_filename VARCHAR(70) DEFAULT NULL',...
                 ', working_has_sco_file BOOL DEFAULT FALSE',...
@@ -303,7 +303,7 @@ classdef CLASS_CManager_database < CLASS_database
                if(~exist(working_foldername,'dir'))
                    fprintf('Where did you go?\n');
                    fprintf('Could not find the working folder for PSGs (%s)!\n',working_foldername);
-                   fprintf('No source folders found for %s!\n',cohort_q.name{c});
+                   fprintf('No working folder found for %s!\n',cohort_q.name{c});
                else
                    
                    if(strcmpi(working_foldertype,'flat') && exist(src_mapping_file,'file'))
