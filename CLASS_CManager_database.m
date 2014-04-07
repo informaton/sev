@@ -621,14 +621,14 @@ classdef CLASS_CManager_database < CLASS_database
                     [~,fname,~] = fileparts(workingFilename);
                     if(strcmpi(workingFolderType,'group'))
                         
-                    elseif(strcmpi(workingFolderType,'flat'))
+                    elseif(strcmpi(workingFolderType,'split'))
                         
                     elseif(strcmpi(workingFolderType,'tier'))
                         
-                    elseif(strcmpi(workingFolderType,'split'))
+                     elseif(strcmpi(workingFolderType,'flat'))
                         for e=1:numel(CLASS_CManager_database.workingFileExts)
                             fext = CLASS_CManager_database.workingFileExts{e};
-                            working_filename = fullfile(fname,fext);
+                            working_filename = strcat(fname,'.',upper(fext));
                             if(exist(fullfile(working_foldername,working_filename),'file'))
                                 cohortStudy.(sprintf('working_has_%s_filename',fext)) = true;
                                 cohortStudy.(sprintf('working_%s_filename',fext)) = working_filename;
