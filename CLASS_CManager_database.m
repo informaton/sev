@@ -317,7 +317,6 @@ classdef CLASS_CManager_database < CLASS_database
                    %subfolders of the root foldername)
                    % note: the subolder names must be the same as the .edf file
                    % names.
-                   %
                    if(strcmpi(src_foldertype,'tier'))
                        
                        folderNames = getPathnames(src_foldername);
@@ -332,7 +331,7 @@ classdef CLASS_CManager_database < CLASS_database
                            curStudy.datetimefirstadded = 'now()';
                            
                            cur_folder = fullfile(src_foldername,folderNames{f});
-                           curStudy.sub_foldername = folderNames{f};
+                           curStudy.src_sub_foldername = folderNames{f};
                            
                            [curStudy, files_found] = CLASS_CManager_database.updateCohortStudySrcStruct(curStudy,'all', cur_folder,psg_ext);
                            
