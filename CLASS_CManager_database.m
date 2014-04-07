@@ -299,8 +299,8 @@ classdef CLASS_CManager_database < CLASS_database
                src_foldertype = cohort_q.src_foldertype{c};
                src_foldername = cohort_q.src_foldername{c};
                
-               working_foldertype = cohort_q.working_foldertype{c};
                working_foldername = cohort_q.working_foldername{c};
+               working_foldertype = cohort_q.working_foldertype{c};
                src_mapping_file = cohort_q.src_mapping_file{c};
                psg_ext = cohort_q.src_psg_extension{c};
                
@@ -343,7 +343,7 @@ classdef CLASS_CManager_database < CLASS_database
                            if(files_found)
                                try
                                    if(look4WorkFiles)
-                                       curStudy = CLASS_CManager_database.updateCohortStudyWorkStruct(curStudy,mappingStruct);                                                                  
+                                       curStudy = CLASS_CManager_database.updateCohortStudyWorkStruct(curStudy,mappingStruct,working_foldername,working_foldertype);                                                                  
                                    end
                                    CLASS_CManager_database.insertRecordFromStruct(TableName,curStudy)
                                catch me
@@ -388,7 +388,7 @@ classdef CLASS_CManager_database < CLASS_database
                                if(files_found)
                                    try
                                        if(look4WorkFiles)
-                                           curStudy = CLASS_CManager_database.updateCohortStudySrcStruct(curStudy,working_foldername,mappingStruct);
+                                           curStudy = CLASS_CManager_database.updateCohortStudyWorkStruct(curStudy,mappingStruct,working_foldername,working_foldertype);
                                        end
                                        
                                        CLASS_CManager_database.insertRecordFromStruct(TableName,curStudy);
@@ -427,7 +427,7 @@ classdef CLASS_CManager_database < CLASS_database
                            if(files_found)
                                try
                                    if(look4WorkFiles)
-                                       curStudy = CLASS_CManager_database.updateCohortStudyWorkStruct(curStudy,mappingStruct);
+                                       curStudy = CLASS_CManager_database.updateCohortStudyWorkStruct(curStudy,mappingStruct,working_foldername,working_foldertype);
                                    end
                                    CLASS_CManager_database.insertRecordFromStruct(TableName,curStudy);
                                    
@@ -479,7 +479,7 @@ classdef CLASS_CManager_database < CLASS_database
                            if(files_found)
                                try
                                    if(look4WorkFiles)
-                                       curStudy = CLASS_CManager_database.updateCohortStudyWorkStruct(curStudy,mappingStruct);                                                                  
+                                       curStudy = CLASS_CManager_database.updateCohortStudyWorkStruct(curStudy,mappingStruct,working_foldername,working_foldertype);                                                                  
                                    end
 
                                    CLASS_CManager_database.insertRecordFromStruct(TableName,curStudy);
@@ -613,12 +613,12 @@ classdef CLASS_CManager_database < CLASS_database
         %> the transformation script using available source data.  Generated
         %> files will have either .EDF, .SCO, or .STA file extensions.
         %> %retval cohortStudy struct
-        function cohortStudy = updateCohortStudyWorkStruct(cohortStudy, mappingStruct)
+        function cohortStudy = updateCohortStudyWorkStruct(cohortStudy, mappingStruct,working_foldername,workingFolderType)
             %find the study name
             if(cohortStudy.src_has_psg_file)
                 src_file = cohortStudy.src_psg_filename;
                 
-                workingFolderType = cohortStudy.working_foldertype;
+                %  workingFolderType = cohortStudy.working_foldertype;
                 workingFilename = char(mappingStruct.work_cell(strcmpi(src_file,mappingStruct.src_cell)));  %apply the char here to remove cell structure when match is found or make empty when no match is found.  The {} operators will throw an empty assignment error in the case of no match.
                 
                 if(~isempty(workingFilename))
@@ -633,7 +633,7 @@ classdef CLASS_CManager_database < CLASS_database
                         for e=1:numel(CLASS_CManager_database.workingFileExts)
                             fext = CLASS_CManager_database.workingFileExts{e};
                             working_filename = fullfile(fname,fext);
-                            if(exist(fullfile(cohortStudy.working_foldername,working_filename),'file'))
+                            if(exist(fullfile(working_foldername,working_filename),'file'))
                                 cohortStudy.(sprintf('working_has_%s_filename',fext)) = true;
                                 cohortStudy.(sprintf('working_%s_filename',fext)) = working_filename;
                             end
