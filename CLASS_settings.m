@@ -95,7 +95,7 @@ classdef  CLASS_settings < handle
             
             while(file_open)
                 try
-                curline = fgetl(fid);
+                curline = strtrim(fgetl(fid)); %remove leading and trailing white space
                 if(~ischar(curline))
                     file_open = false;
                 else
