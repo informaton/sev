@@ -312,10 +312,10 @@ classdef CLASS_CManager_database < CLASS_database
                    fprintf('No working folder found for %s!\n',cohort_q.name{c});
                else
                    
-                   if(strcmpi(working_foldertype,'flat') && exist(src_mapping_file,'file'))
+                   if(exist(src_mapping_file,'file'))  % && strcmpi(working_foldertype,'flat') 
                        [mappingStruct, look4WorkFiles] = CLASS_CManager_database.loadMappingFile(src_mapping_file);
                    else                       
-                       fprintf('This mode has not yet been accounted for (%s).\n',working_foldertype);
+                       fprintf('The source mapping file (%s) could not be found.\n',src_mapping_file);
                        look4WorkFiles = false;               
                    end
                
@@ -334,11 +334,9 @@ classdef CLASS_CManager_database < CLASS_database
                            curStudy = [];
                            curStudy.cohortID =cohortID;
                            curStudy.dbID = databaseID;
-                           curStudy.datetimefirstadded = 'now()';
-                           
+                           curStudy.datetimefirstadded = 'now()';                           
                            cur_folder = fullfile(src_foldername,folderNames{f});
-                           curStudy.src_sub_foldername = folderNames{f};
-                           
+                           curStudy.src_sub_foldername = folderNames{f};                           
                            [curStudy, files_found] = CLASS_CManager_database.updateCohortStudySrcStruct(curStudy,'all', cur_folder,psg_ext);
                            
                            if(files_found)
@@ -346,11 +344,10 @@ classdef CLASS_CManager_database < CLASS_database
                                    if(look4WorkFiles)
                                        curStudy = CLASS_CManager_database.updateCohortStudySrcStruct(curStudy,working_foldername,mappingStruct);                                                                  
                                    end
-
                                    CLASS_CManager_database.insertRecordFromStruct(TableName,curStudy)
                                catch me
                                    showME(me);
-                                   fprintf('Failsed on %s\n',cur_folder);
+                                   fprintf('Failed on %s\n',cur_folder);
                                end
                            else
                                fprintf('No files found in %s!\n',cur_folder);
@@ -358,8 +355,7 @@ classdef CLASS_CManager_database < CLASS_database
                        end
                        
                    %This is a MrOS type
-                   elseif(strcmpi(src_foldertype,'group'))
-                       
+                   elseif(strcmpi(src_foldertype,'group'))                       
                        folderGrpNames = getPathnames(src_foldername);
                        if(~iscell(folderGrpNames))
                            fprintf('Warning!  Only one group folder found for this cohort (%s)\n',folderGrpNames);

@@ -1495,7 +1495,7 @@ classdef CLASS_database < handle
             
         end
         
-                % ======================================================================
+        % ======================================================================
         %> @brief Populates DetectorInfo_T table with manually scored event labels obtained from
         %> WSC .SCO files
         %> @param dbStruct A structure containing database accessor fields:
@@ -1625,7 +1625,7 @@ classdef CLASS_database < handle
             end            
         end
         
-                 %> @brief Loads a mapping file.  Mapping files are used to map
+        %> @brief Loads a mapping file.  Mapping files are used to map
         %> source psg filenames to their generated working files (e.g. .EDF,
         %> .STA, and .SCO files)
         %> @param src_mapping_file A text file with the mapping data.  Each row should contain (1) the
