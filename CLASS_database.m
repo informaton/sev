@@ -1650,6 +1650,7 @@ classdef CLASS_database < handle
                         file_open = true;
                         
                         pat = '([^\.\s]+\.[^\.\s]+)';
+                        pat = '([^\.]+\.[^\.\s]+)';
                         
                         src_cell = {};
                         work_cell = {};
@@ -1661,8 +1662,8 @@ classdef CLASS_database < handle
                                 else
                                     tok = regexp(curline,pat,'tokens');
                                     if(numel(tok)>1 && isempty(strfind(tok{1}{1},'#')))
-                                        src_cell{end+1,1} = char(tok{1});
-                                        work_cell{end+1,1} = char(tok{2});
+                                        src_cell{end+1,1} = strtrim(char(tok{1}));
+                                        work_cell{end+1,1} = strtrim(char(tok{2}));
                                         success = true;
                                     end
                                 end;
