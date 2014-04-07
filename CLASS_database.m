@@ -1662,14 +1662,16 @@ classdef CLASS_database < handle
                                     tok = regexp(curline,pat,'tokens');
                                     if(numel(tok)>1 && isempty(strfind(tok{1}{1},'#')))
                                         src_cell{end+1,1} = char(tok{1});
-                                        work_cell{end+1,1} = tok(1,2:end);
+                                        work_cell{end+1,1} = char(tok{2});
+                                        success = true;
                                     end
                                 end;
                             catch me
-                                showME(me);                                
+                                showME(me); 
+                                success = false;
                             end
                         end;
-                        flcose(fid);
+                        fclose(fid);
                         mappingStruct.src_cell = src_cell;
                         mappingStruct.work_cell = work_cell;
                     catch me
