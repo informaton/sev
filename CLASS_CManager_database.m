@@ -356,10 +356,10 @@ classdef CLASS_CManager_database < CLASS_database
                        
                    elseif(strcmpi(src_foldertype,'flat'))
                        
-                       psg_filenames = strrep(getFilenames(src_folder,strcat('*',lower(psg_ext))),lower(psg_ext),'');
-                       PSG_filenames = strrep(getFilenames(src_folder,strcat('*',upper(psg_ext))),upper(psg_ext),'');
-                       sta_filenames = strrep(getFilenames(src_folder,'*.sta'),'.sta','');
-                       STA_filenames = strrep(getFilenames(src_folder,'*.STA'),'.STA','');
+                       psg_filenames = strrep(getFilenames(src_foldername,strcat('*',lower(psg_ext))),lower(psg_ext),'');
+                       PSG_filenames = strrep(getFilenames(src_foldername,strcat('*',upper(psg_ext))),upper(psg_ext),'');
+                       sta_filenames = strrep(getFilenames(src_foldername,'*.sta'),'.sta','');
+                       STA_filenames = strrep(getFilenames(src_foldername,'*.STA'),'.STA','');
                        
                        unique_names = unique([psg_filenames(:);PSG_filenames(:);sta_filenames(:);STA_filenames(:)]);
                        
@@ -369,7 +369,7 @@ classdef CLASS_CManager_database < CLASS_database
                            curStudy.dbID = databaseID;
                            curStudy.datetimefirstadded = 'now()';
                            cur_name = unique_names{u};
-                           [curStudy, files_found] = CLASS_CManager_database.updateCohortStudySrcStruct(curStudy,'all', src_folder,cur_name,psg_ext);
+                           [curStudy, files_found] = CLASS_CManager_database.updateCohortStudySrcStruct(curStudy,'all', src_foldername,cur_name,psg_ext);
                            if(files_found)
                                try
                                    if(look4WorkFiles)
@@ -394,8 +394,8 @@ classdef CLASS_CManager_database < CLASS_database
                        
                        if(exist(cohort_q.src_psg_foldername{c},'dir'))
                            cur_folder = cohort_q.src_psg_foldername{c};
-                           psg_filenames = strrep(getFilenames(src_folder,strcat('*',lower(psg_ext))),lower(psg_ext),'');
-                           PSG_filenames = strrep(getFilenames(src_folder,strcat('*',upper(psg_ext))),upper(psg_ext),'');
+                           psg_filenames = strrep(getFilenames(src_foldername,strcat('*',lower(psg_ext))),lower(psg_ext),'');
+                           PSG_filenames = strrep(getFilenames(src_foldername,strcat('*',upper(psg_ext))),upper(psg_ext),'');
                            psg_names = unique([psg_filenames(:);PSG_filenames(:)]);
                        end
                        if(exist(cohort_q.src_stage_foldername{c},'dir'))
