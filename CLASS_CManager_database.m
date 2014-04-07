@@ -106,7 +106,7 @@ classdef CLASS_CManager_database < CLASS_database
                 ', src_foldername varchar(128) DEFAULT NULL',...
                 ', src_foldertype ENUM(''tier'',''flat'')',...
                 ', src_psg_foldername varchar(128) DEFAULT NULL',...
-                ', src_psg_extension varchar(4) DEFAULT NULL',...                
+                ', src_psg_extension varchar(4) DEFAULT ''.EDF''',...                
                 ', src_stage_foldername varchar(128) DEFAULT NULL',...
                 ', src_events_foldername varchar(128) DEFAULT NULL',...
                 ', src_xml_foldername varchar(128) DEFAULT NULL',...
@@ -357,8 +357,8 @@ classdef CLASS_CManager_database < CLASS_database
                        
                    elseif(strcmpi(src_foldertype,'flat'))
                        
-                       psg_filenames = strrep(getFilenames(src_folder,lower(psg_ext)),lower(psg_ext),'');
-                       PSG_filenames = strrep(getFilenames(src_folder,upper(psg_ext)),upper(psg_ext),'');
+                       psg_filenames = strrep(getFilenames(src_folder,strcat('*',lower(psg_ext))),lower(psg_ext),'');
+                       PSG_filenames = strrep(getFilenames(src_folder,strcat('*',upper(psg_ext))),upper(psg_ext),'');
                        sta_filenames = strrep(getFilenames(src_folder,'*.sta'),'.sta','');
                        STA_filenames = strrep(getFilenames(src_folder,'*.STA'),'.STA','');
                        
@@ -395,9 +395,8 @@ classdef CLASS_CManager_database < CLASS_database
                        
                        if(exist(cohort_q.src_psg_foldername{c},'dir'))
                            cur_folder = cohort_q.src_psg_foldername{c};
-                           
-                           psg_filenames = strrep(getFilenames(cur_folder,lower(psg_ext)),lower(psg_ext),'');
-                           PSG_filenames = strrep(getFilenames(cur_folder,upper(psg_ext)),upper(psg_ext),'');
+                           psg_filenames = strrep(getFilenames(src_folder,strcat('*',lower(psg_ext))),lower(psg_ext),'');
+                           PSG_filenames = strrep(getFilenames(src_folder,strcat('*',upper(psg_ext))),upper(psg_ext),'');
                            psg_names = unique([psg_filenames(:);PSG_filenames(:)]);
                        end
                        if(exist(cohort_q.src_stage_foldername{c},'dir'))
