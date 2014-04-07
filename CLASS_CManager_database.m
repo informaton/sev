@@ -630,7 +630,7 @@ classdef CLASS_CManager_database < CLASS_database
                             fext = CLASS_CManager_database.workingFileExts{e};
                             working_filename = strcat(fname,'.',upper(fext));
                             if(exist(fullfile(working_foldername,working_filename),'file'))
-                                cohortStudy.(sprintf('working_has_%s_filename',fext)) = true;
+                                cohortStudy.(sprintf('working_has_%s_file',fext)) = true;
                                 cohortStudy.(sprintf('working_%s_filename',fext)) = working_filename;
                             end
                         end
