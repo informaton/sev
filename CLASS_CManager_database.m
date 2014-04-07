@@ -15,7 +15,8 @@ classdef CLASS_CManager_database < CLASS_database
         dbName = 'CManager_DB';
         dbUser = 'CManager_user';
         dbPassword = 'CManager_password';
-        fileTypes = {'psg','stage','sco','xml','events'};        
+        fileTypes = {'psg','stage','sco','xml','events'};  
+        workingFileExts = {'edf','sco','sta'};
     end
     
     methods
@@ -342,7 +343,7 @@ classdef CLASS_CManager_database < CLASS_database
                            if(files_found)
                                try
                                    if(look4WorkFiles)
-                                       curStudy = CLASS_CManager_database.updateCohortStudySrcStruct(curStudy,working_foldername,mappingStruct);                                                                  
+                                       curStudy = CLASS_CManager_database.updateCohortStudyWorkStruct(curStudy,mappingStruct);                                                                  
                                    end
                                    CLASS_CManager_database.insertRecordFromStruct(TableName,curStudy)
                                catch me
@@ -387,11 +388,10 @@ classdef CLASS_CManager_database < CLASS_database
                                if(files_found)
                                    try
                                        if(look4WorkFiles)
-                                           curStudy = CLASS_CManager_database.updateCohortStudySrcStruct(curStudy,working_foldername);
-                                           CLASS_CManager_database.insertRecordFromStruct(TableName,curStudy,mappingStruct)
-                                       else
-                                           CLASS_CManager_database.insertRecordFromStruct(TableName,curStudy)
+                                           curStudy = CLASS_CManager_database.updateCohortStudySrcStruct(curStudy,working_foldername,mappingStruct);
                                        end
+                                       
+                                       CLASS_CManager_database.insertRecordFromStruct(TableName,curStudy);
                                        
                                        
                                    catch me
@@ -427,12 +427,9 @@ classdef CLASS_CManager_database < CLASS_database
                            if(files_found)
                                try
                                    if(look4WorkFiles)
-                                       curStudy = CLASS_CManager_database.updateCohortStudySrcStruct(curStudy,working_foldername);
-                                       CLASS_CManager_database.insertRecordFromStruct(TableName,curStudy,mappingStruct)
-                                   else
-                                       CLASS_CManager_database.insertRecordFromStruct(TableName,curStudy)
+                                       curStudy = CLASS_CManager_database.updateCohortStudyWorkStruct(curStudy,mappingStruct);
                                    end
-
+                                   CLASS_CManager_database.insertRecordFromStruct(TableName,curStudy);
                                    
                                catch me
                                    showME(me);
@@ -482,10 +479,10 @@ classdef CLASS_CManager_database < CLASS_database
                            if(files_found)
                                try
                                    if(look4WorkFiles)
-                                       curStudy = CLASS_CManager_database.updateCohortStudySrcStruct(curStudy,working_foldername,mappingStruct);                                                                  
+                                       curStudy = CLASS_CManager_database.updateCohortStudyWorkStruct(curStudy,mappingStruct);                                                                  
                                    end
 
-                                   CLASS_CManager_database.insertRecordFromStruct(TableName,curStudy)
+                                   CLASS_CManager_database.insertRecordFromStruct(TableName,curStudy);
                                    
                                catch me
                                    showME(me);
@@ -620,14 +617,28 @@ classdef CLASS_CManager_database < CLASS_database
             %find the study name
             if(cohortStudy.src_has_psg_file)
                 src_file = cohortStudy.src_psg_filename;
-                matched_data_cell = mappingStruct.work_cell(strcmpi(src_file,mappingStruct.src_cell));
-                for n=1:numel(matched_data_cell)
-                    working_filename = matched_data_cell{n};
-                    [~,~,fext] = fileparts(working_filename);
-                    if(exist(fullfile(cohortStudy.working_foldername,working_filename),'file'))
-                        cohortStudy.(sprintf('working_has_%s_filename',fext)) = true;
-                        cohortStudy.(sprintf('working_%s_filename',fext)) = working_filename;                        
-                    end                    
+                
+                workingFolderType = cohortStudy.working_foldertype;
+                workingFilename = char(mappingStruct.work_cell(strcmpi(src_file,mappingStruct.src_cell)));  %apply the char here to remove cell structure when match is found or make empty when no match is found.  The {} operators will throw an empty assignment error in the case of no match.
+                
+                if(~isempty(workingFilename))
+                    [~,fname,~] = fileparts(workingFilename);
+                    if(strcmpi(workingFolderType,'group'))
+                        
+                    elseif(strcmpi(workingFolderType,'flat'))
+                        
+                    elseif(strcmpi(workingFolderType,'tier'))
+                        
+                    elseif(strcmpi(workingFolderType,'split'))
+                        for e=1:numel(CLASS_CManager_database.workingFileExts)
+                            fext = CLASS_CManager_database.workingFileExts{e};
+                            working_filename = fullfile(fname,fext);
+                            if(exist(fullfile(cohortStudy.working_foldername,working_filename),'file'))
+                                cohortStudy.(sprintf('working_has_%s_filename',fext)) = true;
+                                cohortStudy.(sprintf('working_%s_filename',fext)) = working_filename;
+                            end
+                        end
+                    end
                 end
             end
         end
