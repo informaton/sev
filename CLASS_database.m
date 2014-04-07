@@ -1584,6 +1584,7 @@ classdef CLASS_database < handle
             fclose(fid);
         end
         
+       
         function exportQuery2File(query, filename, optional_delim)
             if(isstruct(query))
                 q = query;
@@ -1623,6 +1624,64 @@ classdef CLASS_database < handle
                 fclose(fid);
             end            
         end
+        
+                 %> @brief Loads a mapping file.  Mapping files are used to map
+        %> source psg filenames to their generated working files (e.g. .EDF,
+        %> .STA, and .SCO files)
+        %> @param src_mapping_file A text file with the mapping data.  Each row should contain (1) the
+        %> source psg file name and extension followed by (2 to 4?) working
+        %> file names and extensions.  Lines begining with the '#' character 
+        %> are treated as comments and ignored.
+        %> @retval mappingStruct struct that contains the mapping fields
+        %> - src_cell Nx1 cell of strings
+        %> - work_cell Nx1 cell of cell of strings
+        %> work_cell{n,:} containing working file names that correspond to the 
+        %> source psg filename listed in src_cell{n}
+        %> @retval success Boolean that returns true if a mapping file is
+        %> loaded successfully
+        function [mappingStruct, success] = loadMappingFile(src_mapping_file)
+            mappingStruct = [];
+            success = false;
+            if(exist(src_mapping_file,'file'))
+                fid = fopen(src_mapping_file,'r');
+                if(fid>0)
+                    try
+            
+                        file_open = true;
+                        
+                        pat = '([^\.\s]+\.[^\.\s]+)';
+                        
+                        src_cell = {};
+                        work_cell = {};
+                        while(file_open)
+                            try
+                                curline = fgetl(fid);
+                                if(~ischar(curline))
+                                    file_open = false;
+                                else
+                                    tok = regexp(curline,pat,'tokens');
+                                    if(numel(tok)>1 && isempty(strfind(tok{1}{1},'#')))
+                                        src_cell{end+1,1} = char(tok{1});
+                                        work_cell{end+1,1} = tok(1,2:end);
+                                    end
+                                end;
+                            catch me
+                                showME(me);                                
+                            end
+                        end;
+                        flcose(fid);
+                        mappingStruct.src_cell = src_cell;
+                        mappingStruct.work_cell = work_cell;
+                    catch me
+                        showME(me);
+                        fclose(fid);
+                    end
+                else
+                    fprintf('An error occurred while trying to open the source name mapping file (%s).  Working files will not be added to the database.\n',src_mapping_file);
+                end
+            end
+        end
+        
     end
     
 end

@@ -65,7 +65,13 @@ classdef CLASS_CManager_database < CLASS_database
         %> - location Geographic location where sleep studies were
         %> performed.
         %> - src_foldername 
-        %> - src_foldertype Either <b>tier</b> or <b>flat</b>
+        %> - src_foldertype Can be <b>tier</b>, <b>flat</b>, <b>group</b> or
+        %<b>split</b>.  Flat has all psg's in same folder.  Tier has each
+        %>.psg in a subfolder of the main folder.  Group has .psg files
+        %>collected into groups which are placed in several subfolders, each
+        %> one path down from the main folder.  Split allows .psg, .sta, .and event files
+        %> to be placed in their own folder according to their type 
+        %> (e.g. .edf in one folder, .sta files in another, and .event files in another.
         %> - src_psg_foldername Folder name containing the original source
         %> (src) files for the cohort.
         %> - src_psg_extension filename extension of the psg (e.g. <b>.edf</b>)
@@ -104,7 +110,7 @@ classdef CLASS_CManager_database < CLASS_database
                 ', projectname VARCHAR(30) DEFAULT NULL',...                
                 ', location VARCHAR(30) DEFAULT "somewhere"',...                
                 ', src_foldername varchar(128) DEFAULT NULL',...
-                ', src_foldertype ENUM(''tier'',''flat'')',...
+                ', src_foldertype ENUM(''tier'',''flat'',''split'',''group'')',...
                 ', src_psg_foldername varchar(128) DEFAULT NULL',...
                 ', src_psg_extension varchar(4) DEFAULT ''.EDF''',...                
                 ', src_stage_foldername varchar(128) DEFAULT NULL',...
@@ -112,7 +118,7 @@ classdef CLASS_CManager_database < CLASS_database
                 ', src_xml_foldername varchar(128) DEFAULT NULL',...
                 ', src_sco_foldername varchar(128) DEFAULT NULL',...                   
                 ', working_foldername varchar(128) DEFAULT NULL',...
-                ', working_foldertype ENUM(''tier'',''flat'')',...
+                ', working_foldertype ENUM(''tier'',''flat'',''split'',''group'')',...
                 ', working_edf_foldername varchar(128) DEFAULT NULL',...
                 ', working_sta_foldername varchar(128) DEFAULT NULL',...
                 ', working_sco_foldername varchar(128) DEFAULT NULL',...
@@ -348,6 +354,58 @@ classdef CLASS_CManager_database < CLASS_database
                                end
                            else
                                fprintf('No files found in %s!\n',cur_folder);
+                           end
+                       end
+                       
+                   %This is a MrOS type
+                   elseif(strcmpi(src_foldertype,'group'))
+                       
+                       folderGrpNames = getPathnames(src_foldername);
+                       if(~iscell(folderGrpNames))
+                           fprintf('Warning!  Only one group folder found for this cohort (%s)\n',folderGrpNames);
+                           folderGrpNames = {folderGrpNames};
+                       end
+                       
+                       for f=1:numel(folderGrpNames)
+                           rootStudy = [];
+                           rootStudy.cohortID =cohortID;
+                           rootStudy.dbID = databaseID;
+                           rootStudy.datetimefirstadded = 'now()';
+                           
+                           cur_src_foldername = fullfile(src_foldername,folderNames{f});
+                           rootStudy.src_sub_foldername = folderGrpNames{f};
+                           
+                           %now go through each sub folder in a 'flat'
+                           %fashion.
+                           psg_filenames = strrep(getFilenames(cur_src_foldername,strcat('*',lower(psg_ext))),lower(psg_ext),'');
+                           PSG_filenames = strrep(getFilenames(cur_src_foldername,strcat('*',upper(psg_ext))),upper(psg_ext),'');
+                           sta_filenames = strrep(getFilenames(cur_src_foldername,'*.sta'),'.sta','');
+                           STA_filenames = strrep(getFilenames(cur_src_foldername,'*.STA'),'.STA','');
+                           
+                           unique_names = unique([psg_filenames(:);PSG_filenames(:);sta_filenames(:);STA_filenames(:)]);
+                           
+                           for u=1:numel(unique_names)
+                               
+                               cur_name = unique_names{u};
+                               [curStudy, files_found] = CLASS_CManager_database.updateCohortStudySrcStruct(rootStudy,'all', cur_src_foldername,cur_name,psg_ext);
+                               if(files_found)
+                                   try
+                                       if(look4WorkFiles)
+                                           curStudy = CLASS_CManager_database.updateCohortStudySrcStruct(curStudy,working_foldername);
+                                           CLASS_CManager_database.insertRecordFromStruct(TableName,curStudy,mappingStruct)
+                                       else
+                                           CLASS_CManager_database.insertRecordFromStruct(TableName,curStudy)
+                                       end
+                                       
+                                       
+                                   catch me
+                                       showME(me);
+                                       fprintf('Failed on %s\n',cur_name);
+                                   end
+                               else
+                                   fprintf('No files found for %s: %s!\n',cur_folder,cur_name);
+                               end
+                               
                            end
                        end
                        
@@ -611,64 +669,8 @@ classdef CLASS_CManager_database < CLASS_database
                 showME(me);
             end
             
-        end
-        
-        %> @brief Loads a mapping file.  Mapping files are used to map
-        %> source psg filenames to their generated working files (e.g. .EDF,
-        %> .STA, and .SCO files)
-        %> @param src_mapping_file A text file with the mapping data.  Each row should contain (1) the
-        %> source psg file name and extension followed by (2 to 4?) working
-        %> file names and extensions.  Lines begining with the '#' character 
-        %> are treated as comments and ignored.
-        %> @retval mappingStruct struct that contains the mapping fields
-        %> - src_cell Nx1 cell of strings
-        %> - work_cell Nx1 cell of cell of strings
-        %> work_cell{n,:} containing working file names that correspond to the 
-        %> source psg filename listed in src_cell{n}
-        %> @retval success Boolean that returns true if a mapping file is
-        %> loaded successfully
-        function [mappingStruct, success] = loadMappingFile(src_mapping_file)
-            mappingStruct = [];
-            success = false;
-            if(exist(src_mapping_file,'file'))
-                fid = fopen(src_mapping_file,'r');
-                if(fid>0)
-                    try
-            
-                        file_open = true;
-                        
-                        pat = '([^\.\s]+\.[^\.\s]+)';
-                        
-                        src_cell = {};
-                        work_cell = {};
-                        while(file_open)
-                            try
-                                curline = fgetl(fid);
-                                if(~ischar(curline))
-                                    file_open = false;
-                                else
-                                    tok = regexp(curline,pat,'tokens');
-                                    if(numel(tok)>1 && isempty(strfind(tok{1}{1},'#')))
-                                        src_cell{end+1,1} = char(tok{1});
-                                        work_cell{end+1,1} = tok(1,2:end);
-                                    end
-                                end;
-                            catch me
-                                showME(me);                                
-                            end
-                        end;
-                        flcose(fid);
-                        mappingStruct.src_cell = src_cell;
-                        mappingStruct.work_cell = work_cell;
-                    catch me
-                        showME(me);
-                        fclose(fid);
-                    end
-                else
-                    fprintf('An error occurred while trying to open the source name mapping file (%s).  Working files will not be added to the database.\n',src_mapping_file);
-                end
-            end
-        end
+        end        
+
     end
     
 end
