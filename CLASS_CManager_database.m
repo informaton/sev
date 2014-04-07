@@ -297,36 +297,34 @@ classdef CLASS_CManager_database < CLASS_database
                src_mapping_file = cohort_q.src_mapping_file{c};
                psg_ext = cohort_q.src_psg_extension{c};
                
-               files_found = false;
+               
                
                %now look through the working folders...
-               look4WorkFiles = false;
-               if(exist(working_foldername,'dir'))
+               if(~exist(working_foldername,'dir'))
+                   fprintf('Where did you go?\n');
+                   fprintf('Could not find the working folder for PSGs (%s)!\n',working_foldername);
+                   fprintf('No source folders found for %s!\n',cohort_q.name{c});
+               else
                    
                    if(strcmpi(working_foldertype,'flat') && exist(src_mapping_file,'file'))
                        [mappingStruct, look4WorkFiles] = CLASS_CManager_database.loadMappingFile(src_mapping_file);
-                   else
+                   else                       
                        fprintf('This mode has not yet been accounted for (%s).\n',working_foldertype);
+                       look4WorkFiles = false;               
                    end
-               else
-                   fprintf('Where did you go?\n');
-                   fprintf('Could not find the working folder for PSGs (%s)!\n',working_foldername);
-               end
                
-               %Is a tier folder structure used (e.g. an APOE example, where the EDF's and files are all
-               %subfolders of the root foldername)               
-               % note: the subolder names must be the same as the .edf file
-               % names.
-               % 
-               if(~folder_found)
-                   fprintf('No source folders found for %s!\n',cohort_q.name{c});
-               else
+                   %Is a tier folder structure used (e.g. an APOE example, where the EDF's and files are all
+                   %subfolders of the root foldername)
+                   % note: the subolder names must be the same as the .edf file
+                   % names.
+                   %
                    if(strcmpi(src_foldertype,'tier'))
-                       folder_found = true;
+                       
                        folderNames = getPathnames(src_foldername);
                        if(~iscell(folderNames))
                            folderNames = {folderNames};
                        end
+                       
                        for f=1:numel(folderNames)
                            curStudy = [];
                            curStudy.cohortID =cohortID;
@@ -445,9 +443,6 @@ classdef CLASS_CManager_database < CLASS_database
                    else
                        fprintf('unrecognized or unspecified tier type (%s)!\n',cohort_q.src_foldertype{c});
                    end
-                   
-                   
-                      
                    
                end
            end
