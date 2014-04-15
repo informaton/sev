@@ -143,10 +143,10 @@ classdef CLASS_database < handle
         % ======================================================================
         function refactorPatstudykey(obj,table2Refactor, field2RefactorWith)
             if(~strcmpi(table2Refactor,'studyinfo_t'))
-                if(nargin<2 || isempty(field2RefactorWith))
+                if(nargin<3 || isempty(field2RefactorWith))
                     field2RefactorWith = 'patid';
                 end
-                mym('update {S} inner join studyinfo_t on ({S}.{S} = studyinfo_t.{S}) set {S}.{S} = studyinfo_t.{S})',table2Refactor,table2Refactor,field2RefactorWith,field2RefactorWith,table2Refactor,field2RefactorWith,field2RefactorWith);
+                mym('update {S} inner join studyinfo_t on ({S}.{S} = studyinfo_t.{S}) set {S}.{S} = studyinfo_t.{S}',table2Refactor,table2Refactor,field2RefactorWith,field2RefactorWith,table2Refactor,field2RefactorWith,field2RefactorWith);
             else
                 fprintf(1,'Cannot refactor with the studyinfo_t as your source table!\n');
             end
