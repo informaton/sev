@@ -25,7 +25,7 @@ classdef CLASS_database < handle
         %> database desired.
         %> @param obj CLASS_database derived instance
         % =================================================================
-        createDBandTables(obj);
+        createDBandTables(obj)
         
         % ======================================================================
         %> @brief Abstract method to create a mysql database table, Diagnostics_T. 
@@ -33,7 +33,7 @@ classdef CLASS_database < handle
         %> database desired.
         %> @param obj CLASS_database derived instance
         % =================================================================
-        create_Diagnostics_T(obj);
+        create_Diagnostics_T(obj)
     end
     
     methods
@@ -61,8 +61,6 @@ classdef CLASS_database < handle
             %setup a user for this person
             mym(['GRANT ALL ON ',obj.dbStruct.name,'.* TO ''',obj.dbStruct.user,'''@''localhost'' IDENTIFIED BY ''',obj.dbStruct.password,'''']);
             mym('close');
-            
-            
             
             %login as the new user ...
             mym('open','localhost',obj.dbStruct.user,obj.dbStruct.password);
@@ -111,7 +109,49 @@ classdef CLASS_database < handle
             mym('select * from {S} INTO OUTFILE ''{S}''',tableName,outFile);            
         end
         
-
+        % ======================================================================
+        %> @brief Performs a system level MySQL dump of the identified
+        %> table to a file with '.sql' extension.
+        %> @param obj Instance of CLASS_database
+        %> @param tableName Name of the table (as a string) which will be
+        %> dumped as a MySQL file dump.
+        % ======================================================================
+        function dumpTable(obj,tableName)
+            dumpFilename = fullfile(pwd,strcat(tableName,'.sql'));
+            system(sprintf('mysqldump -u%s -p%s %s %s > %s',obj.dbUser,obj.dbPassword,obj.dbName,tableName,dumpFilename),'-echo');
+        end
+        
+        % ======================================================================
+        %> @brief Performs a system level mysqldump call to import the
+        %> passed sql dump file.
+        %> @param obj Instance of CLASS_database
+        %> @param sqlDumFile File name of the mysql dump to import (i.e. a .sql file)
+        % ======================================================================
+        function importTable(obj,sqlDumpFile)
+            system(sprintf('mysql -u%s -p%s %s < %s',obj.dbUser,obj.dbPassword,obj.dbName,sqlDumpFile),'-echo');
+        end
+        
+         % ======================================================================
+        %> @brief Refactors a table's patstudykey using another field that is listed in the studyinfo_t
+        %> table (e.g. patid).
+        %> @param obj Instance of CLASS_database
+        %> @param table2refactor Table name whose patstudykey is to be refactored
+        %> @param fieldToRefactorAgainst The field which is used as an
+        %> alternate key into the studyinfo_t which also identifies a uninque
+        %> record in the table2refactor table.
+        %> @note *patid* is the default value for field2RefactorAgainst
+        % ======================================================================
+        function refactorPatstudykey(obj,table2Refactor, field2RefactorWith)
+            if(~strcmpi(table2Refactor,'studyinfo_t'))
+                if(nargin<2 || isempty(field2RefactorWith)
+                    field2RefactorWith = 'patid';
+                end
+                mym('update {S} inner join studyinfo_t on ({S}.{S} = studyinfo_t.{S}) set {S}.{S} = studyinfo_t.{S})',table2Refactor,table2Refactor,field2RefactorWith,field2RefactorWith,table2Refactor,field2RefactorWith,field2RefactorWith);
+            else
+                fprintf(1,'Cannot refactor with the studyinfo_t as your source table!\n');
+            end
+        end
+        
         
     end
     
@@ -1154,10 +1194,8 @@ classdef CLASS_database < handle
             if(nargout==0)
                 fprintf(strout);                
             end
-                
-
-            
         end
+        
         % ======================================================================
         %> @brief Insert a record into the detectorInfo_T table using the field/values passed in
         %> @param dbStruct A structure containing database accessor fields:

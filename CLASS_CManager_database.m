@@ -67,7 +67,7 @@ classdef CLASS_CManager_database < CLASS_database
         %> performed.
         %> - src_foldername 
         %> - src_foldertype Can be <b>tier</b>, <b>flat</b>, <b>group</b> or
-        %<b>split</b>.  Flat has all psg's in same folder.  Tier has each
+        %> <b>split</b>.  Flat has all psg's in same folder.  Tier has each
         %>.psg in a subfolder of the main folder.  Group has .psg files
         %>collected into groups which are placed in several subfolders, each
         %> one path down from the main folder.  Split allows .psg, .sta, .and event files
@@ -91,12 +91,14 @@ classdef CLASS_CManager_database < CLASS_database
         %> - transformation_script Name of file used to transcode src files
         %> to working files.
         %> - src_mapping_file Name of file that contains the mapping from the src psg filenames to working filenames.
-        %> - Montage_suite PSG montage used by cohort. enumerated ''Grass'',''Gamma'',''Twin'',''Embla Sandman'',''Woodward'',''Unknown'',''Various'') default is ''Unknown'''
+        %> - psg_collection_system PSG collection suite used by cohort. enumerated ''Grass'',''Gamma'',''Twin'',''Embla Sandman'',''Woodward'',''Unknown'',''Various'') default is ''Unknown'''
         %> - pointofcontact Name and email of point of contact
         %> - notes Free form text.
-        %> - reference Free form text
-        %> - website Free form text
-        %> - timeframe Free form text
+        %> - reference Free form text.  Used to hold publication references
+        %>related to the creation of this cohort that should be cited in
+        %> research that uses this cohort.
+        %> - website For holding useful http links related to the cohort.  Free form text.  
+        %> - timeframe Time span of when cohort data was collected (e.g. 2000-2010 for WSC).  Free form text
         %> @note The fields should be listed in the cohort.str text file
         %> for updating; see @update_CohortInfo_T
         function create_CohortInfo_T(obj)            
@@ -126,7 +128,7 @@ classdef CLASS_CManager_database < CLASS_database
                 ', patient_description_file varchar(128) DEFAULT NULL',...                
                 ', transformation_script VARCHAR(128) DEFAULT NULL',...
                 ', src_mapping_file VARCHAR(128) DEFAULT NULL',...                
-                ', Montage_suite ENUM(''Grass'',''Gamma'',''Twin'',''Embla Sandman'',''Woodward'',''Unknown'',''Various'') DEFAULT ''Unknown''',...
+                ', psg_collection_system ENUM(''Grass'',''Gamma'',''Twin'',''Embla Sandman'',''Woodward'',''Unknown'',''Various'') DEFAULT ''Unknown''',...
                 ', pointofcontact VARCHAR(128) DEFAULT NULL',...
                 ', notes VARCHAR(1024) DEFAULT NULL',...
                 ', reference VARCHAR(512) DEFAULT NULL',...
@@ -145,29 +147,30 @@ classdef CLASS_CManager_database < CLASS_database
         %> - dbID Database Info's primary key (primary, foreign key; default is 0 which means the study is not in a database).
         %> - fileID primary key for each record
         %> - patstudykey the primary key of this record in the associated database; there is a problem with how to identify these if they are not in a database.  I see two solutions: (1.)  Build the indexing database first and then build the suboordinate, cohort databases next with the requirement that they use the same patstudykey values for their own entries.  (2.)  Leave the patstudykey blank and instead use the filename and cohort name, combined, as the primary key.
+        %> - patid Cohort patient identifier
         %> - datetimelastupdated Date/time last updated. (e.g. 2014-01-27, 16:49)
         %> - datetimefirstadded Date/time Added (e.g. 2014-01-27, 16:49)        
-        %> - src_sub_foldername 
+        %> - src_sub_foldername Sub foldername of file (only used if the associated cohort entry (i.e. cohortID) has 'tier'
+        %> for the src_foldertype field)
         %> - src_has_psg_file Does it come with an .edf file
-        %> - src_psg_filename name of the .edf (e.g. R0017_2 080612.EDF)
-        %> - src_has_other_psg_file Does it come with a psg file that is
-        %> not .edf
-        %> - src_other_psg_filename name of the non .edf file (e.g. R0017_2 080612.SAN)
-        %> - src_has_sta_file Has stage file? (yes/no - or use empty stage filename)
-        %> - src_sta_filename Stage file name (empty for none)
-        %> - src_has_evt_file event file exists (yes/no - or use empty event filename)
-        %> - src_evt_filename event file name (empty for none)
-        %> - src_has_sco_file 
-        %> - src_sco_filename 
-        %> - src_has_xml_file 
-        %> - src_xml_filename 
-        %> - working_sub_foldername 
-        %> - working_has_edf_file 
-        %> - working_edf_filename
-        %> - working_has_sta_file
-        %> - working_sta_filename
-        %> - working_has_sco_file
-        %> - working_sco_filename
+        %> - src_psg_filename name of the psg file (e.g. R0017_2 080612.EDF)
+        %> - src_has_sta_file Does the original record have a stage file? (yes=1/no=0)
+        %> - src_sta_filename Original stage file name (empty for none)
+        %> - src_has_evt_file Dose an original event file exists (yes=1/no=0)
+        %> - src_evt_filename Original event file name (empty for none)
+        %> - src_has_sco_file Does the original record have a .SCO file (yes=1/no=0)
+        %> - src_sco_filename Original .sco filename (empty for none)
+        %> - src_has_xml_file Does the original record have a .xml file (yes=1/no=0)
+        %> - src_xml_filename Original .xml filename (empty for none)
+        %> - working_sub_foldername sub foldername of file - only used when
+        %> associated cohort entry has 'tier' for the working_foldertype
+        %> field)
+        %> - working_has_edf_file Does a working .edf export of the source psg exist? (yes=1/no=0)
+        %> - working_edf_filename name of the .edf file
+        %> - working_has_sta_file Does a working .sta (stage file) export of the source stage file exist? (yes=1/no=0)
+        %> - working_sta_filename name of the .sta file
+        %> - working_has_sco_file Does a working .sco export of the source record scoring data exist? (yes=1/no=0)
+        %> - working_sco_filename name of the .sco file
         function create_FileStudyInfo_T(obj) 
             obj.open();            
             TableName = 'filestudyInfo_T';
@@ -208,14 +211,12 @@ classdef CLASS_CManager_database < CLASS_database
         
         %> @brief create_DatabaseInfo_T create the database info table.
         %> Database Info Table fields include
-        %> # 1.  DBid - data base info's primary key (e.g. 0, 1, 2, etc)
-        %> # 2.  Cohort name (e.g. WSC, SSC,
-        %> # 3.  Montage type (e.g. grass, twin, sandman, unknown)
-        %> # 4.  EDF/file pathname (e.g. /data1/SSC/APOE)
-        %> # 5.  Transformation script (e.g. /data1/exportScripts/SSC_APOE_convert.m; alternatively, we could store the script itself as a field entry)
-        %> # 6.  Point of Contact (e.g. Eileen Leary; Robin Stubbs; Oscar Carrillo)
-        %> # 7.  Notes (e.g. The files are from China; Ling lin started the development work and is a good contact for following up with collaborator fang han)
-        %> # 8.  Database accessor fields (Database name, user name, password)
+        %> -   dbID - data base info's primary key (e.g. 0, 1, 2, etc)
+        %> -   name - Name of the database entry (e.g. WSC_DB, SSC_DB),
+        %> -   user - User name for entering database
+        %> -   password - database login password for the user.
+        %> -   creationScript - matlab file (and location) used to generate
+        %> the database         
         function create_DatabaseInfo_T(obj)
             obj.open();
             TableName = 'DatabaseInfo_T';
