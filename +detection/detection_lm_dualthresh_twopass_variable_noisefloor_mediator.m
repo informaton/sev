@@ -115,10 +115,10 @@ end
 data = data_in;
 
 %merge events that are within 1/20th of a second of each other samples of each other
-dur_samples_below_count = ceil(0.05*samplerate);
+dur_samples_below_count = ceil(0.05*params.samplerate);
     
 %first pass
-[variable_threshold_low_uv, variable_threshold_high_uv, clean_data] = getNoisefloor(data, params,samplerate);
+[variable_threshold_low_uv, variable_threshold_high_uv, clean_data] = getNoisefloor(data, params,params.samplerate);
 
 new_events = variable_triplethresholdcrossings(clean_data, variable_threshold_high_uv,variable_threshold_low_uv,dur_samples_below_count);
 
@@ -131,7 +131,7 @@ if(~isempty(new_events))
         data(new_events(k,1):new_events(k,2)) = variable_threshold_low_uv(new_events(k,1):new_events(k,2))/2;
     end
 
-    [variable_threshold_low_uv, variable_threshold_high_uv,clean_data2] = getNoisefloor(data, params,samplerate);
+    [variable_threshold_low_uv, variable_threshold_high_uv,clean_data2] = getNoisefloor(data, params,params.samplerate);
     secondpass_events = variable_triplethresholdcrossings(clean_data2, variable_threshold_high_uv,variable_threshold_low_uv,dur_samples_below_count);
     if(~isempty(secondpass_events))
         new_events = sortrows([new_events;secondpass_events],1);
@@ -142,25 +142,25 @@ end
 if(~isempty(new_events))
 
     if(params.merge_within_sec>0)
-        merge_distance = round(0.1*samplerate);
+        merge_distance = round(0.1*params.samplerate);
         new_events = merge_nearby_events(new_events,merge_distance);
     end    
 
     if(params.min_duration_sec>0)
-        diff_sec = (new_events(:,2)-new_events(:,1))/samplerate;
+        diff_sec = (new_events(:,2)-new_events(:,1))/params.samplerate;
         new_events = new_events(diff_sec>=params.min_duration_sec,:);
     end
 
     
     if(params.merge_within_sec>0)
-        merge_distance = round(params.merge_within_sec*samplerate);
+        merge_distance = round(params.merge_within_sec*params.samplerate);
         new_events = merge_nearby_events(new_events,merge_distance);
     end
     
 end
 
-max_duration = params.max_duration_sec*samplerate;
-min_duration = params.min_duration_sec*samplerate;
+max_duration = params.max_duration_sec*params.samplerate;
+min_duration = params.min_duration_sec*params.samplerate;
 
 paramStruct = [];
 
@@ -190,13 +190,13 @@ if(~isempty(new_events))
         end
         for n=1:num_events
             abs_datum = abs(data(new_events(n,1):new_events(n,2)));
-            paramStruct.dur_sec(n) = (new_events(n,2)-new_events(n,1)+1)/samplerate;
+            paramStruct.dur_sec(n) = (new_events(n,2)-new_events(n,1)+1)/params.samplerate;
             paramStruct.median(n) = median(abs_datum);
             
             %             paramStruct.rms(n) = sqrt(mean(datum.*datum));
             paramStruct.rms(n) = sqrt(mean(abs_datum.*abs_datum));
             paramStruct.abs_amplitude(n) = mean(abs_datum);
-            paramStruct.auc(n) = trapz(abs_datum)/samplerate;
+            paramStruct.auc(n) = trapz(abs_datum)/params.samplerate;
             paramStruct.density(n) = paramStruct.auc(n)/paramStruct.dur_sec(n);
             paramStruct.low_uV(n) = variable_threshold_low_uv(floor(new_events(n,1)+(new_events(n,2)-new_events(n,1))/2));
             paramStruct.high_uV(n) = variable_threshold_high_uv(floor(new_events(n,1)+(new_events(n,2)-new_events(n,1))/2));
