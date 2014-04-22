@@ -403,7 +403,7 @@ classdef CLASS_UI_marking < handle
             
             set(handles.menu_tools_event_toolbox,'callback',@obj.eventtoolbox_callback);
             set(handles.menu_tools_filter_toolbox,'callback',@obj.filter_channel_callback);%             filter_channel_Callback
-            set(handles.menu_tools_compare_events,'callback',@compare_events_callback);
+            set(handles.menu_tools_compare_events,'callback',@obj.compare_events_callback);
             set(handles.menu_tools_quad,'callback',@obj.menu_tools_quad_callback);            
             set(handles.menu_tools_roc,'callback',@obj.roc_directory_callback);
             set(handles.menu_tools_timelineEventsSelection,'callback',@obj.menu_tools_timelineEventsSelection_callback);
@@ -540,7 +540,7 @@ cropFigure2Axes(f,axes1_copy);
             end
         end
         
-        % --------------------------------------------------------------------
+        % -----------------------------------------------------------------
         % =================================================================
         %> @brief Import events stored in .SCO format
         %> @param obj instance of CLASS_events class.
@@ -609,7 +609,7 @@ cropFigure2Axes(f,axes1_copy);
             obj.sev_loading_file_flag = false;        
         end
         
-        % --------------------------------------------------------------------
+        % -----------------------------------------------------------------
         % =================================================================
         %> @brief update the SEV with a range of events that were previously saved
         %> using the save to evt menu item (.txt or .mat).
@@ -662,7 +662,7 @@ cropFigure2Axes(f,axes1_copy);
             end;
         end        
         
-        % --------------------------------------------------------------------
+        % -----------------------------------------------------------------
         function menu_file_import_evt_database_callback(obj,hObject, eventdata)
             % hObject    handle to menu_file_import_Evt_database (see GCBO)
             % eventdata  reserved - to be defined in a future version of MATLAB
@@ -695,7 +695,7 @@ cropFigure2Axes(f,axes1_copy);
             end
         end
         
-        % --------------------------------------------------------------------
+        % -----------------------------------------------------------------
         function menu_file_export_events2txt_callback(obj,hObject, eventdata)
             global EVENT_CONTAINER;
             if(ismethod(EVENT_CONTAINER,'save2txt'))
@@ -1503,7 +1503,7 @@ cropFigure2Axes(f,axes1_copy);
         
         function loadSTAGES(obj,stages_filename,num_epochs)
             global EVENT_CONTAINER;
-            obj.sev_STAGES = loadSTAGES(stages_filename,num_epochs);
+            obj.sev_STAGES = loadSTAGES(stages_filename,num_epochs,obj.SETTINGS.VIEW.unknown_stage);
             obj.sev_STAGES.startDateTime = obj.startDateTime;
             obj.sev_adjusted_STAGES = obj.sev_STAGES;            
             EVENT_CONTAINER.setStageStruct(obj.sev_STAGES);

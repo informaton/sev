@@ -384,7 +384,9 @@ classdef  CLASS_settings < handle
                         obj.VIEW.yDir = 'normal';  %or can be 'reverse'
                         obj.VIEW.standard_epoch_sec = 30; %perhaps want to base this off of the hpn file if it exists...
                         obj.VIEW.samplerate = 100;
+                        obj.VIEW.unknown_stage = 7; %this is the default value to use when we don't have a staging file.  
                         obj.VIEW.screenshot_path = obj.rootpathname; %initial directory to look in for EDF files to load
+                        
                         
                         obj.VIEW.channelsettings_file = 'channelsettings.mat'; %used to store the settings for the file
                         obj.VIEW.output_pathname = fullfile(fileparts(mfilename('fullpath')),'output');

@@ -1,4 +1,4 @@
-function STAGES = loadStages(stages_filename,num_epochs)
+function STAGES = loadSTAGES(stages_filename,num_epochs,default_unknown_stage)
 %stages_filename is the filename of an ASCII tab-delimited file whose
 %second column contains a vector of scored sleep stages for each epoch of
 %a sleep study.
@@ -16,19 +16,38 @@ function STAGES = loadStages(stages_filename,num_epochs)
 %                           .study_duration_in_seconds
 % modified 5.1.2013 - added .filename = stages_filename;
 
+if(nargin<3)
+    default_unknown_stage = 7;
+end
+
 %load stages information
 if(exist(stages_filename,'file'))
     stages = load(stages_filename,'-ASCII'); %for ASCII file type loading
-    STAGES.line = stages(:,2); %grab the sleep stages
+    
     if(nargin>1 && ~isempty(num_epochs) && floor(num_epochs)>0)
-        STAGES.line = STAGES.line(1:floor(num_epochs));
+        if(num_epochs~=size(stages,1))
+            STAGES.epochs = stages(:,1);
+            STAGES.line = repmat(default_unknown_stage,max([num_epochs;size(stages,1);STAGES.epochs(:)]),1);
+            STAGES.line(STAGES.epochs) = stages(:,2);
+        else            
+            %this cuts things off at thebackend, where we assume th
+            %disconnect between num_epochs expected and num epochs found
+            %has occurred. However, logically, there is no guarantee that
+            %the disconnect did not occur anywhere else (e.g. at the
+            %beginning, or sporadically throughout)
+            STAGES.line = stages(1:floor(num_epochs),2); 
+        end
+    else
+        STAGES.line = stages(:,2); %grab the sleep stages
     end
+    
 else
+
     if(nargin<2)
         mfile =  strcat(mfilename('fullpath'),'.m');
         fprintf('failed on %s\n',mfile);
     else
-        STAGES.line = repmat(7,num_epochs,1);
+        STAGES.line = repmat(default_unknown_stage,num_epochs,1);
     end
 end;
 

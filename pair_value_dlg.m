@@ -92,7 +92,7 @@ uiwait(handles.figure1);
 function handles = initializeView(handles)
 
 %make the tab groups...
-handles.tabgroup = uitabgroup('v0','parent',handles.panel_tabs);
+handles.tabgroup = uitabgroup('parent',handles.panel_tabs);
 % set(handles.tabgroup,'callback',{@tabgroup_callback,guidata(gcbo)});
 maxRecords = 0;
 
