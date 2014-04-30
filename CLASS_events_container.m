@@ -155,10 +155,15 @@ classdef CLASS_events_container < handle
         end
 
         % =================================================================
-        %> @brief 
+        %> @brief Load detection parameters from the .plist or .mat file
+        %> that associated with the passed detector function filename.  These
+        %> parameters can be passed directly to the detector function and are
+        %> helpful in keeping track of user preferences.
         %> @param obj instance of CLASS_events_container class.
-        %> @param 
-        %> @retval paramStruct 
+        %> @param detectorFcn The filename of the detector function to get parameters for.
+        %> @retval obj instance of CLASS_events_container class.
+        %> @retval paramStruct A structure containing the detectorFcn
+        %> parameters as obtained from the .plist or .mat file.  
         % =================================================================        
         function paramStruct = loadDetectionParams(obj,detectorFcn)
             pfile = fullfile(obj.detection_path,strcat(strrep(detectorFcn,'.m',''),'.plist'));
@@ -183,10 +188,27 @@ classdef CLASS_events_container < handle
         end
         
         % =================================================================
-        %> @brief
+        %> @brief Evaluates a SEV detection algorithm using the passed
+        %> parameters.  
         %> @param obj instance of CLASS_events_container class.
-        %> @param
-        %> @retval 
+        %> @param shortDetectorFcn Filename (sans pathname) of the detector
+        %> to evaluate.
+        %> @source_indices The source indices or source data (i.e. raw
+        %> digital sample values) to evaluate for events by the detector.
+        %> @param params A struct containing detector specific parameters
+        %> which refine the detector's behavior.  These are specific to the
+        %> detector and are optional.
+        %> @retval obj instance of CLASS_events_container class.
+        %> @retval detectStruct Structure containing the detection result
+        %> output.
+        %> @retval source_pStruct The parameters that were used/passed to
+        %> the detector function (this is params if params is entered as an
+        %> argument and not empty).
+        %> @note This function calls loadDetectionParams if the params
+        %> argument is empty or not given and will do a dummy evaluation of
+        %> the detector function to try and generate the default parameters
+        %> which can then be subsequently loaded and then run a second time
+        %> (for real, yo).  
         % =================================================================
         function [detectStruct, source_pStruct] = evaluateDetectFcn(obj,shortDetectorFcn,source_indices,params)
             localDetectorFcn = strcat(strrep(obj.detection_path,'+',''),'.',shortDetectorFcn);
@@ -208,10 +230,8 @@ classdef CLASS_events_container < handle
                         feval(localDetectorFcn,rand(30,1));
                     catch me
                     end
-                    params = obj.loadDetectionParams(shortDetectorFcn);
-                
-                end
-                
+                    params = obj.loadDetectionParams(shortDetectorFcn);                
+                end                
             end
             source_pStruct = params;
             params.samplerate = obj.CHANNELS_CONTAINER.getSamplerate(source_indices(1));
@@ -229,20 +249,20 @@ classdef CLASS_events_container < handle
         end
         
         % =================================================================
-        %> @brief
+        %> @brief Sets the stageStruct property
         %> @param obj instance of CLASS_events_container class.
-        %> @param
-        %> @retval 
+        %> @param stageStruct A stage structure.
+        %> @retval obj instance of CLASS_events_container class.
         % =================================================================
         function setStageStruct(obj,stageStruct)
             obj.stageStruct = stageStruct;
         end
         
         % =================================================================
-        %> @brief
+        %> @brief Sets SEV's default sample rate
         %> @param obj instance of CLASS_events_container class.
-        %> @param
-        %> @retval 
+        %> @param sampleRate The sample rate to set.
+        %> @retval obj instance of CLASS_events_container class.
         % =================================================================
         function setDefaultSamplerate(obj,sampleRate)
             if(sampleRate>0)
@@ -251,10 +271,23 @@ classdef CLASS_events_container < handle
         end
         
         % =================================================================
-        %> @brief
+        %> @brief Creates context menus for placing on detection labels
+        %> (i.e. the detector name that is displayed to the left of the main
+        %> view in SEV's single study mode) and on the event's themselves
+        %> (i.e. the patches that show the location of the event in the main
+        %> view).
+        %> <br> Context menus for the detection lables include:
+        %> - Next Event Epoch
+        %> - Previous Event Epoch
+        %> - Delete Event
+        %> - Rename Event
+        %> - Show Histogram
+        %> - Summary Statistics (Popout)
+        %> - Export to workspace
+        %> - Change Color
+        %> <br> Context menus for the 
         %> @param obj instance of CLASS_events_container class.
-        %> @param
-        %> @retval 
+        %> @param obj instance of CLASS_events_container class.
         % =================================================================
         function makeContextmenus(obj)
             %label contextmenu for the label on the left hand side
@@ -1704,20 +1737,23 @@ classdef CLASS_events_container < handle
             end
         end
         
+      
         % =================================================================
-        %> @brief
+        %> @brief save2text() opens a dialog where the user can select which
+        %> events they want to save and enter a filename to save the
+        %> events to.  Can save as plain text or matlab format (.mat)
+        %> save2text(filename) - saves all events using the filename
+        %> given.  
         %> @param obj instance of CLASS_events_container class.
-        %> @param
-        %> @retval 
+        %> @param filename (optional) file name to save events too.
+        %> If filename is a cell, then it must be of the same
+        %> length as the number of events, and each cell element is used
+        %> as unique filename to save the corresponding events to. 
+        %> @note See save2text and save2mat methods of the CLASS_events
+        %> class for further information on the output file format.
         % =================================================================
         function save2txt(obj,optional_filename)
-            %save2text() opens a dialog where the user can select which
-            %events they want to save and enter a filename to save the
-            %events to.
-            %save2text(filename) - saves all events using the filename
-            %given.  If filename is a cell, then it must be of the same
-            %length as the number of events, and each cell element is used
-            %as unique filename to save the corresponding events to.            
+                       
             global MARKING;
             if(nargin>1 && ~isempty(optional_filename))
                 filename = optional_filename;
@@ -1835,7 +1871,15 @@ classdef CLASS_events_container < handle
         %> @param obj instance of CLASS_events_container class.
         %> @param filename (optional) file name to save events too.
         %> If filename is not empty, then all events in obj are saved to
-        %> filename in .SCO format        
+        %> filename in .SCO format    
+        %> @note .SCO file format contains the following column values for
+        %> describing events on a per row basis:
+        %> - Start epoch
+        %> - Start sample point (based on 200 Hz sampling rate)
+        %> - Duration of the event in seconds
+        %> - numeric code representing the event (unused)
+        %> - Name of the event as a string label
+        %> - Start time of the event in hh:mm:ss.fff 24 hour format
         % =================================================================
         function save2sco(obj,optional_filename)
 
@@ -1871,13 +1915,17 @@ classdef CLASS_events_container < handle
                     start_times = datestr(start_times,'HH:MM:SS.FFF');
                     
                     %                 start_epochs = sample2epoch(starts,studyStruct.standard_epoch_sec,obj.samplerate);
-                    start_epochs = sample2epoch(starts,30,obj.defaults.parent_channel_samplerate);
                     
-                    duration = (event_start_stop_matrix(:,2)-event_start_stop_matrix(:,1)+1);
+                    start_epochs = sample2epoch(starts,obj.SETTINGS.VIEW.standard_epoch_sec,obj.defaults.parent_channel_samplerate);
+                    
+                    SCO_samplerate = 200;
+                    conversion_factor = SCO_samplerate/obj.defaults_parent_channel_samplerate;                    
+                    starts_sco_samples = stars*coversion_factor;
+                    duration_sco_samples = (event_start_stop_matrix(:,2)-event_start_stop_matrix(:,1))*conversion_factor;
                     %                 fid = 1;
                     for r=1:numel(evt_indices);
                         e=evt_indices(r);
-                        fprintf(fid,'%u\t%u\t%u\t%u\t%s\t%u\t%s\n',start_epochs(r),starts(r),duration(r),e,...
+                        fprintf(fid,'%u\t%u\t%u\t%u\t%s\t%u\t%s\n',start_epochs(r),starts_sco_samples(r),duration_sco_samples(r),e,...
                             evt_labels{e},e,start_times(r,:));
                     end
                     

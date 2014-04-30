@@ -1,4 +1,4 @@
-function SCO = loadSCOfile(filename)
+function SCO = loadSCOfile(filename,dest_samplerate, sco_samplerate)
 %loads/parses the .SCO file associated with the EDF.
 %SCO is a struct with the fields
 % .epoch - the epoch that the scored event occured in
@@ -15,6 +15,16 @@ function SCO = loadSCOfile(filename)
 
 % Hyatt Moore IV (< June, 2013)
 %
+
+% modified: 4/30/2014
+%  1.  Added additional input arguments, dest_samplerate and sco_samplerate
+%  to help with conversion.  Defaults are dest_samplerate = 100 and
+%  sco_samplerate = 200
+%  2.  Previously the duration_sec column was only divided by 100Hz and not
+%  200Hz, so durations could be 2x's as long if the sampling rate was not
+%  100 Hz.  
+%
+%
 % modified: 2/6/12 - 
 %  1.  Some .sco files had empty lines at the top, and we need to cruise
 %  through these until something hits - so I do a getl until the scan
@@ -27,6 +37,14 @@ function SCO = loadSCOfile(filename)
 %  3. last argument to textscan has changed to a regular expression since new
 %  files had extra columns at the end which are causing problems with the
 %  imports.
+
+if(nargin<3 || isempty(sco_samplerate)|| sco_samplerate<0)
+    sco_samplerate= 200;
+end
+
+if(nargin<2 || isempty(dest_samplerate)|| dest_samplerate<0)
+    dest_samplerate= 100;
+end
 
 if(exist(filename,'file'))
     fid = fopen(filename,'r');
@@ -58,11 +76,12 @@ if(exist(filename,'file'))
     
     %handle the negative case, which pops up for the more recent sco files
     %which were not converted correctly the first time...
+    % - adjusted on 4/30/2014 reference M.Stubbs email sent August 5, 2011
     neg = x{2}<0;
     
     if(any(neg))
-        x{2}(neg) = abs(floor(x{2}(neg)/100));
-        x{3}(neg) = abs(floor(x{3}(neg)/100));
+        x{2}(neg) = abs(floor(x{2}(neg)/200));
+        x{3}(neg) = abs(floor(x{3}(neg)/200));
     end
     
     x{3}(x{3}==0)=300; %make the default be 1.5 second duration.
@@ -78,13 +97,11 @@ if(exist(filename,'file'))
 %         samplerate = 100;
 %         conversion_factor = 1;
 %     end
-
-    samplerate = 100;
-    conversion_factor = 1;
+    
+    conversion_factor = dest_samplerate/sco_samplerate;
     SCO.start_stop_matrix = floor([x{2},x{2}+x{3}]*conversion_factor); %remove any problems with the 0.5 indexing that can occur here
 
-
-    SCO.duration_seconds = x{3}/samplerate;
+    SCO.duration_seconds = x{3}/sco_samplerate;
     SCO.start_time = x{7};
     SCO.label = deblank(x{5});
     fclose(fid);
