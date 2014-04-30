@@ -1918,7 +1918,7 @@ classdef CLASS_events_container < handle
                     start_epochs = sample2epoch(starts,30,obj.defaults.parent_channel_samplerate);
                     
                     SCO_samplerate = 200;
-                    conversion_factor = SCO_samplerate/obj.defaults_parent_channel_samplerate;                    
+                    conversion_factor = SCO_samplerate/obj.defaults.parent_channel_samplerate;                    
                     starts_sco_samples = stars*coversion_factor;
                     duration_sco_samples = (event_start_stop_matrix(:,2)-event_start_stop_matrix(:,1))*conversion_factor;
                     %                 fid = 1;
