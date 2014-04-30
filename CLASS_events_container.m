@@ -1801,8 +1801,7 @@ classdef CLASS_events_container < handle
                     bPos = get(bSAVE,'position');
                     
                     set(pan_channels,'units',units,'position',[width*1.5, 2*bPos(2)+bPos(4), cur_pos(3)+width*3,cur_pos(2)+delta*2]);
-                    pan_channelsPos = get(pan_channels,'position');
-                    
+                    pan_channelsPos = get(pan_channels,'position');                    
                     
                     set(bSAVE,'callback','uiresume(gcbf)');
                     
@@ -1916,7 +1915,7 @@ classdef CLASS_events_container < handle
                     
                     %                 start_epochs = sample2epoch(starts,studyStruct.standard_epoch_sec,obj.samplerate);
                     
-                    start_epochs = sample2epoch(starts,obj.SETTINGS.VIEW.standard_epoch_sec,obj.defaults.parent_channel_samplerate);
+                    start_epochs = sample2epoch(starts,30,obj.defaults.parent_channel_samplerate);
                     
                     SCO_samplerate = 200;
                     conversion_factor = SCO_samplerate/obj.defaults_parent_channel_samplerate;                    
