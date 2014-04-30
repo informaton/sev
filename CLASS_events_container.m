@@ -1919,7 +1919,7 @@ classdef CLASS_events_container < handle
                     
                     SCO_samplerate = 200;
                     conversion_factor = SCO_samplerate/obj.defaults.parent_channel_samplerate;                    
-                    starts_sco_samples = starts*coversion_factor;
+                    starts_sco_samples = starts*conversion_factor;
                     duration_sco_samples = (event_start_stop_matrix(:,2)-event_start_stop_matrix(:,1))*conversion_factor;
                     %                 fid = 1;
                     for r=1:numel(evt_indices);
