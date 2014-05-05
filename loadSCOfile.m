@@ -80,8 +80,8 @@ if(exist(filename,'file'))
     neg = x{2}<0;
     
     if(any(neg))
-        x{2}(neg) = abs(floor(x{2}(neg)/200));
-        x{3}(neg) = abs(floor(x{3}(neg)/200));
+        x{2}(neg) = abs(floor(x{2}(neg)/100));
+        x{3}(neg) = abs(floor(x{3}(neg)/100));
     end
     
     x{3}(x{3}==0)=300; %make the default be 1.5 second duration.
