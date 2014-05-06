@@ -1,44 +1,44 @@
-//compile instructions: Type the following at the command line in the directory containing this file.
-//mex anc_rls_single.c
-
 #include "mex.h"
-void mexFunction(int nlhs, mxArray *plhs[], 
-    int nrhs, const mxArray *prhs[]){
-    //input will be (signal, ref_signal,order,sigma,lambda)
+void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]){
+
+/*compile instructions: Type the following at the command line in the directory containing this file.
+//mex anc_rls_single.c
+*/
+    /*input will be (signal, ref_signal,order,sigma,lambda) */
     
     int i, j, n, rows, cols, row, col,col2,num_references,vector_size;
-    int M; //%number of weights for the filter; why 4?  because I like the number 4, and He. found that after 3 things are fine.
+    int M; /*%number of weights for the filter; why 4?  because I like the number 4, and He. found that after 3 things are fine.*/
     
-//see following example for reference
+/*see following example for reference
     //edit([matlabroot '/extern/examples/mex/mexget.c']);
 //   mxArray *signalArray, noiseArray;
-
+*/
     double sigma_inv;
     double lambda_inv;
     
-    //http://publications.gbdirect.co.uk/c_book/chapter6/initialization.html
-    double **Rinv, **Result,**RinvTmp;//eye(2*M)/sigma;   %Rinv is the [R(n-1)]^-1
-    double *H; //%contains weights of both filters (hv and hh = horizontal and vertical)
+    /*http://publications.gbdirect.co.uk/c_book/chapter6/initialization.html */
+    double **Rinv, **Result,**RinvTmp;/*eye(2*M)/sigma;   %Rinv is the [R(n-1)]^-1   line 20*/
+    double *H; /*%contains weights of both filters (hv and hh = horizontal and vertical)*/
     double *K;
-    double Kdenom; //denominator scalar and numerator vector which hold the
-    double *Knumer; //values necessary here...
-    double rHprod; // r'*H product
+    double Kdenom; /*denominator scalar and numerator vector which hold the*/
+    double *Knumer; /*values necessary here…*/
+    double rHprod; /* r'*H product*/
   
     
-    double *sig1,*noise1, *e; //s = signal+noise, n1 = noise ref 1, n2 = noise ref 2 (if applicable), e = cleaned signal
-    double    lambda;// %forgetting factor; He. found values between 0.995 and 1.0 to produce similarly good result
+    double *sig1,*noise1, *e; /*s = signal+noise, n1 = noise ref 1, n2 = noise ref 2 (if applicable), e = cleaned signal */
+    double    lambda;/* %forgetting factor; He. found values between 0.995 and 1.0 to produce similarly good result */
     double sigma;
     double e_n;
     
-    //check the input and output variables
+    /*check the input and output variables*/
     if (nlhs<1 || nrhs<3){
         mexErrMsgTxt("Function requires one output vector and at least two input vectors: 1. signal+noise; 2-n. noise reference(s)");
     }
-    num_references = 1; //this is the case for anc_rls_single...mxGetPr(prhs[0])[0];
+    num_references = 1; /*this is the case for anc_rls_single...mxGetPr(prhs[0])[0]; */
     
     if(nrhs>num_references+1){
         M = (int)mxGetScalar(prhs[num_references+1]);
-        //printf("M is now %u\n",M);
+        /*printf("M is now %u\n",M);*/
     }
     else{
         M = 4;
@@ -47,29 +47,29 @@ void mexFunction(int nlhs, mxArray *plhs[],
     
     if(nrhs>num_references+2){
         sigma = (double)mxGetScalar(prhs[num_references+2]);
-        //printf("sigma is now %0.4f\n",sigma);
+        /*printf("sigma is now %0.4f\n",sigma);  line 50*/
     }
     else{
         sigma = 0.01;
     }
     if(nrhs>num_references+3){
         lambda = (double)mxGetScalar(prhs[num_references+3]);
-        //         lambda = mxGetPr(prhs[num_references+3])[0];
-        //printf("lambda is now %0.3f\n",lambda);
+        /*         lambda = mxGetPr(prhs[num_references+3])[0];*/
+        /*printf("lambda is now %0.3f\n",lambda);*/
     }
     else{
         lambda = 0.995;
     }
-//     printf("num references=%i\tM=%i\tSigma=%0.3f\tLambda=%0.3f\n",num_references,M,sigma,lambda);
+/*     printf("num references=%i\tM=%i\tSigma=%0.3f\tLambda=%0.3f\n",num_references,M,sigma,lambda);*/
     
     sigma_inv = 1/sigma;
     lambda_inv = 1/lambda;
     
-    vector_size =  num_references*M;//(nrhs-1)*M;
-    //printf("vector size = %u\n",vector_size);
-    //http://publications.gbdirect.co.uk/c_book/chapter6/initialization.html
+    vector_size =  num_references*M;/* (nrhs-1)*M; */
+    /*printf("vector size = %u\n",vector_size); */
+    /*http://publications.gbdirect.co.uk/c_book/chapter6/initialization.html */
     
-    //initialize memory
+    /*initialize memory*/
 
     Rinv = (double**) calloc(vector_size,sizeof(double*));    
     Result = (double**) calloc(vector_size,sizeof(double*));
@@ -78,13 +78,13 @@ void mexFunction(int nlhs, mxArray *plhs[],
     if(Rinv=='\0' || Result=='\0' || RinvTmp=='\0'){
         printf("Memory not allocated - Failed!\n");
     }
-    H = (double*) calloc(vector_size, sizeof(double)); //%contains weights of both filters (hv and hh = horizontal and vertical)
+    H = (double*) calloc(vector_size, sizeof(double)); /*contains weights of both filters (hv and hh = horizontal and vertical)*/
     K = (double*) calloc(vector_size, sizeof(double));
-    Knumer= (double*) calloc(vector_size, sizeof(double)); //values necessary here...
+    Knumer= (double*) calloc(vector_size, sizeof(double)); /*values necessary here...*/
     
-    //    printf("Vector size = %i\nSigma = %0.3f\tLambda = %0.3f\n",vector_size,sigma,lambda);
+    /*    printf("Vector size = %i\nSigma = %0.3f\tLambda = %0.3f\n",vector_size,sigma,lambda); */
     for(i=0;i<vector_size;i++){
-        Rinv[i] = (double*) calloc(vector_size, sizeof(double)); //all initialized to 0 bits
+        Rinv[i] = (double*) calloc(vector_size, sizeof(double)); /*all initialized to 0 bits*/
         Result[i] = (double*) calloc(vector_size, sizeof(double));
         RinvTmp[i] = (double*) calloc(vector_size, sizeof(double));
         Rinv[i][i]=sigma_inv;
@@ -98,27 +98,28 @@ void mexFunction(int nlhs, mxArray *plhs[],
     /* Create an mxArray for the output data to be same size as input data*/
     plhs[0] = mxCreateDoubleMatrix(rows, cols, mxREAL);
     
-    /* Create a pointer to the output data */
+    /* Create a pointer to the output data Line 101 */
     e = mxGetPr(plhs[0]);
     
     
     /* Retrieve the input data */
-//    signalArray = mxDuplicateArray(prhs[0]);
-//    noiseArray = mxDuplicateArray(prhs[1]);
+/*    signalArray = mxDuplicateArray(prhs[0]);*/
+/*    noiseArray = mxDuplicateArray(prhs[1]);*/
     
-    //This was the old way of doing it, but needed to change so that I wasn't dealing with pass
-    //by reference bugs from changing the data here
+    /*This was the old way of doing it, but needed to change so that I wasn't dealing with pass*/
+    /*by reference bugs from changing the data here*/
     sig1 = mxGetPr(prhs[0]);
     noise1 = mxGetPr(prhs[1]);    
     
-    for (n=0; n<(rows*cols)-(M-1);n++){  // Rinv is nrhs*M x nrls*M
+    /* Rinv is nrhs*M x nrls*M   */
+    for (n=0; n<(rows*cols)-(M-1);n++){  
         Kdenom = 0;
         rHprod = 0;
         for(row = 0; row<vector_size;row++){
             for(col = 0; col<vector_size;col++){
-                Kdenom+=noise1[col+n]*Rinv[col][row]*noise1[row+n]; //r[row] = noise[row+n]
-                Knumer[row]+=Rinv[row][col]*noise1[col+n]; //%either way worksp
-                // Knumer[col]+=Rinv[col][row]*noise1[row+n];
+                Kdenom+=noise1[col+n]*Rinv[col][row]*noise1[row+n]; /* r[row] = noise[row+n] */
+                Knumer[row]+=Rinv[row][col]*noise1[col+n]; /* either way worksp  */
+                /* Knumer[col]+=Rinv[col][row]*noise1[row+n];  */
             }
             rHprod+=noise1[row+n]*H[row];
         }
@@ -126,13 +127,14 @@ void mexFunction(int nlhs, mxArray *plhs[],
         e_n = sig1[n+(M-1)]-rHprod;
         
         
-     //   if(n<10){
+     /*   if(n<10){
       //      printf("e_n = %0.4f\tKdenom=%0.4f\n",e_n,Kdenom);
      //   }
+    */
         rHprod = 0;
         for(row = 0; row<vector_size;row++){
             K[row] = Knumer[row]/Kdenom;
-            Knumer[row] = 0; //reset this for next iteration (above)
+            Knumer[row] = 0; /*reset this for next iteration (above)*/
             H[row] += K[row]*e_n;
             rHprod+=noise1[row+n]*H[row];
             
@@ -145,13 +147,14 @@ void mexFunction(int nlhs, mxArray *plhs[],
                 }
             }
             
-           // if(n<10){
+           /* if(n<10){
                 /*printf("%0.4f\t",K[row]);
                 for(col = 0; col<vector_size;col++){
                     printf("\t%0.4f",RinvTmp[row][col]);                    
                 }
-                printf("\n");*/
-         //   }
+                printf("\n");
+            }   line 156*/
+
             
             
             for(col = 0; col<vector_size;col++){
@@ -176,19 +179,23 @@ void mexFunction(int nlhs, mxArray *plhs[],
         }
  */
     }
+    /* 
     //printf("\n");
 
     //free up allocated memory
+    */
     for(i=0;i<vector_size;i++){
         free(Rinv[i]);
         free(Result[i]);
         free(RinvTmp[i]);        
     }
     
+	/*
     // the following creates problems, so leave commented for now
     //    free(Rinv);
     //    free(Result);
     //    free(RinvTmp);
+*/
     
     free(H);
     free(K);
