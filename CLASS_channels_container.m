@@ -2,7 +2,7 @@
 %> @brief CLASS_channels_container is a wrapper class for CLASS_channels.
 % ======================================================================
 %> @brief CLASS_channels_container exists for the purpose of organizing,
-%updating, and adjusting instances of CLASS_channels.
+%> updating, and adjusting instances of CLASS_channels.
 %
 % 
 % History
@@ -852,10 +852,15 @@ classdef CLASS_channels_container < handle
        end
        
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
+       %> @brief loadedEDFIndices = getLoadedEDFIndices(obj)
+       %> @param obj instance of CLASS_channels_container.
        %> @param
-       %> @retval obj instance of CLASS_channel class.
+       %> @retval obj instance of CLASS_channels_container class.
+       %> @retval loadedEDFIndices Vector containing the indices of the PSG
+       %> channels that have been loaded from the current EDF file.
+       %> @note Synthetic channels are excluded (i.e. ones generated
+       %> internally using SEV and which are not found in the original EDF
+       %> file.
        % =================================================================
        function loadedEDFIndices = getLoadedEDFIndices(obj)
            loadedEDFIndices = zeros(obj.num_channels,1);
@@ -866,12 +871,17 @@ classdef CLASS_channels_container < handle
            %exclude synthetic channels
            loadedEDFIndices = loadedEDFIndices(loadedEDFIndices>0);
        end
+       
        %% sev menu callbacks
        % =================================================================
-       %> @brief
+       %> @brief loadEDFchannels(obj,EDF_fullfilename,EDF_channel_indices,use_Default_Samplerate)
        %> @param obj instance of CLASS_channel class.
-       %> @param
+       %> @param EDF_fullfilename Full path and filename of EDF to load
+       %> @param EDF_channel_indices Vector of channel indices - 1 correspdonds to the
+       %> first channel in the EDF
+       %> @param use_Default_Samplerate - boolean (default is true)
        %> @retval obj instance of CLASS_channel class.
+       %> @retval EDF_HDR EDF's header
        % =================================================================
        function EDF_HDR = loadEDFchannels(obj,EDF_fullfilename,EDF_channel_indices,use_Default_Samplerate)
            try

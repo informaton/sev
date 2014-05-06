@@ -1,12 +1,16 @@
-function filtsig = filter_diff(src_index, optional_params)
+%> @file filter_diff.m
+%> @brief Obtains a signal's first order difference or gradient.
+%======================================================================
+%> @param data Input signal.
+%> @param optional_params Optional structure of field/value parameter pairs that to adjust filter's behavior.
+%> @li %c .num_diff_runs Nnumber of times to apply the diff operator
+%> samples to use - suggest 1.
+%> @retval filstig First order difference of difference signal
+%> @note written by Hyatt Moore IV, March 10, 2013
+%> @note Modified on 5/6/2014 - removed global CHANNELS_CONTAINER reference
+function filtsig = filter_diff(data, optional_params)
 % MATLAB's diff
-% written by Hyatt Moore IV, March 10, 2013
-global CHANNELS_CONTAINER;
-if(numel(src_index)<=20)
-    data = CHANNELS_CONTAINER.getData(src_index);
-else
-    data = src_index;
-end
+
 if(nargin==2 && ~isempty(optional_params))
     params = optional_params;
 else

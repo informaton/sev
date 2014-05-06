@@ -1,14 +1,19 @@
-function filtsig = filter_gauss(src_index, optional_params)
+%> @file filter_gauss.m
+%> @brief Differentiator - Applies a gaussian kernel filter to the input signal.
+%======================================================================
+%> @brief data Input signal.
+%> @param src_data The first PSG channel
+%> @param optional_params Optional structure of field/value parameter pairs that to adjust filter's behavior.
+%> @li @c .order Filter order/size - suggest 15
+%> @li @c .abs_values Boolean to return absolute vale or not - suggest 0 
+%> @li @c .sigma Gaussian parameter - suggest 5
+%> @retval filstig Filtered signal.
+%> @note written by Hyatt Moore IV, January, 23, 2013
+%> @note Modified on 5/6/2014 - removed global CHANNELS_CONTAINER reference
+function filtsig = filter_gauss(src_data, optional_params)
 % Gaussian filter
-% written by Hyatt Moore IV, January, 23, 2013
 
-global CHANNELS_CONTAINER;
-if(numel(src_index)<=20)
-    filtsig = CHANNELS_CONTAINER.getData(src_index);
-else
-    filtsig = src_index;
-end
-% sample_rate = CHANNELS_CONTAINER.getSamplerate(src_index);
+filtsig = src_data;
 
 % this allows direct input of parameters from outside function calls, which
 %can be particularly useful in the batch job mode
