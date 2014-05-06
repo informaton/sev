@@ -1,34 +1,27 @@
-function e = anc_rls(src_index,ref_indices, optional_params)
-% function e = anc_rls(src_index, ref_indices)
-% Adaptive noise canceller based on recursive least squares algorithm as
-% developed/expounded on in P. He paper, "Removal of ocular artifracts from
-% electro-encephalogram by adaptive filtering" - Medical and Biological
-% Engineering and Computing 2004, Vol. 42
+%> @file anc_rls
+%> @brief Recursive least squares implementation of adaptive noise cancellation.
+%======================================================================
+%> @brief Adaptive noise canceller based on recursive least squares algorithm as
+%> developed/expounded on in P. He paper, "Removal of ocular artifracts from
+%> electro-encephalogram by adaptive filtering" - Medical and Biological
+%> Engineering and Computing 2004, Vol. 42
 %
-% e = cleaned output signal
-% sig = input signal contaminated by noise from reference signals ref1 and ref2
-%
-%
-% written by Hyatt Moore IV, February 28, 2012
-% updated: 10/29/12 - added samples2delay as an argument option
-% updated: 9/13/12 - added parameter passing to the c functions
-% modified: 10.16.2012 - updated optional_params argument
-% modified: 12/10/12 - raw data passing now possible using
-% numel(src_index>100)
-
-global CHANNELS_CONTAINER;
-
-if(numel(src_index)>100)
-    sig = src_index;
-else
-    sig = CHANNELS_CONTAINER.getData(src_index);
-end
-
-% if(numel(ref_indices)>100)
-%     ref = ref_indices;
-% else
-%     ref = CHANNELS_CONTAINER.getData(ref_indices);
-% end
+%> @param sig_data = input signal contaminated by noise from reference signal(s) - argument two
+%> @param ref_data = input signal contaminated by noise from reference signal(s) - argument two
+%> @param optional_params Optional structure of field/value parameter pairs that to adjust filter's behavior.
+%> @li %c .order Number of taps to use - suggest 4;  
+%> @li %c .sigma Trace initialization value - suggest 0.01; 
+%> @li %c .lambda Forgetting factor - suggest 0.995; 
+%> @li %c .samples2delay Useful for correcting delayed correlation beyond filter size (i.e. number of taps) or when applying a self reference adaptive noise cancellation - use 0 for none;
+%> @retval e = adaptively cleaned output signal -  the src_data with correlated ref_data interference removed.
+%> @note This uses a mex compiled implementation for speed.
+%> @note Last modified on 5/6/2014 - 
+%> @note written by Hyatt Moore IV, February 28, 2012
+%> @note updated: 10/29/12 - added samples2delay as an argument option
+%> @note updated: 9/13/12 - added parameter passing to the c functions
+%> @note modified: 10.16.2012 - updated optional_params argument
+%> @note modified: 12/10/12 - raw data passing now possible usingfunction e = anc_rls(src_data,ref_data, optional_params)
+function e = anc_rls(sig_data, ref_data, optional_params)
 
 % this allows direct input of parameters from outside function calls, which
 %can be particularly useful in the batch job mode
@@ -51,7 +44,7 @@ else
     end
 end
 
-[nrows,ncols] = size(ref_indices);
+[nrows,ncols] = size(ref_data);
 
 if(ncols>1)
     ref = cell(1,ncols);
@@ -61,12 +54,12 @@ if(ncols>1)
     for cols=1:ncols
         
 %         ref{cols} = CHANNELS_CONTAINER.getData(ref_indices(cols));
-        ref{cols} = filter.nlfilter_delay(ref_indices(:,cols), params);
+        ref{cols} = filter.nlfilter_delay(ref_data(:,cols), params);
         
     end
     disp([ref{1}(1:4),ref{2}(1:4)]);
 %     e = filter.anc_rls_multiple(sig,cell2mat(ref),params.order,params.sigma,params.lambda);
-    e = filter.anc_rls_single(sig,cell2mat(ref),params.order,params.sigma,params.lambda);
+    e = filter.anc_rls_single(sig_data,cell2mat(ref),params.order,params.sigma,params.lambda);
 else
     
 %     if(ncols<nrows)
@@ -75,7 +68,7 @@ else
 
     
 %     ref = CHANNELS_CONTAINER.getData(ref_indices);
-    ref = filter.nlfilter_delay(ref_indices, params);
+    ref = filter.nlfilter_delay(ref_data, params);
     
     %debugging
     %     debugging = false;
