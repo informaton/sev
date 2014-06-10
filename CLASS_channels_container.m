@@ -1186,10 +1186,21 @@ classdef CLASS_channels_container < handle
        end
        
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
-       %> @param
-       %> @retval obj instance of CLASS_channel class.
+       %> @brief addChannel(obj,data,src_label, source_indices,src_samplerate,desired_samplerate)
+       %> @param obj instance of CLASS_channels_container class.
+       %> @param data Signal data of channel to be added (a vector)
+       %> @param src_label Name of the channel to be added (a string)
+       %> @param source_indices Index of the source PSG file that the newly
+       %> added channel corresponds to.
+       %> @note Synthetic channels have a source_indices of -1
+       %> @param src_samplerate Samplerate of the channel being added
+       %> (optional)
+       %> @note CLASS_channels_container default samplerate is used if the source samplerate is not provided
+       %> @param desired_samplerate Desired samplerate of new channel (optional)
+       %> @note @c src_samplerate is used if @c desired_samplerate is not provided
+       %> @retval obj instance of CLASS_channels_container class.
+       %> @retval index_added Index of the cell position where the new
+       %> CLASS_channel object was added/inserted.
        % =================================================================
        function index_added = addChannel(obj,data,src_label, source_indices,src_samplerate,desired_samplerate)
            if(nargin<=5)

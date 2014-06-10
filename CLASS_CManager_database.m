@@ -65,6 +65,9 @@ classdef CLASS_CManager_database < CLASS_database
         %> - projectname name of the specific project (e.g. APOE)
         %> - location Geographic location where sleep studies were
         %> performed.
+        %> - docking_foldername Pathname where PSG files are originally
+        %> placed/held before they are moved to the source folder
+        %> (src_foldername) in the first part of the migration.
         %> - src_foldername 
         %> - src_foldertype Can be <b>tier</b>, <b>flat</b>, <b>group</b> or
         %> <b>split</b>.  Flat has all psg's in same folder.  Tier has each
@@ -81,7 +84,7 @@ classdef CLASS_CManager_database < CLASS_database
         %> - src_xml_foldername xml foldername; used when folder type is <i>tier</i>
         %> - src_sco_foldername sco foldername; used when folder type is <i>tier</i>
         %> - working_foldername Folder name containing the files as
-        %transfomred by *transformation_script*.  
+        %> transfomred by *transformation_script*.  
         %> - working_foldertype Either <b>tier</b> or <b>flat</b>; default
         %> is <b>flat</b>
         %> - working_edf_foldername EDF foldername; used when folder type is <i>tier</i>
@@ -95,12 +98,12 @@ classdef CLASS_CManager_database < CLASS_database
         %> - pointofcontact Name and email of point of contact
         %> - notes Free form text.
         %> - reference Free form text.  Used to hold publication references
-        %>related to the creation of this cohort that should be cited in
+        %> related to the creation of this cohort that should be cited in
         %> research that uses this cohort.
         %> - website For holding useful http links related to the cohort.  Free form text.  
         %> - timeframe Time span of when cohort data was collected (e.g. 2000-2010 for WSC).  Free form text
         %> @note The fields should be listed in the cohort.str text file
-        %> for updating; see @update_CohortInfo_T
+        %> for updating; see update_CohortInfo_T
         function create_CohortInfo_T(obj)            
             obj.open();
             TableName = 'cohortInfo_T';
@@ -112,6 +115,7 @@ classdef CLASS_CManager_database < CLASS_database
                 ', name VARCHAR(30) NOT NULL DEFAULT "whoRwe"',...
                 ', projectname VARCHAR(30) DEFAULT NULL',...                
                 ', location VARCHAR(30) DEFAULT "somewhere"',...                
+                ', docking_foldername varchar(128) DEFAULT NULL',...
                 ', src_foldername varchar(128) DEFAULT NULL',...
                 ', src_foldertype ENUM(''tier'',''flat'',''split'',''group'')',...
                 ', src_psg_foldername varchar(128) DEFAULT NULL',...
@@ -235,13 +239,61 @@ classdef CLASS_CManager_database < CLASS_database
             
             obj.close();
         end
-        
                 
+
         %> @brief update_CohortInfo_T Updates the cohort table based on the
+        %> input XML file.  
+        %> @param filename Optional cohort structure file (*.xml) which
+        %> describes each cohort according to the XML schema or DTD
+        function update_CohortInfo_T(obj,xmlfilename)
+            TableName = lower('CohortInfo_T');
+            
+            %get this from my sev file
+            if(nargin<2)
+                xmlfilename = uigetfullfile({'*.xml','Cohort structure file (*.xml)'},'Select cohort information structure file');
+            end
+            if(exist(xmlfilename,'file'))
+                obj.open();
+                domStruct = obj.loadCohortStruct(xmlfilename);
+                if(isfield(domStruct,'cohort'))
+                    cohortArrayStruct = dom.cohort;
+                    for c=1:numel(cohortArrayStruct)
+                        cohortStruct = cohortArrayStruct(c);
+                        cohorts = fieldnames(cohortStruct);
+                        for f=1:numel(cohorts)
+                            curCohort = cohortStruct.(cohorts{f});
+                            if(isfield(curCohort,'name'))
+                                names = ' (';
+                                values = '(';
+                                curFields = fieldnames(curCohort);
+                                for cf=1:numel(curFields)
+                                    curField = curFields{cf};
+                                    curValue = strrep(curCohort.(curField),'"','\"');
+                                    names = sprintf('%s %s,',names,curField);
+                                    values = sprintf('%s "%s",',values,curValue);
+                                end
+                                names(end)=')';
+                                values(end)=')';
+                                
+                                insertStr = ['INSERT IGNORE INTO ',TableName,names,' VALUES ',values];
+                                try
+                                    mym(insertStr);
+                                catch me
+                                    showME(me);
+                                end
+                            end
+                        end
+                    end
+                end
+                obj.close();
+            end                     
+        end
+        
+        %> @brief update_CohortInfoFromStr_T Updates the cohort table based on the
         %> input text file.
         %> @param filename Optional cohort structure file (*.str) which
         %> describes each cohort using tab delimited key value pairs.
-        function update_CohortInfo_T(obj,filename)
+        function update_CohortInfoFromStr_T(obj,filename)
             TableName = lower('CohortInfo_T');
             
             %get this from my sev file
@@ -281,7 +333,8 @@ classdef CLASS_CManager_database < CLASS_database
             end         
         end
 
-        %> @brief obtain updates based on the cohort information avaialbe
+        %> @brief Update the filestudyinfo_t table by examining folders
+        %> in the cohort information available
         %> in the cohortinfo_t table.
         %> @note A file is not updated until it has been assigned to a
         %> cohort as entered in the update_CohortInfo_T call.
@@ -509,6 +562,7 @@ classdef CLASS_CManager_database < CLASS_database
             if(nargin<2)
                 filename = uigetfullfile({'*.inf','Database information file (*.inf)'},'Select SEV database cohort information file');
             end
+            
             if(exist(filename,'file'))
                 obj.open()
                 database_struct = obj.loadDatabaseStructFromInf(filename);
@@ -526,10 +580,17 @@ classdef CLASS_CManager_database < CLASS_database
                 end
                 obj.close();
             end
+            
         end
     end
     
     methods(Static, Access=private)
+        
+        %> @brief Returns a database struct.
+        %> @retval dbStruct A database struct with the following fields
+        %> @li name Name of the database.  
+        %> @li user User name for the database.
+        %> @li password Password for the user to access the database.        
         function dbStruct = getDBStruct()
             dbStruct.name = CLASS_CManager_database.dbName;
             dbStruct.user = CLASS_CManager_database.dbUser;

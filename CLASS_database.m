@@ -157,13 +157,17 @@ classdef CLASS_database < handle
     
     methods(Static)
         
+        % ======================================================================
+        %> @brief Closes the current MySQL connection
+        % ======================================================================        
         function close()
             mym('close');
         end
         
+        
         % ======================================================================
         %> @brief Helper function for opening the MySQL database using field values
-        %> provided in dbStruct
+        %> provided in dbStruct.
         %> @param dbStruct A structure containing database accessor fields:
         %> @li @c name Name of the database to use (string)
         %> @li @c user Database user (string)
@@ -1259,9 +1263,11 @@ classdef CLASS_database < handle
         % ======================================================================
         %> @brief Retrieves cohort descriptor data as a struct from
         %> the .inf filename provided.
-        %> @param inf_filename Full filename (i.e. path included) of text
-        %> file containing cohort descriptor data as tab-delimited entries.
-        %> @retval cohortSstruct A structure containing database accessor fields:
+        %> @param inf_filename Full filename (i.e. path included) of either a text
+        %> file containing cohort descriptor data as tab-delimited entries
+        %> or an XML formatted file (with .xml extension). 
+        %> @retval cohortSstruct A structure containing file value pairings
+        %> For example, database accessor fields for a database.inf file would be:
         %> @li @c name Name of the database to use (string)
         %> @li @c user Database user (string)
         %> @li @c password Password for @c user (string)
@@ -1269,9 +1275,15 @@ classdef CLASS_database < handle
             %Hyatt Moore, IV (< June, 2013)
             cohortStruct = [];
             if(exist(struct_filename,'file'))
-                fid = fopen(struct_filename,'r');
-                cohortStruct = CLASS_settings.loadStruct(fid);
-                fclose(fid);              
+                [~,~,ext] = fileparts(struct_filename);
+                if(strcmpi(ext,'xml'))
+                    cohortStruct = CLASS_settings.loadXMLstruct(struct_filename);
+                    
+                else
+                    fid = fopen(struct_filename,'r');
+                    cohortStruct = CLASS_settings.loadStruct(fid);
+                    fclose(fid);
+                end
             end
         end        
         

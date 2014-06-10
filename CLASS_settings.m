@@ -63,6 +63,32 @@ classdef  CLASS_settings < handle
             paramStruct = CLASS_settings.loadStruct(fid);
             fclose(fid);            
         end
+
+                
+        % ======================================================================
+        %> @brief Parses the XML file and returns an array of structs
+        %> @param xmlFilename Name of the XML file to parse (absolute path)
+        %> @retval xmlStruct A structure containing the elements and
+        %> associated attributes of the xml as parsed by xml_read.  
+        % ======================================================================
+        function xmlStruct = loadXMLStruct(xmlFilename)
+            % Testing dom = xmlread('cohort.xml');
+            %             dom = xmlread(xmlFilename);
+            %
+            %             firstName = dom.getFirstChild.getNodeName;
+            %             firstLevel = dom.getElementsByTagName(firstName);
+            %             numChildren = firstLevel.getLength();
+            %
+            %             xmlStruct.(firstName) = cell(numChildren,1);
+            %             %numChildren = dom.getChildNodes.getLength();
+            %             for i =0:numChildren-1
+            %                 printf('%s\n',firstLevel.item(i));
+            %             end
+            %             % firstLevel.item(0).getElementsByTagName('projectName').item(0).getFirstChild.getData;
+            %             %str2double(dom.getDocumentElement.getElementsByTagName('EpochLength').item(0).getTextContent);
+            %
+            xmlStruct = read_xml(xmlFilename);
+        end
         
         % ======================================================================
         %> @brief Parses the file with file identifier fid to find structure
@@ -73,7 +99,9 @@ classdef  CLASS_settings < handle
         %> fid must be open for this to work.  fid is not closed at the end
         %> of this function.
         %> @param fid file identifier to parse
-        %> @param pstruct (optional)
+        %> @param pstruct (optional) If included, pstruct fields will be
+        %> overwritten if existing, otherwise they will be added and
+        %> returned.
         %> @retval pstruct return value of tokens2struct call.
         % ======================================================================
         function pstruct = loadStruct(fid,pstruct)
@@ -84,13 +112,16 @@ classdef  CLASS_settings < handle
             % ferror(fid,'clear');
             % status = fseek(fid,0,'bof'); %move to the beginning of file
             % ferror(fid);
+            if(~isempty(fopen(fid)))
+                file_open = true;
+                pat = '^([^\.\s]+)|\.([^\.\s]+)|\s+(.*)+$';
+            else
+                file_open = false;
+            end
             
-            file_open = true;
-            
-            pat = '^([^\.\s]+)|\.([^\.\s]+)|\s+(.*)+$';
 
             if(nargin<2)
-                pstruct = struct;
+                pstruct = struct;                
             end;
             
             while(file_open)
@@ -111,6 +142,7 @@ classdef  CLASS_settings < handle
                 catch me
                     showME(me);
                     fclose(fid);
+                    file_open = false;
                 end  
             end;
         end

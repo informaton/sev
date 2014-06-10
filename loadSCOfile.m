@@ -1,21 +1,29 @@
-function SCO = loadSCOfile(filename,dest_samplerate, sco_samplerate)
-%loads/parses the .SCO file associated with the EDF.
-%SCO is a struct with the fields
-% .epoch - the epoch that the scored event occured in
-% .start_stop_matrix - the sample point that the events begin and end on
-% .label - the string label used to describe the event
-% .duration_seconds = the duration of the event in seconds (default is 1
-% second)
-% .start_time - events start time as a string in hour:minute:second format
-% filename = '/Users/hyatt4/Documents/Sleep Project/Data/Spindle_7Jun11/A0097_4 174733.SCO';
-% filename = '/Users/hyatt4/Documents/Sleep Project/Data/Spindle_7Jun11/A0210_3 170424.SCO';
-% SCO = loadSCOfile(filename)
-%  [ul,ui,uj] = unique(SCO.label); lm_epochs = SCO.epoch(3==uj,:); lm_evts = SCO.start_stop_matrix(3==uj,:); %obtains the unique epochs for the third
-% unique event
+%> @file CLASS_WSC_database.m
+%> @brief loads/parses the .SCO file associated with the EDF.
+%> @brief SCO = loadSCOfile(filename)
+% ======================================================================
+%> @param filename
+%> @param dest_samplerate Sample rate to use for SCO fields (return value)
+%> @param sco_samplerate The SCO file's internal samplerate used internal =
+%> this the sample rate used when generating the SCO file initially.
+%> Typically the samplerate is twice the highest sampling rate used for the .EDF
+%> channels as shown in the .EDF header.
+%> @retval SCO is a struct with the fields
+%> @li .epoch - the epoch that the scored event occured in
+%> @li .start_stop_matrix - the sample point that the events begin and end on
+%> @li .label - the string label used to describe the event
+%> @li .duration_seconds = the duration of the event in seconds (default is 1
+%> second)
+%> @li .start_time - events start time as a string in hour:minute:second format
+%> @param 
+%> @note [ul,ui,uj] = unique(SCO.label); lm_epochs = SCO.epoch(3==uj,:); lm_evts = SCO.start_stop_matrix(3==uj,:); %obtains the unique epochs for the third
+%> unique event
 
+function SCO = loadSCOfile(filename,dest_samplerate, sco_samplerate)
+%> filename = '/Users/hyatt4/Documents/Sleep Project/Data/Spindle_7Jun11/A0097_4 174733.SCO';
+%> filename = '/Users/hyatt4/Documents/Sleep Project/Data/Spindle_7Jun11/A0210_3 170424.SCO';
 % Hyatt Moore IV (< June, 2013)
 %
-
 % modified: 4/30/2014
 %  1.  Added additional input arguments, dest_samplerate and sco_samplerate
 %  to help with conversion.  Defaults are dest_samplerate = 100 and
@@ -23,6 +31,18 @@ function SCO = loadSCOfile(filename,dest_samplerate, sco_samplerate)
 %  2.  Previously the duration_sec column was only divided by 100Hz and not
 %  200Hz, so durations could be 2x's as long if the sampling rate was not
 %  100 Hz.  
+
+% Note:  EDF_filename = [filename(1:end-3),'EDF'];
+
+%     if(exist(EDF_filename,'file'))
+%         HDR = loadHDR(EDF_filename);
+%         samplerate = max(HDR.samplerate);
+%         conversion_factor=100/samplerate;
+%     else
+%         samplerate = 100;
+%         conversion_factor = 1;
+%     end
+% 
 %
 %
 % modified: 2/6/12 - 
