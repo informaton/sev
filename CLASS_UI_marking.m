@@ -355,19 +355,7 @@ classdef CLASS_UI_marking < handle
             if(wasModified)
                 set(obj.axeshandle.main,...
                     'ydir',obj.SETTINGS.VIEW.yDir);
-%                 seconds_per_epoch = obj.getSecondsPerEpoch();
-%                 if(seconds_per_epoch == obj.SETTINGS.VIEW.standard_epoch_sec)
-% %                     set(obj.axeshandle.main,'dataaspectratiomode','manual','dataaspectratio',[30 12 1]);
-%                     set(obj.axeshandle.main,'plotboxaspectratiomode','manual','plotboxaspectratio',[30 12 1]);
-%                 else
-% %                     set(obj.axeshandle.main,'dataaspectratiomode','auto');
-%                     set(obj.axeshandle.main,'plotboxaspectratiomode','auto');
-%                 end;
-% 
-%                 %show the PSD, ROC, events, etc.
-% %                 set(obj.axeshandle.utility,...
-% %                     'xlim',[0 obj.SETTINGS.VIEW.samplerate/2]);
-% %             
+
                 if(obj.STATE.single_study_running)
                     obj.setAxesResolution()
                     obj.refreshAxes();
@@ -415,7 +403,6 @@ classdef CLASS_UI_marking < handle
             set(handles.menu_settings_roc,'callback',@obj.updatePreferencesROC_callback);
             set(handles.menu_settings_classifiers,'callback',{@obj.updateSettings_callback,'CLASSIFIER'});
             set(handles.menu_settings_defaults,'callback',{@obj.updateSettings_callback,'DEFAULTS'});
-            set(handles.menu_settings_saveChannelConfig,'callback',@obj.menu_settings_defaults_callback);
             set(handles.menu_settings_saveChannelConfig,'callback',@obj.menu_settings_saveChannelConfig_callback);
 
             %batch mode
@@ -474,23 +461,23 @@ classdef CLASS_UI_marking < handle
                     set(f,'units','normalized');
                     set(axes1_copy,'parent',f);
                     
-%                     set(text_h,'Units','normalized');
-%                     
-%                     text_E = get(text_h,'extent');
-%                     pos_E = get(text_h,'position');
-%                     if(iscell(text_E))
-%                         text_E = cell2mat(text_E);
-%                         pos_E = cell2mat(pos_E);
-%                     end
-%                     max_E_width = max(text_E(:,3));
-%                     
-%                     for k=1:numel(text_h)
-%                         set(text_h(k),'position',[-text_E(k,3)-0.1*max_E_width,pos_E(k,2)]);
-%                     end
-%                     
-%                     
-%                     set(axes1_copy,'Position',[max_E_width,(1-sum(axes1_props.Position([2,4])))/2,1-max_E_width*1.1,sum(axes1_props.Position([2,4]))])
-cropFigure2Axes(f,axes1_copy);
+                    %                     set(text_h,'Units','normalized');
+                    %
+                    %                     text_E = get(text_h,'extent');
+                    %                     pos_E = get(text_h,'position');
+                    %                     if(iscell(text_E))
+                    %                         text_E = cell2mat(text_E);
+                    %                         pos_E = cell2mat(pos_E);
+                    %                     end
+                    %                     max_E_width = max(text_E(:,3));
+                    %
+                    %                     for k=1:numel(text_h)
+                    %                         set(text_h(k),'position',[-text_E(k,3)-0.1*max_E_width,pos_E(k,2)]);
+                    %                     end
+                    %
+                    %
+                    %                     set(axes1_copy,'Position',[max_E_width,(1-sum(axes1_props.Position([2,4])))/2,1-max_E_width*1.1,sum(axes1_props.Position([2,4]))])
+                    cropFigure2Axes(f,axes1_copy);
 
                     set(f,'visible','on');
                     set(f,'clipping','off');
@@ -849,16 +836,7 @@ cropFigure2Axes(f,axes1_copy);
             
         end
         
-        % --------------------------------------------------------------------
-        function menu_settings_defaults_callback(obj,hObject, eventdata, handles)
-            %Purpose: let user change default settings
-            % hObject    handle to menu_settings_Defaults (see GCBO)
-            % eventdata  reserved - to be defined in a future version of MATLAB
-            % handles    structure with handles and user data (see GUIDATA)
-            
-
-            
-        end
+        
         
         % --------------------------------------------------------------------
         function menu_tools_timelineEventsSelection_callback(obj,hObject, eventdata)

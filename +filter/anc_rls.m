@@ -78,10 +78,10 @@ else
     %
     %     end
     
-    e = filter.anc_rls_single(sig,ref,params.order,params.sigma,params.lambda);  
+    e = filter.anc_rls_single(sig_data,ref,params.order,params.sigma,params.lambda);  
     
     %run it again - some problem here that is not understood
     if(any(isnan(e(1:10))))
-        e = filter.anc_rls_single(sig,ref,params.order,params.sigma,params.lambda);  
+        e = filter.anc_rls_single(sig_data,ref,params.order,params.sigma,params.lambda);  
     end
 end

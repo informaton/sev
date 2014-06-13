@@ -12,19 +12,35 @@
 classdef CLASS_CManager_database < CLASS_database
 
     properties (Constant)
+        %> database name
         dbName = 'CManager_DB';
+        %> database user
         dbUser = 'CManager_user';
+        %> database user password
         dbPassword = 'CManager_password';
+        %> File types to use, can be
+        %> @li psg
+        %> @li stage
+        %> @li sco
+        %> @li xml
+        %> @li events        
         fileTypes = {'psg','stage','sco','xml','events'};  
+        %> Extensions of files that will be used (i.e. after transcoding)
+        %> @li edf
+        %> @li sco
+        %> @li sta
         workingFileExts = {'edf','sco','sta'};
     end
     
     methods
+        %> @brief Constructor
+        %> @retval Instance of CLASS_CManager_database
+        %> @note Initializes <b>dbStruct</b>
         function obj = CLASS_CManager_database()
             obj.dbStruct = CLASS_CManager_database.getDBStruct();
         end
         
-        %this must be defined as it is an abstract method...
+        %> @brif Abstract method that is not implemented.
         function create_Diagnostics_T(~)            
         end        
         
