@@ -1,5 +1,7 @@
 %> @file CLASS_channels_container.m
 %> @brief CLASS_channels_container is a wrapper class for CLASS_channels.
+%> This keeps a collection of CLASS_channels as cell contents which are
+%> stored in an instance variable.
 % ======================================================================
 %> @brief CLASS_channels_container exists for the purpose of organizing,
 %> updating, and adjusting instances of CLASS_channels.
@@ -12,6 +14,7 @@
 % ======================================================================
 classdef CLASS_channels_container < handle
     properties
+        %> The cell which holds CLASS_channel objects.
         cell_of_channels;
         %> size of cell_of_channels (and also channel_vector)
         num_channels;  
@@ -20,8 +23,7 @@ classdef CLASS_channels_container < handle
         %> index of the channel currently selected 
         current_channel_index; 
         %>index of psd channel to show/0 if off
-        current_spectrum_channel_index; 
-        
+        current_spectrum_channel_index;         
         %> @brief array of filter structures for applying filters to the data here.
         %> array struct of filter rules that are applied to the
         %> channel data.
@@ -32,11 +34,11 @@ classdef CLASS_channels_container < handle
         %> -            .m_file = [];
         %> -            .ref_channel_index = [];
         %> -            .ref_channel_label = {};
-        filterArrayStruct;
-        
+        filterArrayStruct;        
         %> .MAT filename which holds or will hold adjustable channel settings
         settingsFilename = []; 
-        %> vector of structs containing stored field values of children channel objects - useful for gui display preference tracking between sessions
+        %> @brief Vector of structs (channelSettings) containing stored field values of children channel objects - useful for gui display preference tracking between sessions
+        %> channelSettings is a struct with settings to load.
         storedChannelSettings = []; 
         %> axes handle to plot PSD results to when applicable
         psd_axes = []; 
@@ -46,8 +48,10 @@ classdef CLASS_channels_container < handle
         main_axes = [];  
         %> context menu handles to be used for added children
         mainline_contextmenu_h;
+        %> 
         referenceline_contextmenu_h; 
-
+        %> Sample rate to use when none is provided by a new CLASS_channel
+        %> instance.
         default_samplerate;
         %> pointer to the current event_container instance
         EVENT_CONTAINER; 
@@ -98,19 +102,32 @@ classdef CLASS_channels_container < handle
         end
         
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
-       %> @param
-       %> @retval obj instance of CLASS_channel class.
+       %> @brief Sets the default sample rate of the object.
+       %> @param obj instance of CLASS_channels_container.
+       %> @param Sample rate to use as the default.
+       %> @retval obj instance of CLASS_channels_container.
        % =================================================================
        function setDefaultSamplerate(obj,samplerate)
            obj.default_samplerate = samplerate;
        end
        
+       % =================================================================
+       %> @brief Contextmenu callback for a channel's visibility.
+       %> @note This is not implemented and may be *REMOVED* in future
+       %> versions.
+       %> @param obj instance of CLASS_channels_container.
+       %> @param hObject Handle of callback object.
+       %> @param eventdata Unused.
+       %> @retval obj instance of CLASS_channels_container.
+       % =================================================================
        function contextmenu_visibility_Callback(obj,hObject,eventdata)
            disp('listening');
        end
        
+       % =================================================================
+       %> @brief Configure the channels contextmenus' callbacks.
+       %> @param obj instance of CLASS_channels_container.
+       % =================================================================       
        function configure_contextmenu(obj)
            
            obj.configureReferenceLineContextmenu();
@@ -125,6 +142,11 @@ classdef CLASS_channels_container < handle
        % --------------------------------------------------------------------
        % Reference Line callback section
        % --------------------------------------------------------------------
+       % =================================================================
+       %> @brief Configure the channel's reference line contextmenu.  
+       %> @param obj instance of CLASS_channels_container.
+       %> @retval obj instance of CLASS_channels_container.
+       % =================================================================
        function configureReferenceLineContextmenu(obj)
            %%% reference line contextmenu
            contextmenu_ref_line_h = uicontextmenu('callback',@obj.contextmenu_ref_line_callback,'parent',obj.parent_fig);
@@ -135,24 +157,27 @@ classdef CLASS_channels_container < handle
        end
        
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
-       %> @param
-       %> @retval obj instance of CLASS_channel class.
+       %> @brief The channel's reference line parent contextmenu callback.
+       %> The parent context menu that pops up before any of the children contexts are
+       %> drawn.           
+       %> @param obj instance of CLASS_channels_container.
+       %> @param hObject Handle of callback object (unused).
+       %> @param eventdata Unused.
+       %> @retval obj instance of CLASS_channels_container.
        % =================================================================
        function contextmenu_ref_line_callback(obj,hObject,eventdata)
-           %parent context menu that pops up before any of the children contexts are
-           %drawn...
            linehandle = get(obj.parent_fig,'currentobject');
            obj.current_channel_index = get(linehandle,'userdata');
            %             set(linehandle,'selected','on');
            
        end
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
-       %> @param
-       %> @retval obj instance of CLASS_channel class.
+       %> @brief Reference lines' contextmenu color callback option for
+       %> changing the lines display color.
+       %> @param obj instance of CLASS_channels_container.
+       %> @param hObject Handle of callback object (unused).
+       %> @param eventdata Unused.
+       %> @retval obj instance of CLASS_channels_container.
        % =================================================================
        function contextmenu_ref_line_color_callback(obj,hObject,eventdata)
            childobj = obj.getCurrentChild();
@@ -164,10 +189,11 @@ classdef CLASS_channels_container < handle
        end
        
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
-       %> @param
-       %> @retval obj instance of CLASS_channel class.
+       %> @brief Remove reference line contextmenu callback.
+       %> @param obj instance of CLASS_channels_container.
+       %> @param hObject Handle of callback object (unused).
+       %> @param eventdata Unused.
+       %> @retval obj instance of CLASS_channels_container.
        % =================================================================
        function contextmenu_ref_line_remove_callback(obj,hObject,eventdata)
            reference_offset = 0;
@@ -180,10 +206,9 @@ classdef CLASS_channels_container < handle
        % Main Channel Line callback section
        % --------------------------------------------------------------------
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
-       %> @param
-       %> @retval obj instance of CLASS_channel class.
+       %> @brief Configure contextmenu for channel instances.
+       %> @param obj instance of CLASS_channels_container.
+       %> @retval obj instance of CLASS_channels_container.
        % =================================================================
        function configureChannelLineContextmenu(obj)
            
@@ -221,10 +246,11 @@ classdef CLASS_channels_container < handle
        end
        
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
-       %> @param
-       %> @retval obj instance of CLASS_channel class.
+       %> @brief Contextmenu callback for channel objects.
+       %> @param obj instance of CLASS_channels_container.
+       %> @param hObject Handle of callback object (unused).
+       %> @param eventdata Unused.
+       %> @retval obj instance of CLASS_channels_container.
        % =================================================================
        function contextmenu_line_callback(obj,hObject,eventdata)
            %parent context menu that pops up before any of the children contexts are
@@ -242,15 +268,10 @@ classdef CLASS_channels_container < handle
            set(channelObj.line_handle,'selected','on');
            MARKING.setLinehandle(channelObj.line_handle);
            
-           
-           
            child_menu_handles = get(hObject,'children');  %this is all of the handles of the children menu options
            default_scale_handle = child_menu_handles(find(~cellfun('isempty',strfind(get(child_menu_handles,'Label'),'Use Default Scale')),1));
            show_filtered_handle = findobj(child_menu_handles,'tag','show_filtered');
            % show_filtered_handle = child_menu_handles(find(~cellfun('isempty',strfind(get(child_menu_handles,'Label'),'Show Filtered')),1));
-           
-           
-           
            
            if(channelObj.scale==1)
                set(default_scale_handle,'checked','on');
@@ -276,12 +297,12 @@ classdef CLASS_channels_container < handle
        end
        
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
-       %> @param
-       %> @retval obj instance of CLASS_channel class.
+       %> @brief Resize callback for channel object contextmenu.
+       %> @param obj instance of CLASS_channels_container.
+       %> @param hObject Handle of callback object (unused).
+       %> @param eventdata Unused.
+       %> @retval obj instance of CLASS_channels_container.
        % =================================================================
-       %hObject will be a CLASS_channel object in this case
        function contextmenu_line_resize_callback(obj,hObject,eventdata)
            handles = guidata(hObject);
            set(obj.parent_fig,'pointer','crosshair','WindowScrollWheelFcn',...
@@ -291,10 +312,12 @@ classdef CLASS_channels_container < handle
        
        
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
-       %> @param
-       %> @retval obj instance of CLASS_channel class.
+       %> @brief Copy current epoch of the selected channel to MATLAB
+       %> clipboard.
+       %> @param obj instance of CLASS_channels_container.
+       %> @param hObject Handle of callback object (unused).
+       %> @param eventdata Unused.
+       %> @retval obj instance of CLASS_channels_container.
        % =================================================================
        function copy_epoch2clipboard(obj,hObject,eventdata)
            obj.copy2clipboard(obj.current_channel_index);
@@ -303,10 +326,12 @@ classdef CLASS_channels_container < handle
        
        
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
-       %> @param
-       %> @retval obj instance of CLASS_channel class.
+       %> @brief Copy current epoch of the selected channel to MATLAB
+       %> workspace.
+       %> @param obj instance of CLASS_channels_container.
+       %> @param hObject Handle of callback object (unused).
+       %> @param eventdata Unused.
+       %> @retval obj instance of CLASS_channels_container.
        % =================================================================
        function copy_channel2workspace(obj,hObject,eventdata)
            obj.copy2workspace(obj.current_channel_index);
@@ -314,10 +339,12 @@ classdef CLASS_channels_container < handle
        end
        
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
-       %> @param
-       %> @retval obj instance of CLASS_channel class.
+       %> @brief Channel contextmenu callback to duplicate selected
+       %> channel.
+       %> @param obj instance of CLASS_channels_container.
+       %> @param hObject Handle of callback object (unused).
+       %> @param eventdata Unused.
+       %> @retval obj instance of CLASS_channels_container.
        % =================================================================
        function contextmenu_line_duplicate_callback(obj,hObject,eventdata)
            obj.duplicate(obj.current_channel_index);
@@ -327,10 +354,12 @@ classdef CLASS_channels_container < handle
        
        
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
-       %> @param
-       %> @retval obj instance of CLASS_channel class.
+       %> @brief Channel contextmenu callback to hide the selected
+       %> channel.
+       %> @param obj instance of CLASS_channels_container.
+       %> @param hObject Handle of callback object (unused).
+       %> @param eventdata Unused.
+       %> @retval obj instance of CLASS_channels_container.
        % =================================================================
        function contextmenu_line_hide_callback(obj,hObject,eventdata)
            obj.hide(obj.current_channel_index);
@@ -338,10 +367,15 @@ classdef CLASS_channels_container < handle
        end
        
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
-       %> @param
-       %> @retval obj instance of CLASS_channel class.
+       %> @brief Channel contextmenu callback to move the selected
+       %> channel's position in the SEV.
+       %> @param obj instance of CLASS_channels_container.
+       %> @param hObject Handle of callback object (unused).
+       %> @param eventdata Unused.
+       %> @param channel_object The CLASS_channel object being moved.
+       %> @param ylim Y-axes limits; cannot move the channel above or below
+       %> these bounds.
+       %> @retval obj instance of CLASS_channels_container.
        % =================================================================
        function move_line(obj,hObject,eventdata,channel_object,y_lim)
            %windowbuttonmotionfcn set by contextmenu_line_move_callback
@@ -352,10 +386,13 @@ classdef CLASS_channels_container < handle
        
        
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
-       %> @param
-       %> @retval obj instance of CLASS_channel class.
+       %> @brief Mouse wheel callback to resize the selected channel.
+       %> @param obj instance of CLASS_channels_container.
+       %> @param hObject Handle of callback object (unused).
+       %> @param eventdata Mouse scroll event data.
+       %> @param channelObj The selected CLASS_channel object.
+       %> @param text_h Text handle for outputing the channel's size/scale.
+       %> @retval obj instance of CLASS_channels_container.
        % =================================================================
        function resize_WindowScrollWheelFcn(obj,hObject,eventdata,channelObj,text_h)
            %the windowwheelscrollfcn set by contextmenu_line_resize_callback
@@ -372,10 +409,13 @@ classdef CLASS_channels_container < handle
        
        % --------------------------------------------------------------------
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
-       %> @param
-       %> @retval obj instance of CLASS_channel class.
+       %> @brief Contextmenu callback to smooth the selected channel's
+       %> display.  Uses matlab's line handle 'linesmoothing' option.
+       %> @param obj instance of CLASS_channels_container.
+       %> @param hObject Handle of callback object (unused).
+       %> @param eventdata Unused.
+       %> @param handles Unused.
+       %> @retval obj instance of CLASS_channels_container.
        % =================================================================
        function context_menu_line_smoothing_Callback(obj,hObject, eventdata, handles)
            % hObject    handle to context_menu_line_smoothing (see GCBO)
@@ -395,14 +435,14 @@ classdef CLASS_channels_container < handle
        end
        
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
-       %> @param
-       %> @retval obj instance of CLASS_channel class.
+       %> @brief This context menu will allow the user to place or remove line labels as
+       %> necessary.           
+       %> @param obj instance of CLASS_channels_container.
+       %> @param hObject Handle of callback object (unused).
+       %> @param eventdata Unused.
+       %> @retval obj instance of CLASS_channels_container.
        % =================================================================
        function contextmenu_line_referenceline_callback(obj,hObject,eventdata)
-           %this context menu will allow the user to place or remove line labels as
-           %necessary...
            %the function str2double is implicitly used as an error check in
            %conjunction with the explecit if statement that follows it.
            
@@ -424,15 +464,15 @@ classdef CLASS_channels_container < handle
        end
        
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
-       %> @param
-       %> @retval obj instance of CLASS_channel class.
+       %> @brief configures a contextmenu selection to be hidden or to have
+       %> attached uimenus with labels of hidden channels displayed.  
+       %> @param obj instance of CLASS_channels_container.
+       %> @param contextmenu_h Handle of parent contextmenu to unhide
+       %> channels.
+       %> @param eventdata Unused.
+       %> @retval obj instance of CLASS_channels_container.
        % =================================================================
-       function configure_contextmenu_unhidechannels(obj,contextmenu_h,eventdata)
-           %configures a contextmenu selection to be hidden or to have
-           %attached uimenus with labels of hidden channels displayed
-           
+       function configure_contextmenu_unhidechannels(obj,contextmenu_h,eventdata)           
            delete(get(contextmenu_h,'children'));
            set(contextmenu_h,'enable','off');
            for k=1:obj.num_channels
@@ -447,10 +487,17 @@ classdef CLASS_channels_container < handle
        end
        
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
-       %> @param
-       %> @retval obj instance of CLASS_channel class.
+       %> @brief Show MUSIC spectrum of a channel's selected data points.
+       %> @param obj instance of CLASS_channels_container.
+       %> @param spectrum_settings MUSIC settings.
+       %> @param axes_h The axes handle to display the spectrum on.
+       %> Default is obj.psd_axes
+       %> @param channel_index Index of the CLASS_channel object to
+       %> calculate spectrum of.
+       %> @param sample_indices Channel's sample indices to calculate
+       %> spectrum over.  Default is to use obj's
+       %> current_spectrum_channel_index instance variable.
+       %> @retval obj instance of CLASS_channels_container.
        % =================================================================
        function showMUSIC(obj,spectrum_settings,axes_h, channel_index, sample_indices)
            if(nargin <5)
@@ -479,7 +526,7 @@ classdef CLASS_channels_container < handle
        %> @brief Displays the PSD of the input channel index on the range
        %> of samples identified by sample_indices using the PSD settings
        %> listd in the input struct spectrum_settings.
-       %> @param obj instance of CLASS_channel class.
+       %> @param obj instance of CLASS_channels_container.
        %> @param spectrum_settings struct with PSD settings to use
        %> @param axes_h Axes handle to plot power spectrum to.
        %> @param channel_index Index of the channel object to calculate PSD
@@ -514,11 +561,13 @@ classdef CLASS_channels_container < handle
        end
        
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
-       %> @param hObject gui handle object
-       %> @param eventdata unused
-       %> @retval obj instance of CLASS_channel class.
+       %> @brief Set color of the selected channels' referece line(s).  
+       %> @param obj instance of CLASS_channels_container.
+       %> @param channel_indices Indices of the channels whose reference
+       %> lines will be set.
+       %> @param new_colors Color to set reference line to.  If
+       %> channel_indices is an Nx1 vector, then new_colors is an Nx3 matrix.
+       %> @retval obj instance of CLASS_channels_container.
        % =================================================================
        function setReferenceLineColor(obj,channel_indices,new_colors)
            num_colors = size(new_colors,1);  %how many rows
@@ -537,33 +586,31 @@ classdef CLASS_channels_container < handle
        end
        
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
-       %> @param hObject gui handle object
-       %> @param eventdata unused
-       %> @retval obj instance of CLASS_channel class.
+       %> @brief Set color of the selected channel's referece line.  
+       %> @param obj instance of CLASS_channels_container.
+       %> @param channel_index Index of the channel to set the reference line color of.
+       %> @param c Color to use.
+       %> @retval obj instance of CLASS_channels_container.
        % =================================================================
        function obj = setColor(obj,channel_index,c)
            obj.cell_of_channels{channel_index}.setColor(c);
        end
        
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
-       %> @param hObject gui handle object
-       %> @param eventdata unused
-       %> @retval obj instance of CLASS_channel class.
+       %> @brief Gets the color of the selected channel.
+       %> @param obj instance of CLASS_channels_container.
+       %> @param channel_index Index of the channel to return the line color of.
+       %> @retval colorOut Color of the selected channel.
        % =================================================================
        function colorOut = getColor(obj,channel_index)
            colorOut = obj.cell_of_channels{channel_index}.color;
        end
        
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
-       %> @param hObject gui handle object
-       %> @param eventdata unused
-       %> @retval obj instance of CLASS_channel class.
+       %> @brief Load settings from a file.
+       %> @param obj instance of CLASS_channels_container.
+       %> @param settingsFilename Name of file to load settings from.
+       %> @retval obj instance of CLASS_channels_container.
        % =================================================================
        function obj = loadSettings(obj, settingsFilename)
            if(exist(settingsFilename,'file'))
@@ -573,11 +620,11 @@ classdef CLASS_channels_container < handle
        end
        
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
+       %> @brief Channel's contextmenu line move callback.
+       %> @param obj instance of CLASS_channels_container.
        %> @param hObject gui handle object
        %> @param eventdata unused
-       %> @retval obj instance of CLASS_channel class.
+       %> @retval obj instance of CLASS_channels_container.
        % =================================================================
        function contextmenu_line_move_callback(obj,hObject,eventdata)
            y_lim = get(obj.main_axes,'ylim');
@@ -590,11 +637,12 @@ classdef CLASS_channels_container < handle
        
        
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
+       %> @brief Channel's contextmenu line default scale callback.
+       %> Returns the channel's scale/size to 1.
+       %> @param obj instance of CLASS_channels_container.
        %> @param hObject gui handle object
        %> @param eventdata unused
-       %> @retval obj instance of CLASS_channel class.
+       %> @retval obj instance of CLASS_channels_container.
        % =================================================================
        function contextmenu_line_default_callback(obj,hObject,eventdata)
            
@@ -608,11 +656,12 @@ classdef CLASS_channels_container < handle
        end
        
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
+       %> @brief Channel's contextmenu option to display results of the
+       %> applied filter(s).
+       %> @param obj instance of CLASS_channels_container.
        %> @param hObject gui handle object
        %> @param eventdata unused
-       %> @retval obj instance of CLASS_channel class.
+       %> @retval obj instance of CLASS_channels_container.
        % =================================================================
        function contextmenu_line_show_filtered_callback(obj,hObject,eventdata)
            if(strcmp(get(hObject,'label'),'Show Filtered Data'))
@@ -632,11 +681,11 @@ classdef CLASS_channels_container < handle
        end
        
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
+       %> @brief Channel contextmenu option to display the channel's PSD.
+       %> @param obj instance of CLASS_channels_container.
        %> @param hObject handle of the gui object
        %> @param eventdata unused
-       %> @retval obj instance of CLASS_channel class.
+       %> @retval obj instance of CLASS_channels_container.
        % =================================================================
        function contextmenu_line_show_psd_callback(obj,hObject,eventdata) 
            global MARKING;
@@ -646,11 +695,12 @@ classdef CLASS_channels_container < handle
        end
        
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
+       %> @brief Channel contextmenu option to display the channel's MUSIC
+       %> spectrum.
+       %> @param obj instance of CLASS_channels_container.
        %> @param hObject handle of the gui object
        %> @param eventdata unused
-       %> @retval obj instance of CLASS_channel class.
+       %> @retval obj instance of CLASS_channels_container.
        % =================================================================
        function contextmenu_line_show_music_callback(obj,hObject,eventdata)
            global MARKING;
@@ -658,12 +708,14 @@ classdef CLASS_channels_container < handle
            obj.showMUSIC(MARKING.SETTINGS.MUSIC);
            set(gco,'selected','off');           
        end
+       
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
+       %> @brief Channel contextmenu option to set the channel's line
+       %> color.
+       %> @param obj instance of CLASS_channels_container.
        %> @param hObject handle of the gui object
        %> @param eventdata unused
-       %> @retval obj instance of CLASS_channel class.
+       %> @retval obj instance of CLASS_channels_container.
        % =================================================================
        function contextmenu_line_color_callback(obj,hObject,eventdata)
            
@@ -676,12 +728,17 @@ classdef CLASS_channels_container < handle
            end;
            set(gco,'selected','off');
        end
+       
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
+       %> @brief Channel contextmenu option to run an event detector on the channel.
+       %> @param obj instance of CLASS_channels_container.
        %> @param hObject gui handle object
        %> @param eventdata unused
-       %> @retval obj instance of CLASS_channel class.
+       %> @param detection_mfile File that contains SEV compatible
+       %> detection methods that can be selected from.
+       %> @note This option will be deprecated in future releases and is
+       %> flagged for removal (*REMOVE*).
+       %> @retval obj instance of CLASS_channels_container.
        % =================================================================
        function contextmenu_event_detector_callback(obj,hObject,eventdata,detection_mfile)
            global MARKING;
@@ -725,11 +782,11 @@ classdef CLASS_channels_container < handle
        end
        
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
+       %> @brief Channel context menu to display statistics of the channel.
+       %> @param obj instance of CLASS_channels_container.
        %> @param hObject gui handle object
        %> @param eventdata unused
-       %> @retval obj instance of CLASS_channel class.
+       %> @retval obj instance of CLASS_channels_container.
        % =================================================================
        function contextmenu_line_show_epoch_stats_callback(obj,hobject,eventdata)
            global MARKING;
@@ -753,9 +810,9 @@ classdef CLASS_channels_container < handle
        end
        
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
-       %> @retval obj instance of CLASS_channel class.
+       %> @brief Return the selected channel object.
+       %> @param obj Instance of CLASS_channels_container.
+       %> @retval childobj The selected CLASS_channel object.
        % =================================================================
        function childobj = getCurrentChild(obj)
            if(obj.current_channel_index>0 && obj.current_channel_index<=obj.num_channels)
@@ -764,17 +821,17 @@ classdef CLASS_channels_container < handle
                childobj = [];
            end
        end
+       
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
-       %> @param indices
-       %> @retval obj instance of CLASS_channel class.
+       %> @brief Sets channel settings indicated by indices.
+       %> @param obj instance of CLASS_channels_container.
+       %> @param Indices are the indices of the children channels requesting
+       %> setting adjustments if there is a match (if indices is empty
+       %> then all channels with matching titles will be used.           
+       %> @retval obj instance of CLASS_channels_container.
        % =================================================================
        function obj = setChannelSettings(obj,indices)
            %channelSettings is a struct with settings to load
-           %indices are the indices of the children channels requesting
-           %setting adjustments if there is a match (if indices is empty
-           %then all channels with matching titles will be used.
            channelSettings = obj.storedChannelSettings;
            if(~isempty(channelSettings))
                if(nargin<2 || isempty(indices))
@@ -798,10 +855,11 @@ classdef CLASS_channels_container < handle
            end
        end
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
-       %> @param
-       %> @retval obj instance of CLASS_channel class.
+       %> @brief Save channel settings to file.
+       %> @param obj instance of CLASS_channels_container.
+       %> @param settingsFilename Name of the file to save settings to
+       %> (string).
+       %> @retval obj instance of CLASS_channels_container.
        % =================================================================
        function obj = saveSettings(obj, settingsFilename)
            %save the settings to the given filename as a .mat file
@@ -840,10 +898,11 @@ classdef CLASS_channels_container < handle
            end
        end
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
-       %> @param
-       %> @retval obj instance of CLASS_channel class.
+       %> @brief Adjust a channel's reference line offset.
+       %> @param obj instance of CLASS_channels_container.
+       %> @param channel_index Index of the channel to adjust.
+       %> @param reference_offset Offset to adjust reference line to.
+       %> @retval obj instance of CLASS_channels_container.
        % =================================================================
        function adjust_reference_offset(obj,channel_index,reference_offset)
            if(channel_index<=obj.num_channels && channel_index>0)
@@ -852,10 +911,8 @@ classdef CLASS_channels_container < handle
        end
        
        % =================================================================
-       %> @brief loadedEDFIndices = getLoadedEDFIndices(obj)
+       %> @brief Retrieves EDF indices that have been loaded and which are stored in the CLASS_channels_container instance.
        %> @param obj instance of CLASS_channels_container.
-       %> @param
-       %> @retval obj instance of CLASS_channels_container class.
        %> @retval loadedEDFIndices Vector containing the indices of the PSG
        %> channels that have been loaded from the current EDF file.
        %> @note Synthetic channels are excluded (i.e. ones generated
@@ -875,12 +932,12 @@ classdef CLASS_channels_container < handle
        %% sev menu callbacks
        % =================================================================
        %> @brief loadEDFchannels(obj,EDF_fullfilename,EDF_channel_indices,use_Default_Samplerate)
-       %> @param obj instance of CLASS_channel class.
+       %> @param obj instance of CLASS_channels_container.
        %> @param EDF_fullfilename Full path and filename of EDF to load
        %> @param EDF_channel_indices Vector of channel indices - 1 correspdonds to the
        %> first channel in the EDF
        %> @param use_Default_Samplerate - boolean (default is true)
-       %> @retval obj instance of CLASS_channel class.
+       %> @retval obj instance of CLASS_channels_container.
        %> @retval EDF_HDR EDF's header
        % =================================================================
        function EDF_HDR = loadEDFchannels(obj,EDF_fullfilename,EDF_channel_indices,use_Default_Samplerate)
@@ -919,11 +976,11 @@ classdef CLASS_channels_container < handle
        
        % =================================================================
        %> @brief Load a single channel as defined by the input arguments
-       %> @param obj instance of CLASS_channel class.
+       %> @param obj instance of CLASS_channels_container.
        %> @param channelData Row vector of channel's sample values
        %> @param samplerate Sampling frequency used for the data.
        %> @param channelLabel Label to describe the channel (string)
-       %> @retval obj instance of CLASS_channel class.
+       %> @retval obj instance of CLASS_channels_container.
        % =================================================================
        function HDR = loadGenericChannel(obj,channelData,samplerate,channelLabel)
            try
@@ -942,15 +999,13 @@ classdef CLASS_channels_container < handle
        end
        
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
-       %> @param
-       %> @retval obj instance of CLASS_channel class.
+       %> @brief Evenly distributes non-hidden channels on the current
+       %> axes.  Variable arguments allow to be used as a callback function if necessary
+       %> @param obj instance of CLASS_channels_container.
+       %> @param varargin (e.g. hObject, eventdata) Unused.
+       %> @retval obj instance of CLASS_channels_container.
        % =================================================================
        function align_channels_on_axes(obj,varargin)
-           %call this function to evenly distribute non-hidden channels on the current
-           %axes as found in the channels.
-           %varargin so it can be used as a callback function if necessary
            
            if(obj.num_channels>0)
                indices_to_draw = zeros(obj.num_channels,1);
@@ -977,10 +1032,11 @@ classdef CLASS_channels_container < handle
        end
        
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
-       %> @param
-       %> @retval obj instance of CLASS_channel class.
+       %> @brief Presents a dialog box (UI) of available channel names for the user to select.
+       %> @param obj instance of CLASS_channels_container.
+       %> @retval channel_indices Channel indices (cell_of_channels) that
+       %> the user selected.  This is empty for no selection or if the user
+       %> cancels.
        % =================================================================
        function channel_indices = channelSelection_dlg(obj) %dialog of channels to select
            channel_names = obj.getChannelNames();
@@ -990,9 +1046,9 @@ classdef CLASS_channels_container < handle
        end
        % =================================================================
        %> @brief
-       %> @param obj instance of CLASS_channel class.
+       %> @param obj instance of CLASS_channels_container.
        %> @param
-       %> @retval obj instance of CLASS_channel class.
+       %> @retval obj instance of CLASS_channels_container.
        % =================================================================
        function savePSD2txt(obj, studyname,optional_src_channels,optional_pathname)
            if(nargin<=2)
@@ -1021,7 +1077,7 @@ classdef CLASS_channels_container < handle
        % =================================================================
        %> @brief getChannel returns the CLASS_channel object found in the
        % cell parameter cell_of_channels at index container_index
-       %> @param obj instance of CLASS_channel class.
+       %> @param obj instance of CLASS_channels_container.
        %> @param container_index Index of the channel to obtain from the
        %> parameter cell_of_channels.
        %> @retval channel_obj instance of CLASS_channel class.
@@ -1038,17 +1094,20 @@ classdef CLASS_channels_container < handle
        end
        
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
-       %> @param
-       %> @retval obj instance of CLASS_channel class.
+       %> @brief Duplicate the channel at channel_index by copying the CLASS_channel object
+       %> at the provided index and updating relevant fields.
+       %> @param obj instance of CLASS_channels_container.
+       %> @param src_container_index Index of the channel to duplicate.
+       %> @param optional_new_title (Optional) string label of the
+       %> duplicated channel.  Default is to append '_duplicate' to the
+       %> original channel's label.
+       %> @param optional_dest_container_index (Optional) container index for synthesized channel
+       %> to be placed at.  This is useful in batch mode when everything is
+       %>preallocated
+       %> @retval obj instance of CLASS_channels_container.
        % =================================================================
        function duplicate(obj,src_container_index,optional_new_title,optional_dest_container_index)
-           %duplicate the channel at channel_index by copying the CLASS_channel object
-           %at src_index and updating the relevant fields.
-           %optional_dest_container_index = optional container_index for synthesized channel
-           %to be placed at - useful in batch mode when everything is
-           %preallocated
+
            if(src_container_index>0 && src_container_index<=obj.num_channels)
                %                 src_channel = obj.cell_of_channels{channel_index};
                %                 src_channel.title = [src_channel.title,'_duplicate'];
@@ -1104,16 +1163,34 @@ classdef CLASS_channels_container < handle
        end
        
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
-       %> @param
-       %> @retval obj instance of CLASS_channel class.
+       %> @brief Synthesize a new channel object (CLASS_channel) and add it
+       %> to the private cell variable 'cell_of_channels'.
+       %> @param obj instance of CLASS_channels_container.
+       %> @param src_container_channel_indices 
+       %> @param filterStructs A cell of filterStruct arrays.  The filter
+       %> structs are applied to the source channels during synthesis.
+       %> filterStruct is a struct with the following fields
+       %> - filter_path (the path where the filter functions are; e.g. sev.filter_path
+       %> - src_channel_index   The index of the event_container EDF channel)
+       %> - src_channel_label   Cell label of the string that holds the EDF channel label
+       %> - m_file              MATLAB filename to use for the filtering (feval)
+       %> - ref_channel_index   The index or indices of additional channels to use as a reference when and where necessary
+       %> - ref_channel_label   Cell of strings that hold the EDF channel label associated with the ref_channel_index
+       %> - src_channel_index: 1
+       %> - src_channel_label: 'C3-M2'
+       %> - filter: 'anc_rls.m'
+       %> - ref_channel_index: [1 1]
+       %> - ref_channel_label: {'C3-M2'  'C3-M2'}
+       %> @note The filter struct should be verified against the existing
+       %> structure for each event and only applied if/as different.
+       %> This checking is carried out at the next level down in the
+       %> channel_class objects.           
+       %> @param synth_titles Synthetic channel's label.
+       %> @param optional_dest_container_indices  Optional container_index for synthesized channel
+       %> to be placed at - useful in batch mode when everything is preallocated
+       %> @retval obj instance of CLASS_channels_container.
        % =================================================================
        function synthesize(obj,src_container_channel_indices, filterStructs, synth_titles,optional_dest_container_indices)
-           %optional_dest_container_indices = optional container_index for synthesized channel
-           %to be placed at - useful in batch mode when everything is
-           %preallocated
-           
            %work with cells
            if(~iscell(filterStructs))
                filterStructs = {filterStructs};
@@ -1156,10 +1233,16 @@ classdef CLASS_channels_container < handle
        end
        
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
-       %> @param
-       %> @retval obj instance of CLASS_channel class.
+       %> @brief Synthesize a new channel (i.e. instance of CLASS_channel)
+       %> @param obj instance of CLASS_channels_container.
+       %> @param data Synthetic channels signal data.  
+       %> @param src_container_channel_indices cell_of_channels indices that the synthetic channel is derived from.
+       %> @param src_label Label to use as the channel's source.
+       %> @param optional_container_placement_index (Optional) index of another channel that should be replaced by the synthesized channel.
+       %> A new channel is simply added to cell_of_channels if this
+       %> parameter is not included.
+       %> @note Synthetic channels show a PSG index of -1.
+       %> @retval obj instance of CLASS_channels_container.
        % =================================================================
        function obj = synthesizeChannel(obj,data, src_container_channel_indices,src_label,optional_container_placement_index)
            %if varargin{1} then the channel space in this container class
@@ -1174,7 +1257,7 @@ classdef CLASS_channels_container < handle
            end
            
            %when working in single study mode for instance...
-           if(nargin>4 && isempty(optional_container_placement_index))
+           if(nargin>4 && ~isempty(optional_container_placement_index))
                obj.replaceChannel(optional_container_placement_index,sdata,src_label,EDF_index,src_samplerate);
            else
                obj.addChannel(data,src_label,EDF_index,src_samplerate);
@@ -1238,16 +1321,23 @@ classdef CLASS_channels_container < handle
        end
        
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
-       %> @param
-       %> @retval obj instance of CLASS_channel class.
+       %> @brief Replace a channel in the cell_of_channels with a
+       %> different channel.
+       %> @note created for batch mode processing with synthetic channel
+       %> support.  Not finished yet for individual study mode
+       %> processing since I have not implemented clean-up of past
+       %> channel at index2replace yet.
+       %> @param obj instance of CLASS_channels_container.
+       %> @param index2replace Index of channel to be replaced.
+       %> @param data Vector of channel's signal data.
+       %> @param src_label PSG label of channel.
+       %> @param source_indices PSG index of channel. 
+       %> @param src_samplerate Original sample rate of source channel.
+       %> @param desired_samplerate New sample rate.
+       %> @retval index_added Index of the channel that was added or empty if it could not be replaced
+       %> (e.g. an invalid index2replace).
        % =================================================================
        function index_added = replaceChannel(obj,index2replace,data,src_label, source_indices,src_samplerate,desired_samplerate)
-           %created for batch mode processing with synthetic channel
-           %support.  Not finished yet for individual study mode
-           %processing since I have not implemented clean-up of past
-           %channel at index2replace yet.
            if(nargin<=6)
                if(obj.default_samplerate>0)
                    desired_samplerate = obj.default_samplerate;
@@ -1280,14 +1370,17 @@ classdef CLASS_channels_container < handle
                        container_index);
                end
                index_added = container_index;
+           else
+               index_added = [];
            end
        end
        
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
-       %> @param
-       %> @retval obj instance of CLASS_channel class.
+       %> @brief Sets current samples of all channel object instances,
+       %> which internally refreshes the display.
+       %> @param obj instance of CLASS_channels_container.
+       %> @param new_samples indices to set current_samples to.
+       %> @retval obj instance of CLASS_channels_container.
        % =================================================================
        function setCurrentSamples(obj,new_samples)
            obj.current_samples = new_samples;
@@ -1297,10 +1390,9 @@ classdef CLASS_channels_container < handle
        end
        
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
-       %> @param
-       %> @retval obj instance of CLASS_channel class.
+       %> @brief Refresh display of all non-hidden channels.
+       %> @param obj instance of CLASS_channels_container.
+       %> @retval obj instance of CLASS_channels_container.
        % =================================================================
        function draw_all(obj)
            %draw all unhidden channels
@@ -1312,10 +1404,11 @@ classdef CLASS_channels_container < handle
        end
        
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
-       %> @param
-       %> @retval obj instance of CLASS_channel class.
+       %> @brief Specify if a channel should display filtered data or not.
+       %> @param obj instance of CLASS_channels_container.
+       %> @param channel_index Index of channel to draw events for.
+       %> @param show_boolean TRUE to show filtered, False otherwise.
+       %> @retval obj instance of CLASS_channels_container.
        % =================================================================
        function setShowFiltered(obj, channel_index, show_boolean)
            channelObj = obj.getChannel(channel_index);
@@ -1325,10 +1418,10 @@ classdef CLASS_channels_container < handle
        end
        
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
-       %> @param
-       %> @retval obj instance of CLASS_channel class.
+       %> @brief Flags a channel's events for display.
+       %> @param obj instance of CLASS_channels_container.
+       %> @param channel_index Index of channel to draw events for.
+       %> @retval obj instance of CLASS_channels_container.
        % =================================================================
        function setDrawEvents(obj,channel_index)
            if(nargin>1)
@@ -1346,11 +1439,11 @@ classdef CLASS_channels_container < handle
        
        % =================================================================
        %> @brief getCurrentData returns the data for the current samples
-       %(e.g. the epoch shown)
-       %> @param obj instance of CLASS_channel class.
+       %> (e.g. the epoch shown).
+       %> @param obj instance of CLASS_channels_container.
        %> @param channel_index - the index of the channel to retrieve data
        %> from
-       %> @retval obj instance of CLASS_channel class.
+       %> @retval obj instance of CLASS_channels_container.
        % =================================================================
        function data = getCurrentData(obj, channel_index)
            %returns data for the current epoch
@@ -1359,11 +1452,11 @@ classdef CLASS_channels_container < handle
        
        % =================================================================
        %> @brief getData - returns the signal data for the specified
-       %> channel
-       %> @param obj instance of CLASS_channel class.
+       %> channel.
+       %> @param obj instance of CLASS_channels_container.
        %> @param channel_index - index of the channel to get data from
        %> @param optional_range - a range to pull data from if desired
-       %> @retval obj instance of CLASS_channel class.
+       %> @retval obj instance of CLASS_channels_container.
        % =================================================================
        function data = getData(obj, channel_index, optional_range)
            %returns filter_data from channel at channel_index if it exists
@@ -1387,10 +1480,10 @@ classdef CLASS_channels_container < handle
        end
        % =================================================================
        %> @brief getSamplerate returns the sample rate of specfied channel
-       %> @param obj instance of CLASS_channel class.
+       %> @param obj instance of CLASS_channels_container.
        %> @param channel_index index of the channel to get sample rate
        %> from.
-       %> @retval obj instance of CLASS_channel class.
+       %> @retval obj instance of CLASS_channels_container.
        % =================================================================
        function samplerate = getSamplerate(obj, channel_index)
            %returns samplerate from channel at channel_index
@@ -1403,35 +1496,29 @@ classdef CLASS_channels_container < handle
        end
        
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
-       %> @param
-       %> @retval obj instance of CLASS_channel class.
+       %> @brief Apply a digital signal processing filter to a channel
+       %> object.  
+       %> @param obj instance of CLASS_channels_container.
+       %> @param filterArrayStruct A vector of filterStructs. 
+       %> filterStruct is a struct with the following fields
+       %> - filter_path (the path where the filter functions are; e.g. sev.filter_path
+       %> - src_channel_index   The index of the event_container EDF channel)
+       %> - src_channel_label   Cell label of the string that holds the EDF channel label
+       %> - m_file              MATLAB filename to use for the filtering (feval)
+       %> - ref_channel_index   The index or indices of additional channels to use as a reference when and where necessary
+       %> - ref_channel_label   Cell of strings that hold the EDF channel label associated with the ref_channel_index
+       %> - src_channel_index: 1
+       %> - src_channel_label: 'C3-M2'
+       %> - filter: 'anc_rls.m'
+       %> - ref_channel_index: [1 1]
+       %> - ref_channel_label: {'C3-M2'  'C3-M2'}
+       %> @note The filter struct should be verified against the existing
+       %> structure for each event and only applied if/as different.
+       %> This checking is carried out at the next level down in the
+       %> channel_class objects.           
+       %> @retval obj instance of CLASS_channels_container.
        % =================================================================
        function filter(obj, filterArrayStruct)
-           %filterArrayStruct is an array (vector) of filterStructs
-           %filterStruct has the following fields
-           %
-           %filter_struct has the following fields
-           % filter_path (the path where the filter functions are; e.g. sev.filter_path
-           % src_channel_index   (the index of the event_container EDF channel)
-           % src_channel_label   (cell label of the string that holds the EDF channel
-           %                      label
-           % m_file                matlab filename to use for the filtering (feval)
-           % ref_channel_index   (the index or indices of additional channels to use
-           %                       as a reference when and where necessary
-           % ref_channel_label   (cell of strings that hold the EDF channel label
-           %                       associated with the ref_channel_index
-           %            src_channel_index: 1
-           %            src_channel_label: 'C3-M2'
-           %            filter: 'anc_rls.m'
-           %            ref_channel_index: [1 1]
-           %            ref_channel_label: {'C3-M2'  'C3-M2'}
-           %
-           % The filter struct should be verified against the existing
-           % structure for each event and only applied if/as different
-           % - this checking is carried out at the next level down in the
-           % channel_class objects
            global MARKING;
            src_indices = cell(numel(filterArrayStruct),1);
            [src_indices{:}]=filterArrayStruct.src_channel_index;
@@ -1476,39 +1563,45 @@ classdef CLASS_channels_container < handle
        
        
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
-       %> @param
-       %> @retval obj instance of CLASS_channel class.
+       %> @brief Removes a CLASS_event object's association with a CLASS_channel object.
+       %> @param obj instance of CLASS_channels_container.
+       %> @param channel_index Index of the channel to remove the event
+       %> from.
+       %> @param event_index Index of the CLASS_events_container event to
+       %> disassociate from the channel at channel_index.
+       %> @retval obj instance of CLASS_channels_container.
        % =================================================================
        function remove_event(obj,channel_index,event_index)
            %removes the event at event_index in the channel at channel_index
            obj.cell_of_channels{channel_index}.remove_event(event_index);
        end
+       
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
-       %> @param
-       %> @retval obj instance of CLASS_channel class.
+       %> @brief Associates a CLASS_event object with a CLASS_channel object.
+       %> @param obj instance of CLASS_channels_container.
+       %> @param channel_index Index of the channel to add an event to.
+       %> @param event_index Index of the CLASS_events_container event to
+       %> associate with the channel at channel_index.
+       %> @retval obj instance of CLASS_channels_container.
        % =================================================================
        function add_event(obj,channel_index,event_index)
-           %adds the event at event_index in the channel at channel_index
            obj.cell_of_channels{channel_index}.add_event(event_index);
            obj.cell_of_channels{channel_index}.draw();  %we just added an event, so update the view
        end
        
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
-       %> @param
-       %> @retval obj instance of CLASS_channel class.
+       %> @brief Compute statistic of a selected region of chanel data.
+       %> @param obj instance of CLASS_channels_container.
+       %> @param chanel_index Index of the channel to copy from.
+       %> @param ROI vector of sample indices to copy (optional)
+       %> @note If not used, the default is current_samples.
+       %> @retval stats is a struct with the fields
+       %> - table_data - for putting into a uitable
+       %> - table_row_names - string labels for each row
+       %> - table_column_names - column_names
        % =================================================================
        function stats = getStats(obj,channel_index,ROI)
            %ROI is the region of interest
-           %stats is a struct with the fields
-           %table_data - for putting into a uitable
-           %table_row_names - string labels for each row
-           %table_column_names - column_names
            
            if(channel_index<=obj.num_channels)
                if(nargin>2)
@@ -1527,10 +1620,12 @@ classdef CLASS_channels_container < handle
            
        end
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
-       %> @param
-       %> @retval obj instance of CLASS_channel class.
+       %> @brief Copy a selected region of chanel data to the clipboard.
+       %> @param obj instance of CLASS_channels_container.
+       %> @param chanel_index Index of the channel to copy from.
+       %> @param ROI vector of sample indices to copy (optional)
+       %> @note If not used, the default is current_samples.
+       %> @retval obj instance of CLASS_channels_container.
        % =================================================================
        function varargout = copy2clipboard(obj,channel_index,ROI)
            if(channel_index<=obj.num_channels)
@@ -1552,14 +1647,15 @@ classdef CLASS_channels_container < handle
            
        end
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
-       %> @param
-       %> @retval obj instance of CLASS_channel class.
+       %> @brief Copy a channel's data to workspace.
+       %> Send the channel at index channel_index to the workspace
+       %> variable.
+       %> @param obj instance of CLASS_channels_container.
+       %> @param channel_index Index of the channel to copy from.
+       %> @retval obj instance of CLASS_channels_container.
        % =================================================================
        function copy2workspace(obj,channel_index)
-           %send the channel at index channel_index to the workspace
-           %variable.
+           
            if(channel_index<=obj.num_channels)
                data = obj.getData(channel_index);
                chanName = obj.getChannelName(channel_index);
@@ -1574,10 +1670,10 @@ classdef CLASS_channels_container < handle
            
        end
        % =================================================================
-       %> @brief
-       %> @param obj instance of CLASS_channel class.
-       %> @param
-       %> @retval obj instance of CLASS_channel class.
+       %> @brief Hide channels from view.
+       %> @param obj instance of CLASS_channels_container.
+       %> @param channels2hide Vector of channel indices to hide.
+       %> @retval obj instance of CLASS_channels_container.
        % =================================================================
        function hide(obj,channels2hide)
            for k=1:numel(channels2hide)
@@ -1590,7 +1686,7 @@ classdef CLASS_channels_container < handle
        
        % =================================================================
        %> @brief getChannelName - return the name/label of a channel
-       %> @param obj instance of CLASS_channel class.
+       %> @param obj instance of CLASS_channels_container.
        %> @param channel_index index of the channel to get name of
        %> @retval channelName - string of the channel name
        % =================================================================
@@ -1605,7 +1701,7 @@ classdef CLASS_channels_container < handle
        
        % =================================================================
        %> @brief getChannelNames return names of all channels
-       %> @param obj instance of CLASS_channel class.
+       %> @param obj instance of CLASS_channels_container.
        %> @retval cell_of_names = cell of channel names
        % =================================================================
        function cell_of_names = getChannelNames(obj)
@@ -1616,7 +1712,7 @@ classdef CLASS_channels_container < handle
        
        % =================================================================
        %> @brief get_labels same as getChannelNames
-       %> @param obj instance of CLASS_channel class.
+       %> @param obj instance of CLASS_channels_container.
        %> @retval cell_of_names = a cell of channel names as strings
        % =================================================================
        function cell_of_names = get_labels(obj)

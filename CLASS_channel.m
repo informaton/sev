@@ -17,19 +17,22 @@
 % ======================================================================
 classdef CLASS_channel < handle
     %look for *REMOVE* to remove older files that may no longer be in use.
-    
+    % The were removed on 6/13/2014            
+    % 1.  function obj = update_file_events_cell(obj,new_event_from_file_obj)
+    % 2.  function savePSD2txt(obj, savefilename,optional_PSD_settings)
+        
     properties
         %> sets 0 position of the data along the y-axes.
         line_offset; 
         %> user defined title
         title; 
-        %> label from the edf for this channel when applicable (i.e.
+        %> @brief label from the edf for this channel when applicable (i.e.
         %> non-synthetic channel)
         EDF_label; 
-        %> numeric index (start at 1) for this channel in the EDF  when
+        %> @brief numeric index (start at 1) for this channel in the EDF  when
         %> applicable (i.e. non-synthetic channel)
         EDF_index;
-         %> index of this object in a cell of objects of this class
+        %> index of this object in a cell of objects of this class
         channel_index;
         %> when a channel is synthesized, I want to know from where
         synth_src_container_indices;  
@@ -40,11 +43,11 @@ classdef CLASS_channel < handle
         %> @brief array struct of filter rules that are applied to the raw data
         %> the filterStruct is obtained from prefilter_dlg and
         %> has the following fields
-        %> outputStruct.src_channel_index = [];
-        %>            .src_channel_label = [];
-        %>            .m_file = [];
-        %>            .ref_channel_index = [];
-        %>            .ref_channel_label = {};
+        %> - outputStruct.src_channel_index = [];
+        %> - src_channel_label = [];
+        %> - m_file = [];
+        %> - ref_channel_index = [];
+        %> - ref_channel_label = {};
         filterStruct;
         %> boolean value, set to true when the user wants to see fitered version of signal             
         show_filtered; 
@@ -58,12 +61,12 @@ classdef CLASS_channel < handle
         MUSIC; 
         %> stores the power spectral density values and parameters used...
         PSD;
-        %> vector into a global instance of events_container_class of the
+        %> @brief vector into a global instance of events_container_class of the
         %> events associated with this channel
         event_indices_vector; 
         %> for the actual line that will be drawn.
         line_handle; 
-        %> current_samples selected for display   (used to be range)
+        %> @brief current_samples selected for display   (used to be range)
         %> range of values currently used for drawing (range(1) is the leftmost sample, range(end) is the right most sample)
         current_samples; 
         %> scales the raw_data by this value when plotted
@@ -74,10 +77,10 @@ classdef CLASS_channel < handle
         text_handle; 
         %> used for how far away the label/title will be        
         label_offset; 
-        %> 3 element vector (x,y,z) for the label's position relative to the
+        %> @brief 3 element vector (x,y,z) for the label's position relative to the
         %> axes...
         label_position; 
-        %> The offset (in uV) to draw reference lines up and below the
+        %> @brief The offset (in uV) to draw reference lines up and below the
         %channel's signal.  A value of 0 indicates on reference lines are
         %drawn (numeric).  
         reference_line_offsets;
@@ -85,11 +88,11 @@ classdef CLASS_channel < handle
         reference_line_color;
         %> MATLAB line handles for the reference lines
         reference_line_handles;
-        %> two element vector of text handles that describe the position of
+        %> @brief two element vector of text handles that describe the position of
         %> the reference lines
         reference_text_handles; 
-        %> flag that indicates whether this channel is being repositioned
-        %by the user (useful to know if the events needed to be updated because of a new offset -  or settings applied
+        %> @brief flag that indicates whether this channel is being repositioned
+        %> by the user (useful to know if the events needed to be updated because of a new offset -  or settings applied
         repositioning; 
          %> flag to draw_events;
         draw_events;
@@ -97,7 +100,7 @@ classdef CLASS_channel < handle
         parent_axes; 
         %> handle of parent figure where mouse events are assigned
         parent_fig; 
-        %> handle to the figure used to display summary_stats for this
+        %> @brief handle to the figure used to display summary_stats for this
         %> channel, if necessary
         summary_stats_figure_h; 
         %> handle to the table which holds the summary_stats structure
@@ -307,25 +310,6 @@ classdef CLASS_channel < handle
            obj.event_indices_vector(obj.event_indices_vector==event_index)=[]; 
         end
         
-        % =================================================================
-        %> @brief This function does not appear to be in use and is likely
-        %> a remnant from previous versions.  ***REMOVE***
-        %> @param obj instance of CLASS_channel class.
-        %> @param new_event_from_file_obj
-        %> @retval obj instance of CLASS_channel class.
-        % =================================================================
-        function obj = update_file_events_cell(obj,new_event_from_file_obj)
-            if(~isempty(new_event_from_file_obj))
-                if(isempty(obj.file_events_cell.start_stop_matrix))                    
-                    obj.file_events_cell = new_event_from_file_obj;
-                    if(~isempty(obj.file_events_cell))
-                        obj.file_events_cell.create_linehandles(get(obj.line_handle,'parent'),'k');
-                    end;
-                 else
-                     obj.event_object_cell.merge_new_object(new_event_from_file_obj);
-                end;
-            end;
-        end;
         
         % =================================================================
         %> @brief Updates object parameters directly from the field/value
@@ -915,156 +899,7 @@ classdef CLASS_channel < handle
             EVENT_CONTAINER.hide(obj.event_indices_vector);
         end
         
-        % =================================================================
-        %> @brief ***REMOVE*** This is used to save PSD data to text files.
-        %> However it appears antiquated based on number of global
-        %> variables referenced withinn.
-        %> @param obj instance of CLASS_channel class.
-        %> @param savefilename 
-        %> @param optional_PSD_settings
-        %> @retval obj instance of CLASS_channel class
-        % =================================================================
-        function savePSD2txt(obj, savefilename,optional_PSD_settings)
-            global BATCH_PROCESS;
-            global EVENT_CONTAINER;
-            global STATE;
-            global ARTIFACT_CONTAINER;
-            global MARKING;
-            if(~isempty(STATE) && isfield(STATE,'batch_process_running' && STATE.batch_process_running))
-                BATCH_JOB = true;
-            else
-                BATCH_JOB = false;
-            end
-            if(BATCH_JOB)
-                standard_epoch_sec = BATCH_PROCESS.standard_epoch_sec;
-                batch_id = BATCH_PROCESS.start_time;
-                num_events = ARTIFACT_CONTAINER.num_events;
-            else
-                batch_id = '0';
-                standard_epoch_sec = MARKING.sev.standard_epoch_sec;
-                num_events = numel(obj.event_indices_vector); %number of events associated with this channel...  %this would be different for batch processing where all events might be desired
-            end
-            try
-                if(isempty(obj.PSD)||nargin>2)
-                    if(nargin<=2)
-                        obj.calculate_PSD();
-                    else
-                        obj.calculate_PSD(optional_PSD_settings);  
-                    end
-                end;
-                
-                y = obj.PSD.magnitude;
-                rows = size(y,1);
-                
-                study_duration_in_seconds = numel(obj.raw_data)/obj.samplerate;
-                E = floor(0:obj.PSD.interval/standard_epoch_sec:(study_duration_in_seconds-obj.PSD.FFT_window_sec)/standard_epoch_sec)'+1;
-                S = MARKING.sev_STAGES.line(E);
-                
-                %     no_artifact_label = '-';
-
-                evt_ind = false(numel(E),num_events);
-                evtLabels=repmat('_',size(evt_ind)); %initialize to blanks
-                for k = 1:num_events
-                    if(BATCH_JOB)
-                        eventMat = ARTIFACT_CONTAINER.cell_of_events{k}.start_stop_matrix;
-                    else
-                        eventMat = EVENT_CONTAINER.cell_of_events{obj.event_indices_vector(k)}.start_stop_matrix;
-                    end
-                    
-                    %periodogram_epoch refers to an epoch that is measured in terms of
-                    %the periodogram length and not a 30-second length
-                    evts_per_periodogram_epoch = sample2epoch(eventMat,obj.PSD.interval,obj.samplerate);
-                    
-                    %need to handle the overlapping case differently here...
-                    if(obj.PSD.FFT_window_sec~=obj.PSD.interval)
-                        %window_sec must be greater than interval_sec if they are not
-                        %equal - this is ensured in the PSD settings GUI - though
-                        %adjusting the parametes externally may cause trouble!
-                        overlap_sec = ceil(obj.PSD.FFT_window_sec-obj.PSD.interval);
-                        evts_per_periodogram_epoch(2:end,1) = evts_per_periodogram_epoch(2:end,1)-overlap_sec;
-                    end;
-                    
-                    %assign the corresponding column of A to the artifacts indices
-                    %found in the current artifact method
-                    for r = 1:size(evts_per_periodogram_epoch,1)
-                        evt_ind(evts_per_periodogram_epoch(r,1):evts_per_periodogram_epoch(r,2),k)=true; %ARTIFACT_CONTAINER.cell_of_events{k}.batch_mode_score;                        
-                    end;
-                    evtLabels(evt_ind(:,k),k) = 'X'; % EVENT_CONTAINER.getLabel();
-                    %         ArtifactBool(A_ind(:,k)) = 1;
-                end
-                
-                evtBool = sum(evt_ind,2)>0;
-                
-                if(BATCH_JOB)
-                    samples_per_artifact = obj.PSD.interval*obj.samplerate;
-                    artifact_mat = find(evtBool);
-                    artifact_mat = [(artifact_mat-1)*samples_per_artifact+1,artifact_mat*samples_per_artifact];
-                    if(BATCH_PROCESS.output_files.cumulative_stats_flag)
-                        batch.updateBatchStatisticsTally(obj.samplerate,artifact_mat);
-                    end
-                    if(BATCH_PROCESS.output_files.individual_stats_flag) %artifact statistics
-                        batch.saveArtifactandStageStatistics(obj.samplerate,artifact_mat);
-                    end
-                end
-
-                fout = fopen(savefilename,'w');
-                
-                analysis_CHANNEL_label = obj.EDF_label;
-                fprintf(fout,['#Power Spectral Density values from FFTs with the following parameters: (Batch ID: %s)\r\n'...
-                    ,'#\tCHANNEL:\t%s\r\n'...
-                    ,'#\twindow length (seconds):\t%0.1f\r\n'...
-                    ,'#\tFFT length (samples):\t%i\r\n'...
-                    ,'#\tFFT interval (taken every _ seconds):\t%0.1f\r\n'...
-                    ,'#\tInitial Sample Rate(Hz):\t%i\r\n'...
-                    ,'#\tFinal Sample Rate(Hz):\t%i\r\n'...
-                    ,'%s\tSlow\tDelta\tTheta\tAlpha\tSigma\tBeta\tGamma\tMean0_30\tSum0_30\tA\tA_type\tS\tE\r\n'],batch_id,analysis_CHANNEL_label,obj.PSD.FFT_window_sec,obj.PSD.nfft,obj.PSD.interval...
-                    ,obj.src_samplerate,obj.samplerate...
-                    ,num2str(obj.PSD.x,'\t%0.001f'));%'\t%0.1f'
-                %     fclose(fout);
-                
-                %obj.PSD.x is a row vector, delivered by calcPSD
-                freqs = obj.PSD.x;
-                slow = mean(y(:,freqs>0&freqs<4),2); %mean across the rows to produce a column vector
-                
-                delta = sum(y(:,freqs>=0.5&freqs<4),2); %mean across the rows to produce a column vector
-                theta = sum(y(:,freqs>=4&freqs<8),2);
-                alpha = sum(y(:,freqs>=8&freqs<12),2);
-                sigma = sum(y(:,freqs>=12&freqs<16),2);
-                beta  = sum(y(:,freqs>=16&freqs<30),2);
-                gamma = sum(y(:,freqs>=30),2);
-                
-                mean0_30  = mean(y(:,freqs>0&freqs<=30),2);
-                sum0_30  = sum(y(:,freqs>0&freqs<=30),2);
-                
-                y = [y, slow, delta, theta, alpha, sigma, beta, gamma, mean0_30, sum0_30, evtBool];
-                
-                numeric_output_str = [repmat('%0.4f\t',1,size(y,2)),repmat('%c',1,size(evtLabels,2)),'\t%u\t%u\r\n'];
-                
-                yall = [y,evtLabels+0,S,E];
-                
-                fprintf(fout,numeric_output_str,yall');
-                
-                %     tic
-                %     for row = 1:r
-                %         fprintf(fout,numeric_output_str,y(row,:),ArtifactLabels(row,:),S(row),E(row));
-                %     end;
-                %     toc
-                
-                fclose(fout);
-                %     tic
-                %     save(fullfile(BATCH_PROCESS.output_path,filename_out),'y','-tabs','-ASCII','-append');
-                %     toc
-                fprintf(1,'%i %0.04f-second periodograms saved to %s\n',rows,obj.PSD.FFT_window_sec,savefilename);
-                
-                
-            catch ME
-                %     warnmsg = ME.message;
-                %     stack_error = ME.stack(1);
-                %     warnmsg = sprintf('%s\r\n\tFILE: %s\f<a href="matlab:opentoline(''%s'',%s)">LINE: %s</a>\fFUNCTION: %s', warnmsg,stack_error.file,stack_error.file,num2str(stack_error.line),num2str(stack_error.line), stack_error.name);
-                %     disp(warnmsg);
-                rethrow(ME);
-            end;
-        end        
+    
     end %end methods
     
 end%end class definition
