@@ -10,14 +10,19 @@
 classdef CLASS_SSC_database < CLASS_database
 
     properties (Constant)
+        %> Database name
         dbName = 'SSC_DB';
+        %> Database user name        
         dbUser = 'SSC_user';
+        %> Database user password        
         dbPassword = 'SSC_password';
     end
     properties
     end
     
     methods
+        %> @brief Class constructor.
+        %> @retval obj Instance of CLASS_SSC_database.
         function obj = CLASS_SSC_database()
             obj.dbStruct = CLASS_SSC_database.getDBStruct();
         end
@@ -405,6 +410,7 @@ classdef CLASS_SSC_database < CLASS_database
         end
     end
     
+    %> @brief Open a mysql connection to the SSC database.
     methods(Static)
         function staticOpen()
             CLASS_database.close();
@@ -413,6 +419,8 @@ classdef CLASS_SSC_database < CLASS_database
     end
     
     methods(Static, Access=private)
+        %> @brief Returns a database struct for the SSC database.
+        %> @retval dbStruct Struct with the fields - name - user - password
         function dbStruct = getDBStruct()
             dbStruct.name = CLASS_SSC_database.dbName;
             dbStruct.user = CLASS_SSC_database.dbUser;

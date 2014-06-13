@@ -18,14 +18,10 @@ classdef CLASS_CManager_database < CLASS_database
         dbUser = 'CManager_user';
         %> database user password
         dbPassword = 'CManager_password';
-        %> File types to use, can be
-        %> @li psg
-        %> @li stage
-        %> @li sco
-        %> @li xml
-        %> @li events        
+        %> @brief File types to use, can be
+        %> @li psg @li stage @li sco @li xml @li events        
         fileTypes = {'psg','stage','sco','xml','events'};  
-        %> Extensions of files that will be used (i.e. after transcoding)
+        %> @brief Extensions of files that will be used (i.e. after transcoding)  
         %> @li edf
         %> @li sco
         %> @li sta

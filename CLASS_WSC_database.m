@@ -10,14 +10,19 @@
 classdef CLASS_WSC_database < CLASS_database
 
     properties (Constant)
+        %> Database name
         dbName = 'WSC_DB';
+        %> Database user name
         dbUser = 'WSC_user';
+        %> Database user password
         dbPassword = 'WSC_password';
     end
     properties
     end
     
     methods
+        %> @brief Class constructor.
+        %> @retval obj Instance of CLASS_WSC_database.
         function obj = CLASS_WSC_database()
             obj.dbStruct = CLASS_WSC_database.getDBStruct();
         end
@@ -985,10 +990,57 @@ classdef CLASS_WSC_database < CLASS_database
             end
         end
         
+        % @brief Export parts of WSC Diagnostics_T to tab delimited text
+        % file
+        % @param txt_filname Name of the file to write data to (it will be
+        % created or over written depending if it already exists or not).
+        function diagnostics2txt(txt_filename)
+            % Author: Hyatt Moore IV
+            % created 8/28/12
+            % modified 11/13/12
+            % modified 2/11/13 - updated for Eileen transfer
+            % modified 2/11/13 - updated for Eileen and Emmanuel transfer
+            %modified 2/13/13 - updated to handle the genetic polymorphisms
+            % modified 2/27/13 - update for Emmanuel and Eileen for later
+            %  txt_filename = fullfile(pwd,'diagnostics_for_Laurel.txt');
+            % modified 6/13/2014 - Placed in CLASS_WSC_database.m
+            
+            CLASS_WSC_database.open();
+            fid = fopen(txt_filename,'w');
+            
+            
+            q=mym('select concat(studyinfo_t.patid,"_",studyinfo_t.studynum) as PatID_StudyNum, detectorid,withwake, RLS_A, RLS_B, (RLS_A=1 or rls_b=1) as RLS_AB, RLS_C, AHI4>=15 as has_OSA,plmi,plm_count,lmcount,periodicity,plm_to_lm_ratio,ratio_plm,ratio_lm  from studyinfo_t join plm_t using (patstudykey) left join diagnostics_t using (patstudykey) where detectorid in (142,143) order by detectorid, withwake, patstudykey');
+            
+            mym('CLOSE');
+            
+            fields = fieldnames(q);
+            for f=1:numel(fields)
+                fprintf(fid,'%s\t',fields{f});
+            end
+            for p=1:numel(q.PatID_StudyNum)
+                fprintf(fid,'\n');
+                for f=1:numel(fields)
+                    if(iscell(q.(fields{f})))
+                        fprintf(fid,'%s\t',q.(fields{f}){p});
+                    else
+                        if(isnan(q.(fields{f})(p)))
+                            fprintf(fid,'\t');
+                        else
+                            fprintf(fid,'%0.2f\t',q.(fields{f})(p));
+                        end
+                    end
+                end
+            end
+            
+            fclose(fid);
+        end
         
     end
     
     methods(Static)
+        
+        %> @brief Open a mysql connection to the WSC database.
+        %> @note mym is used as interface between mysql and database.
         function staticOpen()
             CLASS_database.close();
             CLASS_database.openDB(CLASS_WSC_database.getDBStruct);
@@ -1178,6 +1230,8 @@ classdef CLASS_WSC_database < CLASS_database
             loadStruct.rls_F.value = mat2cell(s.F,mat2cellConverter);            
         end
         
+        %> @brief Returns a database struct for the WSC database.
+        %> @retval dbStruct Struct with the fields - name - user - password
         function dbStruct = getDBStruct()
             dbStruct.name = CLASS_WSC_database.dbName;
             dbStruct.user = CLASS_WSC_database.dbUser;

@@ -1589,52 +1589,15 @@ classdef CLASS_database < handle
         end
         
         
-            
-        % @brief Export parts of WSC Diagnostics_T to tab delimited text
-        % file
-        % @param txt_filname Name of the file to write data to (it will be
-        % created or over written depending if it already exists or not).
-        function diagnostics2txt(txt_filename)
-            % Author: Hyatt Moore IV
-            % created 8/28/12
-            % modified 11/13/12
-            % modified 2/11/13 - updated for Eileen transfer
-            % modified 2/11/13 - updated for Eileen and Emmanuel transfer
-            %modified 2/13/13 - updated to handle the genetic polymorphisms
-            % modified 2/27/13 - update for Emmanuel and Eileen for later
-            %  txt_filename = fullfile(pwd,'diagnostics_for_Laurel.txt');
-            
-            CLASS_WSC_database.open();
-            fid = fopen(txt_filename,'w');
-            
-            
-            q=mym('select concat(studyinfo_t.patid,"_",studyinfo_t.studynum) as PatID_StudyNum, detectorid,withwake, RLS_A, RLS_B, (RLS_A=1 or rls_b=1) as RLS_AB, RLS_C, AHI4>=15 as has_OSA,plmi,plm_count,lmcount,periodicity,plm_to_lm_ratio,ratio_plm,ratio_lm  from studyinfo_t join plm_t using (patstudykey) left join diagnostics_t using (patstudykey) where detectorid in (142,143) order by detectorid, withwake, patstudykey');
-            
-            mym('CLOSE');            
-            
-            fields = fieldnames(q);
-            for f=1:numel(fields)
-                fprintf(fid,'%s\t',fields{f});
-            end
-            for p=1:numel(q.PatID_StudyNum)
-                fprintf(fid,'\n');
-                for f=1:numel(fields)
-                    if(iscell(q.(fields{f})))
-                        fprintf(fid,'%s\t',q.(fields{f}){p});
-                    else
-                        if(isnan(q.(fields{f})(p)))
-                            fprintf(fid,'\t');
-                        else
-                            fprintf(fid,'%0.2f\t',q.(fields{f})(p));
-                        end
-                    end
-                end
-            end
-            
-            fclose(fid);
-        end
-        
-       
+        % ======================================================================
+        %> @brief Exports the output of a mysql query to a file.
+        %> @param query A mysql query (string)
+        %> @param filename The filename to save the MySQL results to
+        %> (string).
+        %> @param optional_delim Delimeter to separate each row's results
+        %> by (optional).  For example, ',' would separate using a comma.
+        %> The default is to use a tab-delimiter (i.e. '\t').
+        % =================================================================
         function exportQuery2File(query, filename, optional_delim)
             if(isstruct(query))
                 q = query;
@@ -1654,8 +1617,7 @@ classdef CLASS_database < handle
                 end
                 for f=1:numel(fields)
                     fprintf(fid,strcat('%s',delim),fields{f});
-                end
-                
+                end                
                 
                 for p=1:numel(q.patstudykey)
                     fprintf(fid,'\n');
