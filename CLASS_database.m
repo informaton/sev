@@ -47,6 +47,51 @@ classdef CLASS_database < handle
         end  
         
         % ======================================================================
+        %> @brief Adds a table column to the database associated with the
+        %> instantiated class.
+        %> @param obj CLASS_database derivded instance.
+        %> @param obj tableName MySQL table to add a column to
+        %> @param obj fieldName Name of the column to add to tableName
+        %> @param obj fieldDefintion Definition of column being added.      
+        %> @note For example:
+        %> @note obj = CLASS_CManager_database();
+        %> @note obj.addTableField('cohortinfo_t','dockingFolder','varchar(128)');
+        % =================================================================
+        function addTableField(obj,tableName,fieldName, fieldDefinition)
+            obj.openDB(obj.dbStruct);
+            
+            mym(sprintf('alter table %s add column %s %s',tableName,fieldName,fieldDefinition));
+            % This fails on some types of work
+            % mym('alter table {S} add column {S} {S}',tableName,fieldName,fieldDefinition); 
+            
+        end        
+        
+        % ======================================================================
+        %> @brief Rename a table column in the database associated with the
+        %> instantiated class.
+        %> @param obj CLASS_database derivded instance.
+        %> @param obj tableName MySQL table to add a column to
+        %> @param obj oldFieldName Name of the column to change from.
+        %> @param obj newFieldName New name to change the column to.
+        %> @note For example:
+        %> @note obj = CLASS_CManager_database();
+        %> @note obj.renameField('cohortinfo_t','cohortID','cohortid');
+        % =================================================================
+        function renameField(obj,tableName,oldFieldName, newFieldName)
+            obj.openDB(obj.dbStruct);
+            
+            %retrieve the original column definition
+            x=mym('show columns from cohortinfo_t where Field = "{S}"',oldFieldName);
+            if(~isempty(x) && iscell(x.Type))
+                colDef = char(x.Type{1}(:)');           %use char() b/c mysql can store as uint8's.
+                mym(sprintf('alter table %s change column %s %s %s',tableName,oldFieldName,newFieldName,colDef));               
+            else
+               fprintf(1,'An error occurred trying to rename column %s from %s\n',oldFieldName,tableName); 
+            end
+                
+        end  
+        
+        % ======================================================================
         %> @brief Builds a mysql database and sets up permissions to modify
         %> for the designated user.
         %> @param obj Instance of CLASS_database
@@ -131,26 +176,7 @@ classdef CLASS_database < handle
             system(sprintf('mysql -u%s -p%s %s < %s',obj.dbUser,obj.dbPassword,obj.dbName,sqlDumpFile),'-echo');
         end
         
-         % ======================================================================
-        %> @brief Refactors a table's patstudykey using another field that is listed in the studyinfo_t
-        %> table (e.g. patid).
-        %> @param obj Instance of CLASS_database
-        %> @param table2refactor Table name whose patstudykey is to be refactored
-        %> @param fieldToRefactorAgainst The field which is used as an
-        %> alternate key into the studyinfo_t which also identifies a uninque
-        %> record in the table2refactor table.
-        %> @note *patid* is the default value for field2RefactorAgainst
-        % ======================================================================
-        function refactorPatstudykey(obj,table2Refactor, field2RefactorWith)
-            if(~strcmpi(table2Refactor,'studyinfo_t'))
-                if(nargin<3 || isempty(field2RefactorWith))
-                    field2RefactorWith = 'patid';
-                end
-                mym('update {S} inner join studyinfo_t on ({S}.{S} = studyinfo_t.{S}) set {S}.{S} = studyinfo_t.{S}',table2Refactor,table2Refactor,field2RefactorWith,field2RefactorWith,table2Refactor,field2RefactorWith,field2RefactorWith);
-            else
-                fprintf(1,'Cannot refactor with the studyinfo_t as your source table!\n');
-            end
-        end
+        
         
         
     end
@@ -180,6 +206,34 @@ classdef CLASS_database < handle
         end
         
         % ======================================================================
+        %> @brief Refactors a table's patstudykey using another field that is listed in the studyinfo_t
+        %> table (e.g. patid).
+        %> @param obj Instance of CLASS_database
+        %> @param table2refactor Table name whose patstudykey is to be refactored
+        %> @param fieldToRefactorAgainst The field which is used as an
+        %> alternate key into the studyinfo_t which also identifies a uninque
+        %> record in the table2refactor table.
+        %> @note *patid* is the default value for field2RefactorAgainst
+        %> @note A connection must already exist and be open before
+        %> refactorPatstudykey is invoked.
+        % ======================================================================
+        function refactorPatstudykey(table2Refactor, field2RefactorWith)
+            if(mym)
+                fprintf(1,'An mym connection must be open!  Try calling openDB() or open() using your CLASS_database based object.\n\n');
+            end
+
+            if(~strcmpi(table2Refactor,'studyinfo_t'))
+                if(nargin<3 || isempty(field2RefactorWith))
+                    field2RefactorWith = 'patid';
+                end
+                    
+                mym('update {S} inner join studyinfo_t on ({S}.{S} = studyinfo_t.{S}) set {S}.{S} = studyinfo_t.{S}',table2Refactor,table2Refactor,field2RefactorWith,field2RefactorWith,table2Refactor,field2RefactorWith,field2RefactorWith);
+            else
+                fprintf(1,'Cannot refactor with the studyinfo_t as your source table!\n');
+            end
+        end
+        
+        % ======================================================================
         %> @brief MySQL helper function.  Updates fields values for the specified
         %> table of the currently open database.  This is a wrapper for the
         %> the mysql call UPDATE table_name SET field1=new-value1, field2=new-value2
@@ -201,6 +255,53 @@ classdef CLASS_database < handle
         end
         
 
+        % ======================================================================
+        %> @brief MySQL helper function.  Updates fields values for the specified
+        %> table of the currently open database.  This is a wrapper for the
+        %> the mysql call UPDATE table_name SET field1=new-value1, field2=new-value2
+        %> [WHERE Clause]
+        %> @param tableName Name of the table to updated (string)        
+        %> @param fields Cell of column label(s) (strings)
+        %> @param values Cell of column values that correspond to fields' column labeling.
+        %> @param whereStmt The 'where' clause (sans 'where'), which must be included (string)
+        %> @note executes the mysql statement
+        %> <i>UPDATE tableName SET fields{1}=values{1}[, fields{k}=values{k}] WHERE whereStmt</i>
+        %> Example: 
+        %>      x = CLASS_CManager_database
+        %>      x.open();
+        %>      x.updateTable('cohortinfo_t',{'dockingFolder','src_foldertype'},{'"/Volumes/BUFFALO 500/dock"','"flat"'},'cohortID=1');
+        %> - x.updateTable('cohortinfo_t','src_foldername','"/Volumes/BUFFALO 500/WSC"','cohortID=1');
+        %> results in the mysql statement
+        %> - update cohortinfo_t set  src_foldername="/Volumes/BUFFALO 500/WSC" WHERE cohortID=1
+        function updateTable(tableName, fields, values, whereStmt)
+            %UPDATE table_name SET field1=new-value1, field2=new-value2
+            %[WHERE Clause]
+            if(~iscell(fields))
+                fields = {fields};
+            end
+            if(~iscell(values))
+                values = {values};
+            end
+            if(iscell(whereStmt))
+                whereStmt = whereStmt{1};
+            end
+
+            updateStr = sprintf('update %s set ',tableName);
+            
+            %generate the column=value portion.
+            for k=1:numel(fields)
+                value = values{k};
+                if(isnumeric(value))
+                    value = num2str(value);
+                end
+                updateStr = sprintf('%s %s=%s,',updateStr,fields{k},value);
+            end
+            updateStr(end)=[]; %remove the trailing ',' 
+            updateStr = sprintf('%s WHERE %s',updateStr,whereStmt);
+            
+            mym(updateStr);
+        end
+                
         
         % ======================================================================
         %> @brief This creates a DetectorInfo_T table based on the provided

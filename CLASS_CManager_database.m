@@ -91,17 +91,17 @@ classdef CLASS_CManager_database < CLASS_database
         %> - src_psg_foldername Folder name containing the original source
         %> (src) files for the cohort.
         %> - src_psg_extension filename extension of the psg (e.g. <b>.edf</b>)
-        %> - src_stage_foldername stage foldername; used when folder type is <i>tier</i>
-        %> - src_events_foldername events foldername; used when folder type is <i>tier</i>
-        %> - src_xml_foldername xml foldername; used when folder type is <i>tier</i>
-        %> - src_sco_foldername sco foldername; used when folder type is <i>tier</i>
+        %> - src_stage_foldername stage foldername; used when folder type is <i>split</i>
+        %> - src_events_foldername events foldername; used when folder type is <i>split</i>
+        %> - src_xml_foldername xml foldername; used when folder type is <i>split</i>
+        %> - src_sco_foldername sco foldername; used when folder type is <i>split</i>
         %> - working_foldername Folder name containing the files as
         %> transfomred by *transformation_script*.  
-        %> - working_foldertype Either <b>tier</b> or <b>flat</b>; default
+        %> - working_foldertype Either <b>split</b> or <b>flat</b>; default
         %> is <b>flat</b>
-        %> - working_edf_foldername EDF foldername; used when folder type is <i>tier</i>
-        %> - working_sta_foldername STA foldername; used when folder type is <i>tier</i>
-        %> - working_sco_foldername SCO foldername; used when folder type is <i>tier</i>
+        %> - working_edf_foldername EDF foldername; used when folder type is <i>split</i>
+        %> - working_sta_foldername STA foldername; used when folder type is <i>split</i>
+        %> - working_sco_foldername SCO foldername; used when folder type is <i>split</i>
         %> - patient_description_file
         %> - transformation_script Name of file used to transcode src files
         %> to working files.
