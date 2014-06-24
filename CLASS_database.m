@@ -81,7 +81,7 @@ classdef CLASS_database < handle
             obj.openDB(obj.dbStruct);
             
             %retrieve the original column definition
-            x=mym('show columns from cohortinfo_t where Field = "{S}"',oldFieldName);
+            x=mym('show columns from {S} where Field = "{S}"',tableName,oldFieldName);
             if(~isempty(x) && iscell(x.Type))
                 colDef = char(x.Type{1}(:)');           %use char() b/c mysql can store as uint8's.
                 mym(sprintf('alter table %s change column %s %s %s',tableName,oldFieldName,newFieldName,colDef));               
@@ -175,8 +175,21 @@ classdef CLASS_database < handle
         function importTable(obj,sqlDumpFile)
             system(sprintf('mysql -u%s -p%s %s < %s',obj.dbUser,obj.dbPassword,obj.dbName,sqlDumpFile),'-echo');
         end
+
+        % ======================================================================
+        %> @brief Adds the user specified in the dbStruct instance variable to the
+        %> the database (also specified in dbStruct)
+        %> @param obj Instance of CLASS_database
+        % ======================================================================
+        function addUser(obj)
+           
+            mym('open','localhost','root')            
+            %setup a user for this person
+            CLASS_database.grantPrivileges(obj.dbStruct);
+            mym('close');
+        end
         
-        
+            
         
         
     end
@@ -204,6 +217,17 @@ classdef CLASS_database < handle
             mym('open','localhost',dbStruct.user,dbStruct.password);
             mym(['USE ',dbStruct.name]);
         end
+        
+        % ======================================================================
+        %> @brief Adds the user specified in the dbStruct instance variable to the
+        %> the database (also specified in dbStruct)%> @param dbStruct A structure containing database accessor fields:
+        %> @li @c name Name of the database to use (string)
+        %> @li @c user Database user (string)
+        %> @li @c password Password for @c user (string)
+        function grantPrivileges(dbStruct)
+            mym(['GRANT ALL ON ',dbStruct.name,'.* TO ''',dbStruct.user,'''@''localhost'' IDENTIFIED BY ''',dbStruct.password,'''']);
+        end
+        
         
         % ======================================================================
         %> @brief Refactors a table's patstudykey using another field that is listed in the studyinfo_t
@@ -271,7 +295,7 @@ classdef CLASS_database < handle
         %>      x.open();
         %>      x.updateTable('cohortinfo_t',{'dockingFolder','src_foldertype'},{'"/Volumes/BUFFALO 500/dock"','"flat"'},'cohortID=1');
         %> - x.updateTable('cohortinfo_t','src_foldername','"/Volumes/BUFFALO 500/WSC"','cohortID=1');
-        %> results in the mysql statement
+        %> results in the following mysql statement:
         %> - update cohortinfo_t set  src_foldername="/Volumes/BUFFALO 500/WSC" WHERE cohortID=1
         function updateTable(tableName, fields, values, whereStmt)
             %UPDATE table_name SET field1=new-value1, field2=new-value2
@@ -300,6 +324,28 @@ classdef CLASS_database < handle
             updateStr = sprintf('%s WHERE %s',updateStr,whereStmt);
             
             mym(updateStr);
+        end
+                
+        % ======================================================================
+        %> @brief MySQL helper function.  Delete a table entry or entries
+        %> from the specified table of the current database which match the 
+        %> the where statement provided.  This is a wrapper for the
+        %> the mysql call DELETE FROM table_name WHERE whereStmt
+        %> @param tableName Name of the table to updated (string)        
+        %> @param whereStmt The 'where' clause (sans 'where'), which must be included (string)
+        %> @note executes the mysql statement
+        %> <i>DELETE FROM tableName WHERE whereStmt</i>
+        %> Example: 
+        %>      x = CLASS_CManager_database
+        %>      x.open();
+        %>      x.deleteTableEntry('filestudyinfo_t','cohortID=1 and src_psg_filename="A0097_4 174733.EDF"');
+        %> results in the following mysql statement:
+        %> - delete from filestudyinfo_t where cohortID=1 and
+        %src_psg_filename="A0097_4 174733.EDF"
+        function deleteTableEntry(tableName, whereStmt)
+            deleteStr = sprintf('delete from %s WHERE %s',tableName,whereStmt);
+            
+            mym(deleteStr);
         end
                 
         
