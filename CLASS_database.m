@@ -5,6 +5,29 @@
 %> interaction with SEV.
 %> @note: A MySQL database must be installed on the local host for class
 %> instantiations to operate correctly.
+%> @note Here are a few tips for upgrading MySQL on a Mac
+%> - Turn off MySQL server and install new MySQL (which you should have
+%> downloaded from apache's website)
+%> - After installation, copy the database files from the old mysql/data
+%> directory to the new mysql/data directory (i.e.
+%> /usr/local/mysql_blah_blah_old_Version/data/[database_name] to
+%> /usr/local/mysql/data/ folder.
+%> - Open a terminal window in Mac and change directory to the mysql data
+%>  folder like so:
+%> - cd /usr/local/mysql/data
+%> - Then for each databasse that you transferred over, give _mysql
+%> permission to access it (and not just yourself)
+%> If you transferred a database named 'CManager_DB' for example then you
+%> would type this into the terminal:
+%> - sudo chown _mysql CManager_DB
+%> - Do this for each database file that you copied over.  
+%> - Grant user privileges to these databases (that you just moved) again.
+%> These are lost in the upgrade.  In MySQL use a "Grant all on [database
+%> name].* to [username]@localhost identified by [password].  Otherwise,
+%> from MATLAB, run the CLASS_database instance method 'addUser()'.
+%> Copy all innodb tables from the old mysql/data directory to the new one
+%>  (e.g. ib_logfile0, ib_logfile1, and ibdata).  
+%> From the terminal run, mysql_upgrade
 % ======================================================================
 classdef CLASS_database < handle
 
@@ -293,11 +316,12 @@ classdef CLASS_database < handle
         %> Example: 
         %>      x = CLASS_CManager_database
         %>      x.open();
-        %>      x.updateTable('cohortinfo_t',{'dockingFolder','src_foldertype'},{'"/Volumes/BUFFALO 500/dock"','"flat"'},'cohortID=1');
+        %>      x.updateTableEntry('cohortinfo_t',{'dockingFolder','src_foldertype'},{'"/Volumes/BUFFALO 500/dock"','"flat"'},'cohortID=1');
         %> - x.updateTable('cohortinfo_t','src_foldername','"/Volumes/BUFFALO 500/WSC"','cohortID=1');
         %> results in the following mysql statement:
-        %> - update cohortinfo_t set  src_foldername="/Volumes/BUFFALO 500/WSC" WHERE cohortID=1
-        function updateTable(tableName, fields, values, whereStmt)
+        %> - update cohortinfo_t set  src_foldername="/Volumes/BUFFALO
+        %> 500/WSC" WHERE cohortID=1 and src_psg_filename="A0097_4 174733.EDF"')
+        function updateTableEntry(tableName, fields, values, whereStmt)
             %UPDATE table_name SET field1=new-value1, field2=new-value2
             %[WHERE Clause]
             if(~iscell(fields))
