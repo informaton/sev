@@ -2,13 +2,10 @@
 %> @brief Extends CLASS_database class for use with PSG based databases.
 % ======================================================================
 %> @brief The class is designed for database development, functionality, and 
-%> interaction with PSG based sleep study cohorts.
+%> interaction with PSG based sleep study cohorts and the SEV.
 %> @note: A MySQL database must be installed on the local host for class
 %> instantiations to operate correctly.
 classdef CLASS_database_psg < CLASS_database
-
-        
-    
     
     methods(Abstract)
         % ======================================================================
