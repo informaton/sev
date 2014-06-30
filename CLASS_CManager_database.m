@@ -80,12 +80,19 @@ classdef CLASS_CManager_database < CLASS_database
         %> - docking_foldername Pathname where PSG files are originally
         %> placed/held before they are moved to the source folder
         %> (src_foldername) in the first part of the migration.
-        %> - src_foldername 
-        %> - src_foldertype Can be <b>tier</b>, <b>flat</b>, <b>group</b> or
+        
+        %> - is_docking_folder_grouped BOOL (YES/NO == 1/0)  If true, then the PSGs (regardless of their
+        %> source folder type have been grouped together in separate subfolders of the docking folder.
+        %> Default is NO.  In processing grouped docking folders, every
+        %> folder in the docking folder is treated as if it contains PSG
+        %> folders and processed according to the entry's src_foldertype property. 
+        %> - src_foldername This is the system level pathname where the
+        %> files from the docking folder are moved to permanently in their
+        %>original format, and where transcoding scripts look to for their
+        %> sorce file to transcode.
+        %> - src_foldertype Can be <b>tier</b>, <b>flat</b>, or
         %> <b>split</b>.  Flat has all psg's in same folder.  Tier has each
-        %>.psg in a subfolder of the main folder.  Group has .psg files
-        %>collected into groups which are placed in several subfolders, each
-        %> one path down from the main folder.  Split allows .psg, .sta, .and event files
+        %> PSG in a subfolder of the main folder.  Split allows .psg, .sta, .and event files
         %> to be placed in their own folder according to their type 
         %> (e.g. .edf in one folder, .sta files in another, and .event files in another.
         %> - src_psg_foldername Folder name containing the original source
@@ -128,6 +135,7 @@ classdef CLASS_CManager_database < CLASS_database
                 ', projectname VARCHAR(30) DEFAULT NULL',...                
                 ', location VARCHAR(30) DEFAULT "somewhere"',...                
                 ', docking_foldername varchar(128) DEFAULT NULL',...
+                ', is_docking_folder_grouped BOOL DEFAULT FALSE',...
                 ', src_foldername varchar(128) DEFAULT NULL',...
                 ', src_foldertype ENUM(''tier'',''flat'',''split'',''group'')',...
                 ', src_psg_foldername varchar(128) DEFAULT NULL',...
@@ -714,39 +722,93 @@ classdef CLASS_CManager_database < CLASS_database
         end
         
         
-        function insertRecordFromStruct(TableName,insertStruct)
-            names = ' (';
-            values = '(';
-            curFields = fieldnames(insertStruct);
-            for cf=1:numel(curFields)
-                curField = curFields{cf};
-                curValue = insertStruct.(curField);
-                if(~isempty(curValue))
-                    if(islogical(curValue))
-                        values = sprintf('%s %u,',values,curValue);
-                    elseif(ischar(curValue))
-                        if(strcmpi(curField,'datetimefirstadded'))
-                            values = sprintf('%s now(),',values);
-                        else
-                            curValue = strrep(insertStruct.(curField),'"','\"');
-                            values = sprintf('%s "%s",',values,curValue);
-                        end
-                    elseif(isnumeric(curValue))
-                        values = sprintf('%s %0.3g,',values,curValue);
-                    end
-                    names = sprintf('%s %s,',names,curField);
+
+        % ======================================================================
+        %> @brief Retrieves cohort descriptor data as a struct from
+        %> the .inf filename provided.
+        %> @param inf_filename Full filename (i.e. path included) of either a text
+        %> file containing cohort descriptor data as tab-delimited entries
+        %> or an XML formatted file (with .xml extension). 
+        %> @retval cohortSstruct A structure containing file value pairings
+        %> For example, database accessor fields for a database.inf file would be:
+        %> @li @c name Name of the database to use (string)
+        %> @li @c user Database user (string)
+        %> @li @c password Password for @c user (string)
+        function cohortStruct = loadCohortStruct(struct_filename)
+            %Hyatt Moore, IV (< June, 2013)
+            cohortStruct = [];
+            if(exist(struct_filename,'file'))
+                [~,~,ext] = fileparts(struct_filename);
+                if(strcmpi(ext,'xml'))
+                    cohortStruct = CLASS_settings.loadXMLstruct(struct_filename);
+                    
+                else
+                    fid = fopen(struct_filename,'r');
+                    cohortStruct = CLASS_settings.loadStruct(fid);
+                    fclose(fid);
                 end
             end
-            names(end)=')';
-            values(end)=')';
-            insertStr = ['INSERT IGNORE INTO ',TableName,names,' VALUES ',values];
-            try
-                mym(insertStr);
-            catch me
-                showME(me);
-            end
-            
         end        
+        
+        %> @brief Loads a mapping file.  Mapping files are used to map
+        %> source psg filenames to their generated working files (e.g. .EDF,
+        %> .STA, and .SCO files)
+        %> @param src_mapping_file A text file with the mapping data.  Each row should contain (1) the
+        %> source psg file name and extension followed by (2 to 4?) working
+        %> file names and extensions.  Lines begining with the '#' character 
+        %> are treated as comments and ignored.
+        %> @retval mappingStruct struct that contains the mapping fields
+        %> - src_cell Nx1 cell of strings
+        %> - work_cell Nx1 cell of cell of strings
+        %> work_cell{n,:} containing working file names that correspond to the 
+        %> source psg filename listed in src_cell{n}
+        %> @retval success Boolean that returns true if a mapping file is
+        %> loaded successfully
+        function [mappingStruct, success] = loadMappingFile(src_mapping_file)
+            mappingStruct = [];
+            success = false;
+            if(exist(src_mapping_file,'file'))
+                fid = fopen(src_mapping_file,'r');
+                if(fid>0)
+                    try
+            
+                        file_open = true;
+                        
+                        pat = '([^\.\s]+\.[^\.\s]+)';
+                        pat = '([^\.]+\.[^\.\s]+)';
+                        
+                        src_cell = {};
+                        work_cell = {};
+                        while(file_open)
+                            try
+                                curline = fgetl(fid);
+                                if(~ischar(curline))
+                                    file_open = false;
+                                else
+                                    tok = regexp(curline,pat,'tokens');
+                                    if(numel(tok)>1 && isempty(strfind(tok{1}{1},'#')))
+                                        src_cell{end+1,1} = strtrim(char(tok{1}));
+                                        work_cell{end+1,1} = strtrim(char(tok{2}));
+                                        success = true;
+                                    end
+                                end;
+                            catch me
+                                showME(me); 
+                                success = false;
+                            end
+                        end;
+                        fclose(fid);
+                        mappingStruct.src_cell = src_cell;
+                        mappingStruct.work_cell = work_cell;
+                    catch me
+                        showME(me);
+                        fclose(fid);
+                    end
+                else
+                    fprintf('An error occurred while trying to open the source name mapping file (%s).  Working files will not be added to the database.\n',src_mapping_file);
+                end
+            end
+        end
 
     end
     
