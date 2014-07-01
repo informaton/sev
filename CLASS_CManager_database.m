@@ -722,34 +722,6 @@ classdef CLASS_CManager_database < CLASS_database
         end
         
         
-
-        % ======================================================================
-        %> @brief Retrieves cohort descriptor data as a struct from
-        %> the .inf filename provided.
-        %> @param inf_filename Full filename (i.e. path included) of either a text
-        %> file containing cohort descriptor data as tab-delimited entries
-        %> or an XML formatted file (with .xml extension). 
-        %> @retval cohortSstruct A structure containing file value pairings
-        %> For example, database accessor fields for a database.inf file would be:
-        %> @li @c name Name of the database to use (string)
-        %> @li @c user Database user (string)
-        %> @li @c password Password for @c user (string)
-        function cohortStruct = loadCohortStruct(struct_filename)
-            %Hyatt Moore, IV (< June, 2013)
-            cohortStruct = [];
-            if(exist(struct_filename,'file'))
-                [~,~,ext] = fileparts(struct_filename);
-                if(strcmpi(ext,'xml'))
-                    cohortStruct = CLASS_settings.loadXMLstruct(struct_filename);
-                    
-                else
-                    fid = fopen(struct_filename,'r');
-                    cohortStruct = CLASS_settings.loadStruct(fid);
-                    fclose(fid);
-                end
-            end
-        end        
-        
         %> @brief Loads a mapping file.  Mapping files are used to map
         %> source psg filenames to their generated working files (e.g. .EDF,
         %> .STA, and .SCO files)

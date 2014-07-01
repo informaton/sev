@@ -308,9 +308,19 @@ classdef CLASS_database < handle
             
             %generate the column=value portion.
             for k=1:numel(fields)
-                value = values{k};
+                value = values{k};                
+                
                 if(isnumeric(value))
                     value = num2str(value);
+                elseif(ischar(value))
+                    %check if we need to add double quotes.
+                    if(value(1)~='"' || value(end)~='"')
+                        value = strcat('"',strrep(value,'"','\"'),'"');
+                    end
+                
+                %elseif(islogical(value)
+                %   value = value;
+                %
                 end
                 updateStr = sprintf('%s %s=%s,',updateStr,fields{k},value);
             end
@@ -436,6 +446,36 @@ classdef CLASS_database < handle
             end
         end        
         
+        % ======================================================================
+        %> @brief Inserts a record into a table of the current, open, database
+        %> using a struct of field name/value pairings.
+        %> @param Name of the table to insert record into (string).
+        %> @param Struct of column names and column values to insert into the
+        %> specified table.
+        %> @note Numeric values are formatted to 3 significant digits
+        %> (%0.3g).  
+        %> - A struct field name of 'datetimefirstadded' is given the value
+        %> 'now()'.        
+        %> - String values that contain double quotes inside the string, should not start and end with double quotes.
+        %> @ Okay examples
+        %> - insertStruct.name = '"John"';
+        %> - insertStruct.name = 'John';
+        %> - insertStruct.name = 'John "Little mike" Doe';
+        %> - insertStruct.name = '"John \"Little mike\" Doe'";
+        %> @ Not Okay example (results in mysql error)
+        %> - insertStruct.name = '"John "Little mike" Doe"';
+        %> @note @b Example:
+        %> @note insertStruct.name = 'Korea';
+        %> @note insertStruct.projectname = 'Narcolepsy';
+        %> @note insertStruct.location = 'Korea';
+        %> @note insertStruct.src_psg_extension = '.ewp';
+        %> @note insertStruct.is_docking_folder_grouped = 1;
+        %> @note insertStruct.src_foldername = '/Users/hyatt4/Documents/Sleep Project/Data/Korea';
+        %> @note insertStruct.src_foldertype = 'tier';
+        %> @note insertStruct.docking_foldername = '/Users/hyatt4/Documents/Sleep Project/Data/dock/WSC';
+        %> @note obj = CLASS_CManager_database();
+        %> @note obj.open();
+        %> @note obj.insertRecordFromStruct('cohortinfo_t',insertStruct);
         function insertRecordFromStruct(TableName,insertStruct)
             names = ' (';
             values = '(';
@@ -450,8 +490,11 @@ classdef CLASS_database < handle
                         if(strcmpi(curField,'datetimefirstadded'))
                             values = sprintf('%s now(),',values);
                         else
-                            curValue = strrep(insertStruct.(curField),'"','\"');
-                            values = sprintf('%s "%s",',values,curValue);
+                            if(curValue(1)~='"')
+                                curValue = strrep(curValue,'"','\"');
+                                curValue = strcat('"',curValue,'"');
+                            end                
+                            values = sprintf('%s %s,',values,curValue);
                         end
                     elseif(isnumeric(curValue))
                         values = sprintf('%s %0.3g,',values,curValue);
@@ -466,8 +509,43 @@ classdef CLASS_database < handle
                 mym(insertStr);
             catch me
                 showME(me);
+            end            
+        end
+        
+        % ======================================================================
+        %> @brief Updates a table record in the current, open, database
+        %> using a struct of field name/value pairings.
+        %> @param Name of the table to insert record into (string).
+        %> @param Struct of column names and column values to update in the table.
+        %> @param A where statement (sans "where") to locate the record to
+        %> update.
+        %> @note Numeric values are formatted to 3 significant digits
+        %> (%0.3g).  
+        %> - A struct field name of 'datetimefirstadded' is given the value
+        %> 'now()'.
+        %> - String values should include double quotes (e.g.
+        %> insertStruct.name = '"John"';
+        %> @note @b Example:
+        %> @note updateStruct.name = 'Korea';
+        %> @note updateStruct.projectname = 'Narcolepsy';
+        %> @note updateStruct.location = 'Korea';
+        %> @note updateStruct.src_psg_extension = '.ewp';
+        %> @note updateStruct.is_docking_folder_grouped = 1;
+        %> @note updateStruct.src_foldername = '/Users/hyatt4/Documents/Sleep Project/Data/Korea';
+        %> @note updateStruct.src_foldertype = 'tier';
+        %> @note updateStruct.docking_foldername = '/Users/hyatt4/Documents/Sleep Project/Data/dock/WSC';
+        %> @note whereStmt = 'cohortid = 0';
+        %> @note obj = CLASS_CManager_database();
+        %> @note obj.open();
+        %> @note obj.updateRecordFromStruct('cohortinfo_t',updateStruct,whereStmt);
+        function updateRecordFromStruct(tableName,updateStruct,whereStmt)
+            fields = fieldnames(updateStruct);
+            values = cell(size(fields));
+            for cf=1:numel(fields)
+                curField = fields{cf};
+                values{cf} = updateStruct.(curField);
             end
-            
+            CLASS_database.updateTableEntry(tableName, fields, values, whereStmt);
         end
         
         % ======================================================================
