@@ -924,13 +924,29 @@ classdef CLASS_events_container < handle
         end
         
         % =================================================================
-        %> @brief
-        %> @param obj instance of CLASS_events_container class.
-        %> @param
-        %> @retval 
+        %> @brief Adjust the vertical display offset of the current event
+        %> in relation to its parent channel.
+        %> @param Instance of CLASS_events_container class.
+        %> @param Graphic handle to the box of the selected patch.
         % =================================================================
-        function contextmenu_patch_adjustOffset_callback(obj,hObject,eventdata)
-            disp('To Do contextmenu_evt_patch_adjust_offset_callback');
+        function contextmenu_patch_adjustOffset_callback(obj,hObject,~)
+            eventObj = obj.getCurrentChild();
+            vertical_offset_str = num2str(eventObj.vertical_offset_delta);
+            
+            vertical_offset_str = inputdlg(char({'Input desired display offset (in uV) for the event(s)','(0 turns off reference lines)'}),'Line Reference Input Dialog',1,{vertical_offset_str});
+            if(~isempty(vertical_offset_str))
+                vertical_offset = str2double(vertical_offset_str{1});
+
+                if(~(isnan(reference_offset)))
+                    % since we don't keep track of the parent channel's y
+                    % offset, we need to determine where it from the change
+                    % in the vertical offset and the evt_patch_y position.
+                    parent_channel_y_offset = eventObj.evt_patch_y - eventObj.vertical_offset_delta;
+                    event_obj.vertical_offset_delta = vertical_offset;
+                    event_obj.setYoffset(parent_channel_y_offset);
+                end
+            end
+            set(gco,'selected','off');
         end
         
         % =================================================================
@@ -989,14 +1005,17 @@ classdef CLASS_events_container < handle
         end
         
         % =================================================================
-        %> @brief
+        %> @brief Removes the individual event instance of one event object as
+        %< specified by the input arguments
         %> @param obj instance of CLASS_events_container class.
-        %> @param
-        %> @retval 
+        %> @param Index of the event object (CLASS_event) stored by the events contaier
+        %> (CLASS_events_container).  
+        %> #param Row index of the start/stop event to remove from the
+        %> event object (CLASS_event)
+        %> @note Method checks if event_index is within acceptable range of
+        %> available events before trying to remove the event.
         % =================================================================
         function obj = remove_event_instance(obj,event_index,start_stop_matrix_index)
-            %removes the individual event instance of one event object as
-            %specified by the input arguments
             
             if(event_index>0 && event_index <= obj.num_events)
                 obj.set_Channel_drawEvents(event_index);
@@ -1010,14 +1029,14 @@ classdef CLASS_events_container < handle
         end
         
         % =================================================================
-        %> @brief
+        %> @brief Removes the event class found at index event_index from
+        %> obj.cell_of_events   
         %> @param obj instance of CLASS_events_container class.
-        %> @param
-        %> @retval 
+        %> @param The index of the CLASS_event instance stored in
+        %> cell_of_events to be removed.
         % =================================================================
         function obj = removeEvent(obj,event_index)
-            %removes the event class found at index event_index from
-            %obj.cell_of_events                        
+                                 
             parent_channel_index =obj.channel_vector(event_index);
             obj.CHANNELS_CONTAINER.remove_event(parent_channel_index, event_index);
             
@@ -1311,13 +1330,18 @@ classdef CLASS_events_container < handle
         % =================================================================
         %> @brief
         %> @param obj instance of CLASS_events_container class.
-        %> @param
-        %> @retval 
+        %> @param % DBstruct contains the following fields for database interaction
+        %> - .name
+        %> - .user
+        %> - .password
+        %> - .table
+        %> #param patstudy is the name of .edf file sans .edf extension
+        %> @param localStageStruct (optional).  Include if you want to usea
+        %> the otherwise default obj.stageStruct instance variable
+        %> stage struct.        
         % =================================================================
         function save2DB(obj,DBstruct,patstudy,localStageStruct)
-            % DBstruct contains the following fields for database interaction
-            % .name, .user, .password, .table
-            %patstudy is the .edf filename with the .edf extension removed
+            
             if(nargin<4)
                 localStageStruct = obj.stageStruct;
             end
@@ -1986,14 +2010,13 @@ classdef CLASS_events_container < handle
 
         
         % =================================================================
-        %> @brief
+        %> @brief Event label callback to get to the previos epoch
+        %> containing the current event type.
         %> @param obj instance of CLASS_events_container class.
-        %> @param
-        %> @retval 
+        %> @param Graphic handle of the event label (left side of main
+        %> axes). 
         % =================================================================
         function contextmenu_label_previousEvent_callback(obj,hObject,~)
-            %get to the next epoch containing this event...
-            %             global EVENT_CONTAINER;
             global MARKING;
             childobj = obj.getCurrentChild();
             cur_range = get(obj.parent_axes,'xlim');
@@ -2010,13 +2033,13 @@ classdef CLASS_events_container < handle
         
         
         % =================================================================
-        %> @brief
+        %> @brief Event label callback to get to the next epoch
+        %> containing the current event type.
         %> @param obj instance of CLASS_events_container class.
-        %> @param
-        %> @retval 
+        %> @param Graphic handle of the event label (left side of main
+        %> axes). 
         % =================================================================
-        function contextmenu_label_nextEvent_callback(obj,hObject,~)
-            %get to the next epoch containing this event...
+         function contextmenu_label_nextEvent_callback(obj,hObject,~)
             global MARKING;
             childobj = obj.getCurrentChild();
             cur_range = get(obj.parent_axes,'xlim');
@@ -2027,7 +2050,6 @@ classdef CLASS_events_container < handle
             if(~isempty(nextEpoch))
                 MARKING.setEpoch(nextEpoch);
             end
-            
         end
         
         % =================================================================
@@ -2036,7 +2058,6 @@ classdef CLASS_events_container < handle
         %> @param obj instance of CLASS_events_container class.
         %> @param event_index index into the container of the event to be
         %> visually refreshed in SEV
-        %> @retval obj instance of CLASS_events_container class
         % =================================================================
         function refresh(obj, event_index)
             childObj = obj.getEventObj(event_index);
@@ -2376,8 +2397,6 @@ classdef CLASS_events_container < handle
                         end
                         stop_sample = start_sample;
                         
-                        
-                        
                     elseif(strcmpi(eventType,'numeric'))
                         disp('numeric');
                     elseif(strcmpi(eventType,'tag'))
@@ -2468,9 +2487,6 @@ classdef CLASS_events_container < handle
             HDR.checksum = fread(fid,1,'int32'); %28
             HDR.num_records = fread(fid,1,'int32'); %32 bytes read
         end
-        
-
-        
         
         function evtStruct = evtTxt2evtStruct(filenameIn)
         %This function takes an event file of SEV's evt.* format and
@@ -2677,7 +2693,6 @@ classdef CLASS_events_container < handle
 %            roc_struct.study_names - unique study names for this container
 %            roc_struct.K_0_0 - weighted Kappa value for QROC
 %            roc_struct.K_1_0 - weighted Kappa value for QROC
-
            
            pat = '.*ROC_(?<truth_algorithm>.+)_VS_(?<estimate_algorithm>.+)\.txt';
            t = regexpi(filename,pat,'names');
@@ -2687,7 +2702,6 @@ classdef CLASS_events_container < handle
            else
                roc_struct.truth_algorithm = t.truth_algorithm;
                roc_struct.estimate_algorithm = t.estimate_algorithm;
-               
            end
            
            fid = fopen(filename,'r');           

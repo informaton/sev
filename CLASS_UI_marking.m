@@ -665,7 +665,7 @@ classdef CLASS_UI_marking < handle
             
             if(~isempty(selection))
                 %prepare database import fields
-                selection.DB = loadDatabaseStructFromInf(obj.SETTINGS.VIEW.database_inf_file);
+                selection.DB = CLASS_database.loadDatabaseStructFromInf(obj.SETTINGS.VIEW.database_inf_file);
                 DB_fields = fieldnames(selection.DB);
                 for k=1:numel(DB_fields)
                     selection.DB.(DB_fields{k}) = selection.DB.(DB_fields{k}){selection.database_choice};

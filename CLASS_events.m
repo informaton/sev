@@ -463,21 +463,21 @@ classdef CLASS_events < handle
         end
 
         % =================================================================
-        %> @brief
+        %> @brief Updates the y position of our event patch based on the input
+        %> parent y offset.  If it is different from before, then draw it
         %> @param obj instance of CLASS_events class.
-        %> @param
-        %> @retval obj instance of CLASS_events class.
+        %> @param Y position/offset of the event's parent channel.  The
+        %> event's y position is determined by summing this value with its
+        %> (obj's) vertical_offset_delta instance variable.
         % =================================================================
         function setYOffset(obj,parent_y_offset)
-            %update the y position of our event patch based on the input
-            %parent y offset.  If it is different from before, then draw it
             new_y = obj.vertical_offset_delta+parent_y_offset;
             if(obj.evt_patch_y~=new_y)
                 obj.evt_patch_y = new_y;
                 obj.draw();
             end
         end
-        
+                
         % =================================================================
         %> @brief
         %> @param obj instance of CLASS_events class.
@@ -872,13 +872,11 @@ classdef CLASS_events < handle
         end
 
         % =================================================================
-        %> @brief
+        %> @brief %removes the event entry in start_stop_matrix found at row index start_stop_matrix_index
         %> @param obj instance of CLASS_events class.
-        %> @param
-        %> @retval obj instance of CLASS_events class.
+        %> @param Index of the start stop entry to remove.
         % =================================================================
         function obj = remove(obj,start_stop_matrix_index)
-           %removes the event entry in start_stop_matrix found at row index start_stop_matrix_index
            if(start_stop_matrix_index>0 && start_stop_matrix_index <= size(obj.start_stop_matrix,1))
               obj.start_stop_matrix(start_stop_matrix_index,:) = []; 
               obj.draw();              
@@ -886,32 +884,30 @@ classdef CLASS_events < handle
         end
         
         % =================================================================
-        %> @brief
+        %> @brief Checks if event is empty (has zero start/stop records).
         %> @param obj instance of CLASS_events class.
-        %> @param
-        %> @retval obj instance of CLASS_events class.
         % =================================================================
         function result = isempty(obj)
             result = isempty(obj.start_stop_matrix);
         end
         
         % =================================================================
-        %> @brief
+        %> @brief Tis function requires filename to meet OS file naming requirements
+        %> or it will crash - it appends to the file if filename already
+        %> exists, otherwise a new one is created.  The file is closed at
+        %> the end of this function call
+        %> filename is the file to save the data to
+        %> stageStruct is a struct with the following fields
+        %>     .startDateTime
+        %>     .standard_epoch_sec
+        %>     .line
+        %>     .cycle
         %> @param obj instance of CLASS_events class.
-        %> @param
-        %> @retval obj instance of CLASS_events class.
+        %> @param Filename to save events to.
+        %> @param Struct of stage values for the associated PSG that the
+        %> events are found for.
         % =================================================================
         function save2text(obj,filename,stageStruct)
-            %this function requires filename to meet OS file naming requirements
-            %or it will crash - it appends to the file if filename already
-            %exists, otherwise a new one is created.  The file is closed at            
-            %the end of this function call
-            %filename is the file to save the data to
-            %stageStruct is a struct with the following fields
-            %    .startDateTime
-            %    .standard_epoch_sec
-            %    .line
-            %    .cycle
             
             if(~isempty(obj.start_stop_matrix))
                 
@@ -979,10 +975,9 @@ classdef CLASS_events < handle
 
         
         % =================================================================
-        %> @brief
+        %> @brief Rename the event with new label.
         %> @param obj instance of CLASS_events class.
-        %> @param
-        %> @retval obj instance of CLASS_events class.
+        %> @param New label to use for the event.
         % =================================================================
         function obj = rename(obj,new_label)
             if(ischar(new_label))

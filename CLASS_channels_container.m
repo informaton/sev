@@ -197,7 +197,8 @@ classdef CLASS_channels_container < handle
        % =================================================================
        function contextmenu_ref_line_remove_callback(obj,hObject,eventdata)
            reference_offset = 0;
-           obj.setReferenceLineOffset(reference_offset);
+           
+           obj.adjust_reference_offset(obj.current_channel_index,reference_offset);
            set(gco,'selected','off');
        end
        
