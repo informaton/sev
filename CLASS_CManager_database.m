@@ -288,6 +288,7 @@ classdef CLASS_CManager_database < CLASS_database
                             if(isfield(curCohort,'name'))
                                 names = ' (';
                                 values = '(';
+                                updateClause = [' ON DUPLICATE KEY UPDATE '];
                                 curFields = fieldnames(curCohort);
                                 for cf=1:numel(curFields)
                                     curField = curFields{cf};
@@ -298,11 +299,13 @@ classdef CLASS_CManager_database < CLASS_database
                                     curValue = strrep(curValue,'"','\"');
                                     names = sprintf('%s %s,',names,curField);
                                     values = sprintf('%s "%s",',values,curValue);
+                                    updateClause = sprintf('%s %s="%s",',updateClause,curField,curValue);
                                 end
                                 names(end)=')';
                                 values(end)=')';
+                                updateClause(end) = []; %remove trailing ','
                                 
-                                insertStr = ['INSERT INTO ',TableName,names,' VALUES ',values, ' ON DUPLICATE KEY UPDATE'];
+                                insertStr = ['INSERT INTO ',TableName,names,' VALUES ',values, updateClause];
                                 try
                                     mym(insertStr);
                                 catch me
@@ -337,6 +340,7 @@ classdef CLASS_CManager_database < CLASS_database
                         if(isfield(curCohort,'name'))
                             names = ' (';
                             values = '(';
+                            updateClause = [' ON DUPLICATE KEY UPDATE '];
                             curFields = fieldnames(curCohort);
                             for cf=1:numel(curFields)
                                 curField = curFields{cf};
@@ -347,11 +351,13 @@ classdef CLASS_CManager_database < CLASS_database
                                 curValue = strrep(curValue,'"','\"');
                                 names = sprintf('%s %s,',names,curField);
                                 values = sprintf('%s "%s",',values,curValue);
+                                updateClause = sprintf('%s %s="%s",',updateClause,curField,curValue);
                             end
                             names(end)=')';
                             values(end)=')';
+                            updateClause(end) = []; %remove trailing ','
                             
-                            insertStr = ['INSERT INTO ',TableName,names,' VALUES ',values, ' ON DUPLICATE KEY UPDATE'];
+                            insertStr = ['INSERT INTO ',TableName,names,' VALUES ',values, updateClause];
                             try
                                 mym(insertStr);
                             catch me
@@ -600,10 +606,12 @@ classdef CLASS_CManager_database < CLASS_database
                 
                 if(~isempty(database_struct) && isfield(database_struct,'name'))
                     num_entries = numel(database_struct.name);
-                    preInsertStr = ['INSERT INTO ',TableName, ' (name,user, password) VALUES ("%s", "%s", "%s") ON DUPLICATE KEY UPDATE'];
+                    onDuplicateStr = 'ON DUPLICATE KEY UPDATE name=%s, user=%s, password = %s';
+                    preInsertStr = ['INSERT INTO ',TableName, ' (name,user, password) VALUES ("%s", "%s", "%s") ', onDuplicateStr];
                     for n=1:num_entries
                         try
-                            mym(sprintf(preInsertStr,database_struct.name{n},database_struct.user{n},database_struct.password{n}));
+                            mym(sprintf(preInsertStr,database_struct.name{n},database_struct.user{n},database_struct.password{n},...
+                                database_struct.name{n},database_struct.user{n},database_struct.password{n}));
                         catch me
                             showME(me);
                         end
