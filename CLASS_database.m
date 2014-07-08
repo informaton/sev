@@ -97,11 +97,11 @@ classdef CLASS_database < handle
             
             %retrieve the original column definition
             x=mym('show columns from {S} where Field = "{S}"',tableName,oldFieldName);
-            if(~isempty(x) && iscell(x.Type))
+            if(~isempty(x) && iscell(x.Type) && ~isempty(x.Type))
                 colDef = char(x.Type{1}(:)');           %use char() b/c mysql can store as uint8's.
                 mym(sprintf('alter table %s change column %s %s %s',tableName,oldFieldName,newFieldName,colDef));               
             else
-               fprintf(1,'An error occurred trying to rename column %s from %s\n',oldFieldName,tableName); 
+               fprintf(1,'\nAn error occurred trying to rename column %s from %s\n\n',oldFieldName,tableName); 
             end                
         end  
         

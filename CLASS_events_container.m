@@ -937,13 +937,13 @@ classdef CLASS_events_container < handle
             if(~isempty(vertical_offset_str))
                 vertical_offset = str2double(vertical_offset_str{1});
 
-                if(~(isnan(reference_offset)))
+                if(~(isnan(vertical_offset)))
                     % since we don't keep track of the parent channel's y
                     % offset, we need to determine where it from the change
                     % in the vertical offset and the evt_patch_y position.
                     parent_channel_y_offset = eventObj.evt_patch_y - eventObj.vertical_offset_delta;
-                    event_obj.vertical_offset_delta = vertical_offset;
-                    event_obj.setYoffset(parent_channel_y_offset);
+                    eventObj.vertical_offset_delta = vertical_offset;
+                    eventObj.setYOffset(parent_channel_y_offset);
                 end
             end
             set(gco,'selected','off');

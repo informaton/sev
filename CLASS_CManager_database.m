@@ -195,6 +195,8 @@ classdef CLASS_CManager_database < CLASS_database
         %> - working_sta_filename name of the .sta file
         %> - working_has_sco_file Does a working .sco export of the source record scoring data exist? (yes=1/no=0)
         %> - working_sco_filename name of the .sco file
+        %> @note The table is further constrained to have a unique
+        %> src_psg_filename, src_sub_foldername, and cohortID.
         function create_FileStudyInfo_T(obj) 
             obj.open();            
             TableName = 'filestudyInfo_T';
@@ -229,6 +231,7 @@ classdef CLASS_CManager_database < CLASS_database
                 ', working_has_sco_file BOOL DEFAULT FALSE',...
                 ', working_sco_filename VARCHAR(70) DEFAULT NULL',...                
                 ', PRIMARY KEY (fileID)',...                
+                ', CONSTRAINT UNIQUE (src_psg_filename, src_psg_foldername,cohortid)',...                
                 ')']);
             obj.close();
         end
