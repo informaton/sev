@@ -302,7 +302,7 @@ classdef CLASS_CManager_database < CLASS_database
                                 names(end)=')';
                                 values(end)=')';
                                 
-                                insertStr = ['INSERT IGNORE INTO ',TableName,names,' VALUES ',values];
+                                insertStr = ['INSERT INTO ',TableName,names,' VALUES ',values, ' ON DUPLICATE KEY UPDATE'];
                                 try
                                     mym(insertStr);
                                 catch me
@@ -351,7 +351,7 @@ classdef CLASS_CManager_database < CLASS_database
                             names(end)=')';
                             values(end)=')';
                             
-                            insertStr = ['INSERT IGNORE INTO ',TableName,names,' VALUES ',values];
+                            insertStr = ['INSERT INTO ',TableName,names,' VALUES ',values, ' ON DUPLICATE KEY UPDATE'];
                             try
                                 mym(insertStr);
                             catch me
@@ -600,7 +600,7 @@ classdef CLASS_CManager_database < CLASS_database
                 
                 if(~isempty(database_struct) && isfield(database_struct,'name'))
                     num_entries = numel(database_struct.name);
-                    preInsertStr = ['INSERT IGNORE INTO ',TableName, ' (name,user, password) VALUES ("%s", "%s", "%s")'];
+                    preInsertStr = ['INSERT INTO ',TableName, ' (name,user, password) VALUES ("%s", "%s", "%s") ON DUPLICATE KEY UPDATE'];
                     for n=1:num_entries
                         try
                             mym(sprintf(preInsertStr,database_struct.name{n},database_struct.user{n},database_struct.password{n}));
