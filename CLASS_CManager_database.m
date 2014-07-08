@@ -71,7 +71,7 @@ classdef CLASS_CManager_database < CLASS_database
         
         %> @brief create_CohortInfo_T creates the cohortinfo_t table
         %> CohortInfo_T table fields include
-        %> - cohortID Primary key with constraint that name and projectname
+        %> - cohortid Primary key with constraint that name and projectname
         %> are unique
         %> - name Name of the cohort (e.g. SSC)
         %> - projectname name of the specific project (e.g. APOE)
@@ -130,7 +130,7 @@ classdef CLASS_CManager_database < CLASS_database
             mym(['DROP TABLE IF EXISTS ',TableName]);
             
             mym(['CREATE TABLE IF NOT EXISTS ',TableName,'(',...
-                ' cohortID SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT',...
+                ' cohortid SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT',...
                 ', name VARCHAR(30) NOT NULL DEFAULT "whoRwe"',...
                 ', projectname VARCHAR(30) DEFAULT NULL',...                
                 ', location VARCHAR(30) DEFAULT "somewhere"',...                
@@ -158,7 +158,7 @@ classdef CLASS_CManager_database < CLASS_database
                 ', reference VARCHAR(512) DEFAULT NULL',...
                 ', website VARCHAR(512) DEFAULT NULL',...
                 ', timeframe VARCHAR(256) DEFAULT NULL',...                
-                ', PRIMARY KEY (cohortID)',...
+                ', PRIMARY KEY (cohortid)',...
                 ', CONSTRAINT UNIQUE (name, projectname)',...                
                 ')']);
             obj.close();
@@ -167,14 +167,14 @@ classdef CLASS_CManager_database < CLASS_database
         %> @brief create_FileStudyInfo_T creates the filestudyinfo_t table.
         %> FileStudyinfo Table fields:        
         %> - uuid universal ID (primary, foreign key, can be empty?)
-        %> - cohortID unique key of the cohort database each record is related to.
+        %> - cohortid unique key of the cohort database each record is related to.
         %> - dbID Database Info's primary key (primary, foreign key; default is 0 which means the study is not in a database).
         %> - fileID primary key for each record
         %> - patstudykey the primary key of this record in the associated database; there is a problem with how to identify these if they are not in a database.  I see two solutions: (1.)  Build the indexing database first and then build the suboordinate, cohort databases next with the requirement that they use the same patstudykey values for their own entries.  (2.)  Leave the patstudykey blank and instead use the filename and cohort name, combined, as the primary key.
         %> - patid Cohort patient identifier
         %> - datetimelastupdated Date/time last updated. (e.g. 2014-01-27, 16:49)
         %> - datetimefirstadded Date/time Added (e.g. 2014-01-27, 16:49)        
-        %> - src_sub_foldername Sub foldername of file (only used if the associated cohort entry (i.e. cohortID) has 'tier'
+        %> - src_sub_foldername Sub foldername of file (only used if the associated cohort entry (i.e. cohortid) has 'tier'
         %> for the src_foldertype field)
         %> - src_has_psg_file Does it come with an .edf file
         %> - src_psg_filename name of the psg file (e.g. R0017_2 080612.EDF)
@@ -196,7 +196,7 @@ classdef CLASS_CManager_database < CLASS_database
         %> - working_has_sco_file Does a working .sco export of the source record scoring data exist? (yes=1/no=0)
         %> - working_sco_filename name of the .sco file
         %> @note The table is further constrained to have a unique
-        %> src_psg_filename, src_sub_foldername, and cohortID.
+        %> src_psg_filename, src_sub_foldername, and cohortid.
         function create_FileStudyInfo_T(obj) 
             obj.open();            
             TableName = 'filestudyInfo_T';
@@ -205,7 +205,7 @@ classdef CLASS_CManager_database < CLASS_database
             
             mym(['CREATE TABLE IF NOT EXISTS ',TableName,'(',...
                 '  uID INT UNSIGNED DEFAULT NULL ',...
-                ', cohortID SMALLINT UNSIGNED NOT NULL',...
+                ', cohortid SMALLINT UNSIGNED NOT NULL',...
                 ', dbID SMALLINT UNSIGNED DEFAULT NULL',...
                 ', fileID INT UNSIGNED NOT NULL AUTO_INCREMENT',...
                 ', patstudykey SMALLINT UNSIGNED DEFAULT NULL',...
@@ -373,8 +373,8 @@ classdef CLASS_CManager_database < CLASS_database
            obj.open();
            TableName = lower('FileStudyInfo_T');
            cohort_q= mym('select * from cohortinfo_t');           
-           for c = 1:numel(cohort_q.cohortID)
-               cohortID = cohort_q.cohortID(c);
+           for c = 1:numel(cohort_q.cohortid)
+               cohortid = cohort_q.cohortid(c);
                database_q = mym('select dbid from databaseinfo_t where name="{S}_DB"',cohort_q.name{c});
                databaseID = database_q.dbid;
                src_foldertype = cohort_q.src_foldertype{c};
@@ -414,7 +414,7 @@ classdef CLASS_CManager_database < CLASS_database
                        
                        for f=1:numel(folderNames)
                            curStudy = [];
-                           curStudy.cohortID =cohortID;
+                           curStudy.cohortid =cohortid;
                            curStudy.dbID = databaseID;
                            curStudy.datetimefirstadded = 'now()';                           
                            cur_folder = fullfile(src_foldername,folderNames{f});
@@ -446,7 +446,7 @@ classdef CLASS_CManager_database < CLASS_database
                        
                        for f=1:numel(folderGrpNames)
                            rootStudy = [];
-                           rootStudy.cohortID =cohortID;
+                           rootStudy.cohortid =cohortid;
                            rootStudy.dbID = databaseID;
                            rootStudy.datetimefirstadded = 'now()';
                            
@@ -500,7 +500,7 @@ classdef CLASS_CManager_database < CLASS_database
                        
                        for u=1:numel(unique_names)
                            curStudy = [];
-                           curStudy.cohortID =cohortID;
+                           curStudy.cohortid =cohortid;
                            curStudy.dbID = databaseID;
                            curStudy.datetimefirstadded = 'now()';
                            cur_name = unique_names{u};
@@ -543,7 +543,7 @@ classdef CLASS_CManager_database < CLASS_database
                        for u=1:numel(unique_names)
                            
                            cur_name = unique_names{u};
-                           curStudy.cohortID =cohortID;
+                           curStudy.cohortid =cohortid;
                            curStudy.dbID = databaseID;
                            curStudy.datetimefirstadded = 'now()';
                            
