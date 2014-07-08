@@ -291,7 +291,11 @@ classdef CLASS_CManager_database < CLASS_database
                                 curFields = fieldnames(curCohort);
                                 for cf=1:numel(curFields)
                                     curField = curFields{cf};
-                                    curValue = strrep(curCohort.(curField),'"','\"');
+                                    curValue = curCohort.(curField);
+                                    if(isnumeric(curValue))
+                                        curValue = num2str(curValue);
+                                    end
+                                    curValue = strrep(curValue,'"','\"');
                                     names = sprintf('%s %s,',names,curField);
                                     values = sprintf('%s "%s",',values,curValue);
                                 end
@@ -336,7 +340,11 @@ classdef CLASS_CManager_database < CLASS_database
                             curFields = fieldnames(curCohort);
                             for cf=1:numel(curFields)
                                 curField = curFields{cf};
-                                curValue = strrep(curCohort.(curField),'"','\"');
+                                curValue = curCohort.(curField);
+                                if(isnumeric(curValue))
+                                    curValue = num2str(curValue);
+                                end
+                                curValue = strrep(curValue,'"','\"');
                                 names = sprintf('%s %s,',names,curField);
                                 values = sprintf('%s "%s",',values,curValue);
                             end
