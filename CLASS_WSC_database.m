@@ -990,6 +990,80 @@ classdef CLASS_WSC_database < CLASS_database
             end
         end
         
+        % ======================================================================
+        %> @brief This builds the SNP mapping table (SNP_Map_T) from a PLINK
+        %> formatted .bim file (i.e. an extended MAP file: two extra columns for
+        %> allele names).
+        %> Table column names are:
+        %> - refSNP (primary key) unisgned int (4 bytes gives us 2^32
+        %> possibilities (~ 4*10^9), which is more than enough for the
+        %> current total SNP count on the genome (~10 million or 10^7).
+        %> Prefix 'rs' to refSNP to get back to human readable form.
+        %> - gene VARCHAR(20) default NULL
+        %> - chromosome (tinyint, so have to change x,y, and mt as
+        %> necessary in plink files with these chromosome entries
+        %> - majorallele {A,C,G,T}
+        %> - minorallele {A,C,G,T}
+        %> - riskallele {A,C,G,T}, default is empty/null
+        %> @note Any previously existing table with the same name is first dropped.
+        %> @param Filename of a PLINK formatted .bim file.  The file contains 6
+        %> columns:
+        %> - chromosome (1-22, X,XY, MT)
+        %> - snp name (e.g. rs7754266)
+        %> - dunno 1 (skipped)
+        %> - dunno 2 (skipped)
+        %> - major allele (A,C,G,T)
+        %> - minor allele (A,C,G,T)
+        %> @note See <a href="http://pngu.mgh.harvard.edu/~purcell/plink/data.shtml#bed">http://pngu.mgh.harvard.edu/~purcell/plink/data.shtml#bed</a> for details.
+        %> @note Example BIM file contents:
+        %> @note 6	rs7754266	0	94609	G	A
+        %> @note 6	rs1929630	0	99536	A	C
+        %> @note 6	rs4959515	0	110391	A	G
+        %
+        %       major-major = 0
+        %       major-minor = 1
+        %       minor-minor = 2
+        %
+        % Author: Hyatt Moore IV
+        % created 7/9/2014
+        function create_snp_map_t(obj, plinkBimFilename)
+            if(nargin<2 || isempty(plinkBimFilename))
+                [plinkBimFilename, pathname, ~] = uigetfile({'*.bim','Extended MAP file (*.bim)'},'Select a PLINK SNP mapping file (e.g. plink.bim)','MultiSelect','off');
+            end
+            
+            %get the snp mapping data
+            if(isnumeric(plinkBimFilename) && ~plinkBimFilename)
+                fprintf('No SNP mapping file entered or found.  The table SNP_T has not been (re)created.\n');
+            else
+                plinkBimFilename = fullfile(pathname,plinkBimFilename);
+                
+                obj.open();
+                
+                tableName = 'snp_map_t';
+                
+                mym(['DROP TABLE IF EXISTS ',tableName]);
+                
+                mym(['CREATE TABLE IF NOT EXISTS ',tableName,'('...
+                    '  refSNP INT UNSIGNED NOT NULL'...
+                    ', gene VARCHAR(20) default NULL'...
+                    ', chromosome tinyint unsigned default null'...
+                    ', majorallele ENUM(''A'',''C'',''G'',''T'')'...
+                    ', minorallele ENUM(''A'',''C'',''G'',''T'')'...
+                    ', riskallele ENUM(''A'',''C'',''G'',''T'') default null'...     
+                    ', PRIMARY KEY (refSNP)'...
+                    ')']);
+                
+                loadStr = sprintf(['load data local infile ''%s'' into table %s '...
+                    '(chromosome, @snp, @dunno1, @dunno2,majorallele, minorallele) '...
+                    'set refSNP=substring(@snp from 3)'],plinkBimFilename,tableName);
+                mym(loadStr);
+                
+                mym('select * from {S} limit 10',tableName);
+                
+                mym('close');
+            end
+        end
+        
         % @brief Export parts of WSC Diagnostics_T to tab delimited text
         % file
         % @param txt_filname Name of the file to write data to (it will be
