@@ -54,7 +54,7 @@ else
     maxSourceChannelsAllowed = 14;
     userdata.nReqdIndices = maxSourceChannelsAllowed;
     userdata.selectedIndices = 1:maxSourceChannelsAllowed;    
-    set(handles.buttonEventSelectSources,'userdata',userdata);
+    set(handles.buttonEventSelectSources,'userdata',userdata,'value',0);
     
     %still using a global here; not great...
     createGlobalTemplate(handles);
@@ -347,7 +347,9 @@ else
         set(get(handles.panel_synth_CHANNEL,'children'),'enable','on');
         set(handles.edit_synth_CHANNEL_name,'enable','off');
         set(handles.push_run,'enable','on');
+        
         set(get(handles.panel_events,'children'),'enable','on');
+        
         %     set(get(handles.panel_psd,'children'),'enable','on');
         set(handles.pop_spectral_method,'enable','on');
         set(handles.push_add_psd,'enable','on');
@@ -556,7 +558,7 @@ event_channel1_values = get(flipud(findobj(handles.panel_events,'-regexp','tag',
 event_channel2_values = get(flipud(findobj(handles.panel_events,'-regexp','tag','channel2')),'value');
 
 event_multichannel_data = get(flipud(findobj(handles.panel_events,'tag','buttonEventSelectSources')),'userdata');
-event_multichannel_enabled = get(flipud(findobj(handles.panel_events,'tag','buttonEventSelectSources')),'enable');
+event_multichannel_value = get(flipud(findobj(handles.panel_events,'tag','buttonEventSelectSources')),'value');
 
 
 event_settings_handles = flipud(findobj(handles.panel_events,'-regexp','tag','settings'));
@@ -570,12 +572,12 @@ if(iscell(event_method_values))
     event_channel2_values = cell2mat(event_channel2_values);
     
     event_multichannel_data = cell2mat(event_multichannel_data);
-    event_multichannel_enabled = cell2mat(event_multichannel_enabled);
+    event_multichannel_value = cell2mat(event_multichannel_value);
     
     event_settings_handles = cell2mat(event_settings_handles);
     event_save_image_choices = cell2mat(event_save_image_choices);
 else
-    event_multichannel_enabled = {event_multichannel_enabled};
+    event_multichannel_value = {event_multichannel_value};
     
 end;
 
@@ -590,7 +592,7 @@ event_channel_values = [event_channel1_values(selected_events),event_channel2_va
 event_save_image_choices = event_save_image_choices(selected_events);
 
 event_multichannel_data = event_multichannel_data(selected_events);
-event_multichannel_enabled = event_multichannel_enabled(selected_events);
+event_multichannel_value = event_multichannel_value(selected_events);
 
 num_selected_events = sum(selected_events);
 event_settings = cell(num_selected_events,1);
@@ -601,7 +603,8 @@ for k = 1:num_selected_events
     eventStruct.numConfigurations = 1;
     eventStruct.save2img = event_save_image_choices(k);
 
-    if(strcmpi(event_multichannel_enabled(k),'on'))
+    %if we are using a multiple channel sourced event method
+    if(event_multichannel_value{k})
         eventStruct.channel_labels = EDF_labels(event_multichannel_data(k).selectedIndices);        
     else
         eventStruct.channel_labels = EDF_labels(event_channel_values(k,1:num_reqd_channels));
@@ -613,7 +616,10 @@ for k = 1:num_selected_events
     if(~isempty(BATCH_PROCESS.synth_CHANNEL.names))
         for ch=1:numel(eventStruct.channel_labels)
            eventStruct.channel_configs{ch}  = BATCH_PROCESS.synth_CHANNEL.structs(strcmp(eventStruct.channel_labels{ch},BATCH_PROCESS.synth_CHANNEL.names));  %insert the corresponding synthetic channel where applicable
-            channel_config = BATCH_PROCESS.synth_CHANNEL.structs(strcmp(eventStruct.channel_labels{ch},BATCH_PROCESS.synth_CHANNEL.names));  %insert the corresponding synthetic channel where applicable
+
+%           This was commented out on 7/12/2014->
+%           channel_config = BATCH_PROCESS.synth_CHANNEL.structs(strcmp(eventStruct.channel_labels{ch},BATCH_PROCESS.synth_CHANNEL.names));  %insert the corresponding synthetic channel where applicable
+%           This was found commented out on 7/12/2014->
 %            if(~isempty(channel_config))
 %                 channel_config = channel_config{1};
 %                 channel_config.channel_label = eventStruct.channel_labels{ch};
@@ -948,7 +954,7 @@ set(h_pop_channels,'visible','off');
 
 nReqdIndices = GUI_TEMPLATE.detection.reqd_indices(choice);
 if(nReqdIndices<=2)
-    set(h_buttonSelectSource,'visible','off','enable','off');
+    set(h_buttonSelectSource,'visible','off','enable','off','value',0);
     for k=1:nReqdIndices
         set(h_pop_channels(k),'visible','on','enable','on','string',GUI_TEMPLATE.EDF.labels);
     end
@@ -957,7 +963,7 @@ else
     if(~isfield(userdata,'selectedIndices'))
         userdata.selectedIndices = 1:nReqdIndices;
     end
-    set(h_buttonSelectSource,'visible','on','enable','on','userdata',userdata,'callback', @buttonSelectSources_Callback);
+    set(h_buttonSelectSource,'visible','on','enable','on','value',1,'userdata',userdata,'callback', @buttonSelectSources_Callback);
 end
 end
 

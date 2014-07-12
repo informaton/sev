@@ -2273,7 +2273,7 @@ classdef CLASS_UI_marking < handle
         function sev_button_up(obj)                        
             selected_obj = get(obj.figurehandle.sev,'CurrentObject');
             
-            if ~isempty(selected_obj)
+            if(~isempty(selected_obj))
                 if(selected_obj==obj.axeshandle.timeline)                    
                     if(obj.getSecondsPerEpoch()>0)
                         pos = round(get(obj.axeshandle.timeline,'currentpoint'));
