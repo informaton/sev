@@ -18,16 +18,63 @@ classdef CLASS_database_psg < CLASS_database
     end
     
     methods
-     
+        
+        % ======================================================================
+        %> @brief Creates patidmap_t table for the PSG database using a
+        %> text file which places the column names in the first row, and
+        %> the respective id's in the rows below.  The first row is the
+        %> primary key.
+        %> @param obj Instance of CLASS_database_psg
+        %> @param STA_pathname Directory containing .STA hypnograms, the staging
+        %> files for WSC sleep studies (string)
+        %> @note If StageStats_T already exists, it is first dropped and
+        %> then created again.
+        % =================================================================
+        function create_and_populate_patidmap_t(obj,mapping_txt_file)
+            if(nargin<2 || isempty(mapping_txt_file))
+                mapping_txt_file =uigetfullfile({'*.txt','Cohort mapping file (*.txt)'},'Select mapping text file');
+            end            
+          
+            if(~isempty(mapping_txt_file) && exist(mapping_txt_file,'file'))
+                
+                fid = fopen(mapping_txt_file,'r');
+                header = textscan(fgetl(fid),'%s');
+                fclose(fid);
+                
+                columnNames = header{1};
+                nCols = numel(columnNames);
+                
+                if(nCols>1)
+                     tableName = 'patidmap_t';
+                     dropStr = ['drop table if exists ',tableName];
+                     createStr = ['CREATE TABLE IF NOT EXISTS ',tableName,'('];
+                     
+                     for k=1:nCols
+                         createStr = sprintf('%s %s VARCHAR(20) NOT NULL,',createStr,columnNames{k});
+                     end
+                     createStr = sprintf('%s PRIMARY KEY (%s))',createStr,columnNames{1});
+                     loadStr = sprintf('load data local infile ''%s'' into table %s fields terminated by ''\\t'' lines terminated by ''\\r'' ignore 1 lines',mapping_txt_file,tableName);
+                     
+                     obj.open();
+                     mym(dropStr);
+                     mym(createStr);
+                     mym(loadStr);
+                     mym('select * from {S} limit 4',tableName);
+                     obj.close();
+                else
+                   fprintf('Mapping file must have at least 2 columns for the table to be created'); 
+                end                
+            end             
+        end
         
       
         
         % ======================================================================
-        %> @brief Creates StageStats_T table and populates it for WSC using
+        %> @brief Creates StageStats_T table and populates it for the cohort database using
         %> stage files found in the directory provided.
-        %> @param obj Instance of CLASS_database
+        %> @param obj Instance of CLASS_database_psg
         %> @param STA_pathname Directory containing .STA hypnograms, the staging
-        %> files for WSC sleep studies (string)
+        %> files for PSG studies (string)
         %> @note If StageStats_T already exists, it is first dropped and
         %> then created again.
         % =================================================================
@@ -44,6 +91,168 @@ classdef CLASS_database_psg < CLASS_database
             CLASS_database.static_create_StageStats_T(obj.dbStruct);            
             CLASS_database.populate_StageStats_T(stats,obj.dbStruct);
         end
+        
+        % ======================================================================
+        %> @brief This builds the SNP mapping table (SNP_Map_T) from a PLINK
+        %> formatted .bim file (i.e. an extended MAP file: two extra columns for
+        %> allele names).
+        %> Table column names are:
+        %> - refSNP (primary key) unisgned int (4 bytes gives us 2^32
+        %> possibilities (~ 4*10^9), which is more than enough for the
+        %> current total SNP count on the genome (~10 million or 10^7).
+        %> Prefix 'rs' to refSNP to get back to human readable form.
+        %> - gene VARCHAR(20) default NULL
+        %> - chromosome (tinyint, so have to change x,y, and mt as
+        %> necessary in plink files with these chromosome entries
+        %> - majorallele {A,C,G,T}
+        %> - minorallele {A,C,G,T}
+        %> - riskallele {A,C,G,T}, default is empty/null
+        %> @note Any previously existing table with the same name is first dropped.
+        %> @param Filename of a PLINK formatted .bim file.  The file contains 6
+        %> columns:
+        %> - chromosome (1-22, X,XY, MT)
+        %> - snp name (e.g. rs7754266)
+        %> - dunno 1 (skipped)
+        %> - dunno 2 (skipped)
+        %> - major allele (A,C,G,T)
+        %> - minor allele (A,C,G,T)
+        %> @note See <a href="http://pngu.mgh.harvard.edu/~purcell/plink/data.shtml#bed">http://pngu.mgh.harvard.edu/~purcell/plink/data.shtml#bed</a> for details.
+        %> @note Example BIM file contents:
+        %> @note 6	rs7754266	0	94609	G	A
+        %> @note 6	rs1929630	0	99536	A	C
+        %> @note 6	rs4959515	0	110391	A	G
+        %
+        %       major-major = 0
+        %       major-minor = 1
+        %       minor-minor = 2
+        %
+        % Author: Hyatt Moore IV
+        % created 7/9/2014
+        function create_snp_map_t(obj, plinkBimFilename)
+            if(nargin<2 || isempty(plinkBimFilename))
+                [plinkBimFilename, pathname, ~] = uigetfile({'*.bim','Extended MAP file (*.bim)'},'Select a PLINK SNP mapping file (e.g. plink.bim)','MultiSelect','off');
+            end
+            
+            %get the snp mapping data
+            if(isnumeric(plinkBimFilename) && ~plinkBimFilename)
+                fprintf('No SNP mapping file entered or found.  The table SNP_T has not been (re)created.\n');
+            else
+                plinkBimFilename = fullfile(pathname,plinkBimFilename);
+                
+                obj.open();
+                
+                tableName = 'snp_map_t';
+                
+                mym(['DROP TABLE IF EXISTS ',tableName]);
+                
+                mym(['CREATE TABLE IF NOT EXISTS ',tableName,'('...
+                    '  refSNP INT UNSIGNED NOT NULL'...
+                    ', gene VARCHAR(20) default NULL'...
+                    ', chromosome tinyint unsigned default null'...
+                    ', majorallele ENUM(''A'',''C'',''G'',''T'')'...
+                    ', minorallele ENUM(''A'',''C'',''G'',''T'')'...
+                    ', riskallele ENUM(''A'',''C'',''G'',''T'') default null'...     
+                    ', PRIMARY KEY (refSNP)'...
+                    ')']);
+                
+                loadStr = sprintf(['load data local infile ''%s'' into table %s '...
+                    '(chromosome, @snp, @dunno1, @dunno2,majorallele, minorallele) '...
+                    'set refSNP=substring(@snp from 3)'],plinkBimFilename,tableName);
+                mym(loadStr);
+                
+                mym('select * from {S} limit 10',tableName);
+                
+                mym('close');
+            end
+        end
+        
+        % ======================================================================
+        %> @brief Builds the genome table for the cohort.  It 
+        %> Table column names are the unique patid's of the cohort (e.g.
+        %> taken from studyfino_t) and also the snpID which is the primary
+        %> key and can be found in the snp_map_t table as well.
+        %> Rows represent the genotype for each cohort subject for the
+        %> given snp.  Genotypes are encoded as 
+        %>       major-major = 0
+        %>       major-minor = 1
+        %>       minor-minor = 2
+        %>       missing     = 3
+        %
+        % Author: Hyatt Moore IV
+        % created 7/12/2014
+        function create_genome_t(obj, plinkRawFilename)
+            if(nargin<2 || ~exist(plinkRawFilename,'file'))
+                plinkRawFilename =uigetfullfile({'*.raw','Genome typing file for cohort (*.raw)'},'Select Cohort''s genome typing file');
+            end
+            
+            if(exist(plinkRawFilename,'file'))
+                obj.open();
+                
+                % for just the ones we have genomes for ...
+                q = mym('select distinct patid from patidmap_t');
+                %or more generally ... but this exceeds our column limit
+                % q = mym('select distinct patid from studyinfo_t');
+                
+                tableName = 'genome_t';
+                dropStr = ['drop table if exists ',tableName];
+                createStr = ['CREATE TABLE IF NOT EXISTS ',tableName,'(refSNP INT UNSIGNED NOT NULL,'];
+                obj.open();
+                for k=1:numel(q.patid)
+                    createStr = sprintf('%s %s TINYINT NOT NULL DEFAULT 3,',createStr,q.patid{k});
+                end
+                
+                createStr = sprintf('%s PRIMARY KEY (refSNP))',createStr);
+                
+                mym(dropStr);
+                mym(createStr);
+                
+                %parse the file for data now;
+                fid = fopen(plinkRawFilename,'r');
+                header = textscan(fgetl(fid),'%s');
+                snpRefCell=regexp(header{1}(7:end),'^rs(?<snpRef>\d+)_\w','names');
+                
+                % example of a .raw file we have ...
+                %FID 	IID 		PAT 	MAT 	SEX 	PHENOTYPE 	rs7754266_G 	rs1929630_A
+                %C9228 	Wisc7G04 	0	0	1	1	 	0	 	0
+                genericInsertStr = ['insert into ',tableName,' set refSNP=%s'];
+                genericUpdateStr = ['update ',tableName,' set %s=%c where refSNP=%s'];
+                
+                fprintf('Inserting initial records into the database.\n');
+                % This will take a while as we have a huge number of snps.
+                for s=1:numel(snpRefCell)
+                   insertStr = sprintf(genericInsertStr,snpRefCell{s}.snpRef); 
+                   mym(insertStr);
+                end
+                
+                
+                
+                fprintf('Updating each subject into the database\n');
+                row = fgetl(fid);
+                p = 1;
+                            
+                while(~isempty(row))
+                    p = p+1;
+                    disp(p)
+                    %fprintf('.');
+                    exp = regexp(row,['^(?<patid>\w\d+)\s+[^\s]+\s+',repmat('\d\s+',1,4),'(?<genotype>\d)|\s+(?<genotype>\d)'],'names');   
+                    tic                    
+                    for g=1:numel(exp)
+                        updateStr = sprintf(genericUpdateStr,exp(1).patid,exp(g).genotype,snpRefCell{g}.snpRef);
+                        mym(updateStr);
+                    end
+                    toc
+
+                    row = fgetl(fid);
+                end
+                frintf('\n');
+                
+                fclose(fid);                            
+                
+                mym('select * from {S} limit 4',tableName);
+                obj.close();
+            end
+        end
+        
         
         
         

@@ -7,7 +7,7 @@
 %> instantiations to operate correctly.
 %>
 % ======================================================================
-classdef CLASS_SSC_database < CLASS_database
+classdef CLASS_SSC_database < CLASS_database_psg
 
     properties (Constant)
         %> Database name
