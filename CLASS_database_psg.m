@@ -177,78 +177,115 @@ classdef CLASS_database_psg < CLASS_database
         %>       major-minor = 1
         %>       minor-minor = 2
         %>       missing     = 3
-        %
+        %> @param Plink files that has been recoded (--recodeAD) and then
+        %> trnasposed.  
+        %         FID (WSC patids) A0001 ...
+        %         IID (stanford ids) WISC6H01...
+        %         father 0 0 0 0
+        %         mother 0 0 0 0 (delete these 2 rows)
+        %         sex 1 2 2 1 -9
+        %         pheno 1 1 2 2 -9
+        %         rs111111_G 1 2 0 1
+        %>
         % Author: Hyatt Moore IV
         % created 7/12/2014
-        function create_genome_t(obj, plinkRawFilename)
-            if(nargin<2 || ~exist(plinkRawFilename,'file'))
-                plinkRawFilename =uigetfullfile({'*.raw','Genome typing file for cohort (*.raw)'},'Select Cohort''s genome typing file');
+        function create_genome_t(obj, plinkTransposedRawFilename)
+            if(nargin<2 || ~exist(plinkTransposedRawFilename,'file'))
+                plinkTransposedRawFilename =uigetfullfile({'*.traw','Transposed genome typing file (*.traw)'},'Select Cohort''s transposed genome typing file');
             end
             
-            if(exist(plinkRawFilename,'file'))
+            if(exist(plinkTransposedRawFilename,'file'))
                 obj.open();
                 
                 % for just the ones we have genomes for ...
-                q = mym('select distinct patid from patidmap_t');
+                % q = mym('select distinct patid from patidmap_t');
                 %or more generally ... but this exceeds our column limit
                 % q = mym('select distinct patid from studyinfo_t');
+                
+                %parse the file for data now;
+                tic
+                fid = fopen(plinkTransposedRawFilename,'r');
+                tokens = textscan(fgetl(fid),'%s');
+                patidCell=tokens{1}(2:end); %first element is for the snpref, but it needs to be renamed anyway, so just drop from here.
+                fclose(fid);
                 
                 tableName = 'genome_t';
                 dropStr = ['drop table if exists ',tableName];
                 createStr = ['CREATE TABLE IF NOT EXISTS ',tableName,'(refSNP INT UNSIGNED NOT NULL,'];
                 obj.open();
-                for k=1:numel(q.patid)
-                    createStr = sprintf('%s %s TINYINT NOT NULL DEFAULT 3,',createStr,q.patid{k});
+                loadStr = '@snp';
+                fprintf('Generating table creation string');
+                for k=1:numel(patidCell)
+                    fprintf('.')
+                    if(mod(k,100)==0)
+                        fprintf('\n');
+                    end
+                    loadStr = sprintf('%s,%s',loadStr,patidCell{k});
+                    createStr = sprintf('%s %s TINYINT UNSIGNED NOT NULL DEFAULT 3,',createStr,patidCell{k});
                 end
                 
                 createStr = sprintf('%s PRIMARY KEY (refSNP))',createStr);
-                
+                toc
+                fprintf('\nExecuting mysql table creation');
                 mym(dropStr);
+                tic
                 mym(createStr);
+                toc
+                tic
+                fprintf('\nLoading data from file into the table');
                 
-                %parse the file for data now;
-                fid = fopen(plinkRawFilename,'r');
-                header = textscan(fgetl(fid),'%s');
-                snpRefCell=regexp(header{1}(7:end),'^rs(?<snpRef>\d+)_\w','names');
+                %                 fields terminated by ''\\t'' lines terminated by ''\\r''
+                loadStrFinal = sprintf(['load data local infile ''%s'' into table %s fields terminated by '' '' ignore 6 lines  (%s) '...                    
+                    'set refSNP=substring_index(substring(@snp from 3),"_",1)'],plinkTransposedRawFilename,tableName,loadStr);
+                mym(loadStrFinal);
+                mym('select * from {S} limit 10',tableName);
+                toc
+                fprintf('\n');
                 
-                % example of a .raw file we have ...
-                %FID 	IID 		PAT 	MAT 	SEX 	PHENOTYPE 	rs7754266_G 	rs1929630_A
-                %C9228 	Wisc7G04 	0	0	1	1	 	0	 	0
-                genericInsertStr = ['insert into ',tableName,' set refSNP=%s'];
-                genericUpdateStr = ['update ',tableName,' set %s=%c where refSNP=%s'];
+                % This code attempts to build a database table using the
+                % raw file, which has not been transposed.  It's
+                % computationally prohibitive at the moment - a transaction
+                % would speed things up, but even better is a transposed
+                %                 % raw file and direct load local infile mysql command.
+                %                 snpRefCell=regexp(header{1}(7:end),'^rs(?<snpRef>\d+)_\w','names');
+                %
+                %                 % example of a .raw file we have ...
+                %                 %FID 	IID 		PAT 	MAT 	SEX 	PHENOTYPE 	rs7754266_G 	rs1929630_A
+                %                 %C9228 	Wisc7G04 	0	0	1	1	 	0	 	0
+                %                 genericInsertStr = ['insert into ',tableName,' set refSNP=%s'];
+                %                 genericUpdateStr = ['update ',tableName,' set %s=%c where refSNP=%s'];
+                %
+                %                 fprintf('Inserting initial records into the database.\n');
+                %                 % This will take a while as we have a huge number of snps.
+                %                 for s=1:numel(snpRefCell)
+                %                     insertStr = sprintf(genericInsertStr,snpRefCell{s}.snpRef);
+                %                     mym(insertStr);
+                %                 end
+                %
+                %
+                %
+                %                 fprintf('Updating each subject into the database\n');
+                %                 row = fgetl(fid);
+                %                 p = 1;
+                %
+                %                 while(~isempty(row))
+                %                     p = p+1;
+                %                     disp(p)
+                %                     %fprintf('.');
+                %                     exp = regexp(row,['^(?<patid>\w\d+)\s+[^\s]+\s+',repmat('\d\s+',1,4),'(?<genotype>\d)|\s+(?<genotype>\d)'],'names');
+                %                     tic
+                %                     for g=1:numel(exp)
+                %                         updateStr = sprintf(genericUpdateStr,exp(1).patid,exp(g).genotype,snpRefCell{g}.snpRef);
+                %                         mym(updateStr);
+                %                     end
+                %                     toc
+                %
+                %                     row = fgetl(fid);
+                %                 end
+                %                 frintf('\n');
+                %      fclose(fid);                            
                 
-                fprintf('Inserting initial records into the database.\n');
-                % This will take a while as we have a huge number of snps.
-                for s=1:numel(snpRefCell)
-                   insertStr = sprintf(genericInsertStr,snpRefCell{s}.snpRef); 
-                   mym(insertStr);
-                end
-                
-                
-                
-                fprintf('Updating each subject into the database\n');
-                row = fgetl(fid);
-                p = 1;
-                            
-                while(~isempty(row))
-                    p = p+1;
-                    disp(p)
-                    %fprintf('.');
-                    exp = regexp(row,['^(?<patid>\w\d+)\s+[^\s]+\s+',repmat('\d\s+',1,4),'(?<genotype>\d)|\s+(?<genotype>\d)'],'names');   
-                    tic                    
-                    for g=1:numel(exp)
-                        updateStr = sprintf(genericUpdateStr,exp(1).patid,exp(g).genotype,snpRefCell{g}.snpRef);
-                        mym(updateStr);
-                    end
-                    toc
 
-                    row = fgetl(fid);
-                end
-                frintf('\n');
-                
-                fclose(fid);                            
-                
-                mym('select * from {S} limit 4',tableName);
                 obj.close();
             end
         end
