@@ -285,8 +285,6 @@ classdef CLASS_WSC_database < CLASS_database_psg
             end
         end
         
-        
-        
         % ======================================================================
         %> @brief Creates Diagnostic_T table for the WSC database and populates it 
         %> from the WSC datashseet file provided by Wisconsin Sleep Cohort.
@@ -1060,7 +1058,7 @@ classdef CLASS_WSC_database < CLASS_database_psg
         %>       major-minor = 1
         %>       minor-minor = 2
         %>
-        %> @note This is a helper function for create__Diagnostics_T and
+        %> @note This is a helper function for create_Diagnostics_T and
         %> is not designed for external use.  
         function create_SNP_T(snpMappingFilename)
             if(nargin==0 || isempty(snpMappingFilename))
