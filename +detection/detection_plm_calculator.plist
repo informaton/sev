@@ -3,9 +3,9 @@
 <plist version="1.0">
 <dict>
 	<key>filter_with_anc</key>
-	<real>0.000000</real>
+	<real>1.000000</real>
 	<key>min_duration_sec</key>
-	<real>0.500000</real>
+	<real>0.750000</real>
 	<key>average_power_window_sec</key>
 	<real>20.000000</real>
 	<key>merge_within_sec</key>
@@ -13,6 +13,6 @@
 	<key>use_summer</key>
 	<real>1.000000</real>
 	<key>median_removal</key>
-	<real>1.000000</real>
+	<real>0.000000</real>
 </dict>
 </plist>
