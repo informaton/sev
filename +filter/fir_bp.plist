@@ -7,6 +7,6 @@
 	<key>start_freq_hz</key>
 	<real>5.000000</real>
 	<key>stop_freq_hz</key>
-	<real>25.000000</real>
+	<real>30.000000</real>
 </dict>
 </plist>

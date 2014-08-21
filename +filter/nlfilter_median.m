@@ -1,10 +1,26 @@
+%> @file nlfilter_median
+%> @brief Non linear moving median filter.
+%> Returns the moving median for a specified window length over
+%> the signal vector sig.  Returned signal is a vector with the same length as sig. 
+%======================================================================
+%> @brief Non linear moving median filter.
+%> Returns the moving median for a specified window length (order) over
+%> the signal vector sig.  Returned signal is a vector with the same length as sig. 
+%> @param Vector of sample data to filter.
+%> @param params Structure of field/value parameter pairs that to adjust filter's behavior.
+%> - order = 100  (filter order; window length to calculate median from)
+%> - abs = 1     (1 if the result should be all positive values (absolute
+% %value)
+%> @retval The nonlinear filtered signal. 
+%> @note Uses MATLAB medfilt1() method
+%> written by Hyatt Moore IV,
+%> updated May 10, 2012
+%> updates March 17, 2014
+%> updated August 21, 2014 - commenting
 function output = nlfilter_median(sig,optional_params)
 %returns the moving median for a specified window length (win_length) over
 %the signal vector sig
 %output is a vector with the same length as sig. 
-%written by Hyatt Moore IV,
-%updated May 10, 2012
-% updates March 17, 2014
 if(nargin==2 && ~isempty(optional_params))
     params = optional_params;
 else
@@ -31,8 +47,9 @@ if(win_length>=length(sig)|| win_length<=1)
     output(1:end) = median(sig);
 else
     tic
-    output = medfilt1(sig,params.order);
+    output = medfilt1(sig,win_length);
     toc
+    
 %     output = zeros(1,numel(sig));
 %     
 %     %handle initial values before the window starts moving    

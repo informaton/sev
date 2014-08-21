@@ -1,13 +1,17 @@
-function filtsig = fir_lp(src_index, optional_params)
+%> @file fir_hp
+%> @brief Finite impulse response lowpass filter.
+%======================================================================
+%> @brief Finite impulse response lowpass filter.
+%> @param Vector of sample data to filter.
+%> @param params Structure of field/value parameter pairs that to adjust filter's behavior.
+%> - order = 100
+%> - freq_hz = 12  (frequency to pass to (from 0))
+%> - samplerate = 100
+%> @retval The filtered signal. 
 % written by Hyatt Moore IV, March 8, 2012
-global CHANNELS_CONTAINER;
+% Modified 8/21/2014
+function filtsig = fir_lp(srcData, optional_params)
 
-if(numel(src_index)>20)
-    filtsig = src_index;    
-else
-    filtsig = CHANNELS_CONTAINER.getData(src_index);
-    samplerate = CHANNELS_CONTAINER.getSamplerate(src_index);
-end
 
 % this allows direct input of parameters from outside function calls, which
 %can be particularly useful in the batch job mode
@@ -24,15 +28,16 @@ else
     else
         %make it and save it for the future
         params.order=100;
-        params.freq_hz = floor(samplerate/8);
+        params.samplerate = params.order;
+        params.freq_hz = floor(params.samplerate/8);
         plist.saveXMLPlist(pfile,params);
     end
 end
 
 delay = (params.order)/2;
 
-b = fir1(params.order,params.freq_hz/samplerate*2,'low');
+b = fir1(params.order,params.freq_hz/params.samplerate*2,'low');
 
-filtsig = filter(b,1,filtsig);
+filtsig = filter(b,1,srcData);
 %account for the delay...
 filtsig = [filtsig((delay+1):end); zeros(delay,1)];

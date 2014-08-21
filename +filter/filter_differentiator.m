@@ -4,20 +4,19 @@
 %======================================================================
 %> @brief 
 %> @param data Input signal.
-%> @param optional_params Optional structure of field/value parameter pairs that to adjust filter's behavior.
+%> @param Structure of field/value parameter pairs that to adjust filter's behavior.
 %> @li %c .order Number of samples to use - suggest 5
 %> @retval filstig Filtered signal.
 %> @note written by Hyatt Moore IV, March 31, 2013
 %> @note Modified on 5/6/2014 - removed global CHANNELS_CONTAINER reference
 %> @note modified: 3/11/2013 - updated filter weights (b) to more general form
-function filtsig = filter_differentiator(data, optional_params)
+%> @note modified: 8/21/2014 - changed input checking for optional_params.
+function filtsig = filter_differentiator(data, params)
 % 
 % written by Hyatt Moore IV, May 31, 2012
 %
 
-if(nargin==2 && ~isempty(optional_params))
-    params = optional_params;
-else
+if(nargin<2 || isempty(params))
     pfile = strcat(mfilename('fullpath'),'.plist');
     
     if(exist(pfile,'file'))

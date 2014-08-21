@@ -8,6 +8,7 @@ exponentiator exponentiator 0 plist_editor_dlg exponentiated
 fir_lp fir_lowpass 0 plist_editor_dlg FLp
 fir_hp fir_highpass 0 plist_editor_dlg FHp
 fir_bp fir_bandpass 0 plist_editor_dlg FBp
+fir_bp_butter butterworth_bandpass 0 plist_editor_dlg BwBP
 fir_bs fir_bandstop 0 plist_editor_dlg fBs
 filter_diff filter_diff 0 plist_editor_dlg FilterDiff
 filter_differentiator filter_differentiator 0 plist_editor_dlg FilterDifferentiator

@@ -1,9 +1,11 @@
-function output = nlfilter_abs(src_index,varargin)
+%> @file nfilter_abs.m
+%> @brief Returns absolute value of the input signal.
+%======================================================================
+%> @brief Sums two input channels together as one.
+%> @param Vector of time series signal data.
+%> @param varargin Additional arguments are not used.
+%> @retval filstig The absolute value of of srcData 
+function output = nlfilter_abs(srcData,varargin)
 %returns the absolute value of the signal
-
-global CHANNELS_CONTAINER;
-if(numel(src_index)>20)
-    output = abs(src_index);
-else
-    output = abs(CHANNELS_CONTAINER.getData(src_index));
+    output = abs(srcData);
 end
