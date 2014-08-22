@@ -3,12 +3,10 @@ anc_rls anc_rls1 1 plist_editor_dlg f
 anc_rls anc_rls2 2 plist_editor_dlg f
 denoise_wavelet wavelet_denoise 0 plist_editor_dlg Wavelet_denoise
 decompose_wavelet wavelet_decomposition 0 wavelet_dlg Wavelet_Decomp
-inverter inverter 0 none Inverted
 exponentiator exponentiator 0 plist_editor_dlg exponentiated
 fir_lp fir_lowpass 0 plist_editor_dlg FLp
 fir_hp fir_highpass 0 plist_editor_dlg FHp
 fir_bp fir_bandpass 0 plist_editor_dlg FBp
-fir_bp_butter butterworth_bandpass 0 plist_editor_dlg BwBP
 fir_bs fir_bandstop 0 plist_editor_dlg fBs
 filter_diff filter_diff 0 plist_editor_dlg FilterDiff
 filter_differentiator filter_differentiator 0 plist_editor_dlg FilterDifferentiator
@@ -20,6 +18,8 @@ filter_sum filter_sum 0 plist_editor_dlg FilterSum
 filter_modulate_channel modulate_channel 1 none ModulateChannel
 filter_add_channel add_channel 1 none AddAChannel
 filter_subtract_channel substract_channel 1 none SubtractAChannel
+inverter inverter 0 none Inverted
+iir_bp_butter butterworth_bandpass 0 plist_editor_dlg BwBP
 nlfilter_delay nlfilter_delay 0 plist_editor_dlg Delay
 nlfilter_min_past nlfilter_min_past 0 plist_editor_dlg NLFilterMinPast
 nlfilter_max_future nlfilter_max_future 0 plist_editor_dlg NLFilterMaxFuture

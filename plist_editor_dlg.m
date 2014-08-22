@@ -132,7 +132,6 @@ guidata(hObject, handles);
 % UIWAIT makes plist_editor_dlg wait for user response (see UIRESUME)
 uiwait(handles.figure1);
 
-
 % --- Outputs from this function are returned to the command line.
 function varargout = plist_editor_dlg_OutputFcn(hObject, eventdata, handles) 
 % varargout  cell array for returning output args (see VARARGOUT);
@@ -146,7 +145,6 @@ if(nargout>0)
     varargout{1} = handles.output;
 end
 delete(gcf);
-
 
 function pStruct = save_plist(handles)
 %saves the params and returns as output argument, pStruct

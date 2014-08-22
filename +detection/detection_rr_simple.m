@@ -1,4 +1,4 @@
-%> @file
+%> @file detection_rr_simple
 %> @brief Based on 1985 paper, " Real-Time QRS Detection Algorithm" by Jiapu Pan and
 %> Willis Tompkins.  Originally implemented in assembly language this
 %> algorithm uses a single ECG lead, bandpass filtering (originally cascade
@@ -12,7 +12,6 @@
 %> @param params A structure for variable parameters passed in
 %> with following field
 %> @li @c filter_order Band pass filter order (i.e. number of taps to use).
-%
 %> @param stageStruct Not used.
 %> @retval detectStruct a structure with following fields
 %> @li @c new_data Calculated heart rate; same size as input data.

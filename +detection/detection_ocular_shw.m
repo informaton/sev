@@ -1,4 +1,4 @@
-%> @file
+%> @file detection_ocular_shw.m
 %> @brief Slope based eye movement detector designed for Woodward EOG
 %> montage.
 %======================================================================

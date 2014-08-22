@@ -1,4 +1,5 @@
 #MATLAB_filename   Label Number_of_channels_required Dialog_name Batch_mode_score
+detection_breathing Breath_detector 3 plist_editor_dlg breathdetection
 detection_ocular_dualthreshold eog_dualthresh 1 plist_editor_dlg eog_dual
 detection_ocular_gopal eog_gopal 1 plist_editor_dlg eog_gopal
 detection_ocular_quadrants eog_quadrants 2 plist_editor_dlg eog_quads
@@ -7,6 +8,8 @@ detection_ocular_takahashi eog_takahashi 1 plist_editor_dlg eog_taka
 detection_ocular_tan eog_tan 1 plist_editor_dlg eog_tan
 detection_ocular_variable_dualthreshold eog_varthresh 1 plist_editor_dlg eog_varthresh
 detection_arousal  arousal 2 plist_editor_dlg arousal
+detection_artifact_saturation artifact_SaO2_Saturation 1 plist_editor_dlg O2Saturation_artifact
+detection_artifact_nasalpressure artifact_Nasal_Pressure 1 plist_editor_dlg NasalPressure_artifact
 detection_artifact_hp_20hz  artifact_high_frequency_noise 1 plist_editor_dlg Muscle_artifact
 detection_artifact_electrode_pop artifact_electrode_pop 1 plist_editor_dlg Pop_artifact
 detection_artifact_power artifactPower 1 plist_editor_dlg artifactPower

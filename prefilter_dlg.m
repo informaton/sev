@@ -415,7 +415,7 @@ filter_index = get(handles.(menu_tag),'value');
 
 param_gui = handles.user.filterInf.param_gui{filter_index};
 filter_label = handles.user.filterInf.evt_label{filter_index};
-%filter_label = handles.user.filterInf.mfile{filter_index}(1:end-2);
+filter_mfile = handles.user.filterInf.mfile{filter_index};
 
 cur_row = str2double(cur_row{1});
 
@@ -437,6 +437,8 @@ if(~isempty(param_gui) && ~strcmp(param_gui,'none'))
             params = feval(param_gui,curParams);
         end
     else
+        %check if there is a .plist file first?
+        
         params = feval(param_gui,filter_label,'+filter',curParams);
     end
     if(~isempty(params))
