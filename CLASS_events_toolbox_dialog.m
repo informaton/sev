@@ -297,9 +297,8 @@ classdef CLASS_events_toolbox_dialog < handle
                 
                 method_popupCallback(popup.method,[],handles);
                 obj.num_sources = get(popup.num_sources,'value');
-                if(obj.num_sources ==3)
-                    set(popup.sources(1),'value',2);
-                    set(popup.sources(2),'value',1);
+                for s=1:min([obj.num_sources,numel(obj.channel_selections)])
+                    set(popup.sources(s),'value',s);
                 end
                 
                 uiwait(obj.dialog_handle);

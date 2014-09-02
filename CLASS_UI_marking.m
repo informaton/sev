@@ -1326,9 +1326,15 @@ classdef CLASS_UI_marking < handle
             th = uitoolbar('parent',obj.figurehandle.sev);
             drawnow();
             jToolbar = get(get(th,'JavaContainer'),'ComponentPeer');
-            backgroundColor = get(jToolbar,'Background')*255;
             
-            
+            % Correct for newer versions of MATLAB which return an object
+            % for the background.
+            backgroundColor = get(jToolbar,'Background');
+            if(strcmpi(class(backgroundColor),'double'))
+                backgroundColor = backgroundColor*255;
+            else
+                backgroundColor = [backgroundColor.getRed(),backgroundColor.getGreen(),backgroundColor.getBlue()];
+            end
             
             %% load EDF folder icon
             loadedf_img = imread(fullfile(obj.SETTINGS.rootpathname,'icons/folder-24x24.png'));
@@ -1445,7 +1451,14 @@ classdef CLASS_UI_marking < handle
                 %establish the callbck
                 msgid= 'MATLAB:hg:JavaSetHGProperty';
                 warning('off',msgid);
-                set(obj.toolbarhandle.jCombo, 'ActionPerformedCallback', @obj.combo_selectEventLabel_callback);
+                toolbarPropNames = fieldnames(get(obj.toolbarhandle.jCombo));
+                if(~isempty(intersect('ActionPerformedCallback',toolbarPropNames)))
+                    set(obj.toolbarhandle.jCombo, 'ActionPerformedCallback', @obj.combo_selectEventLabel_callback);
+                end
+                if(~isempty(intersect('Action',toolbarPropNames)))
+                    set(obj.toolbarhandle.jCombo, 'Action', @obj.combo_selectEventLabel_callback);
+                end
+                
                 warning('on',msgid);
                 
             end
