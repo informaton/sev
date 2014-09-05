@@ -220,7 +220,7 @@ classdef CLASS_database_psg < CLASS_database
                     if(mod(k,100)==0)
                         fprintf('\n');
                     end
-                    if(isnan(str2double(patidCell{k})))
+                    if(~isnan(str2double(patidCell{k})))
                         patidCell{k} = strcat('Unknown',patidCell{k});
                     end
                     loadStr = sprintf('%s,%s',loadStr,patidCell{k});
