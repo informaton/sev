@@ -128,17 +128,17 @@ classdef CLASS_database_psg < CLASS_database
         %
         % Author: Hyatt Moore IV
         % created 7/9/2014
-        function create_snp_map_t(obj, plinkBimFilename)
-            if(nargin<2 || isempty(plinkBimFilename))
-                [plinkBimFilename, pathname, ~] = uigetfile({'*.bim','Extended MAP file (*.bim)'},'Select a PLINK SNP mapping file (e.g. plink.bim)','MultiSelect','off');
+        function create_snp_map_t(obj, plinkBimFullFilename)
+            if(nargin<2 || ~exist(plinkBimFullFilename,'file'))                
+                plinkBimFullFilename        = uigetfullfile({'*.bim','Extended MAP file (*.bim)'},'Select a PLINK SNP mapping file (e.g. plink.bim)','MultiSelect','off');
+            
             end
             
-            %get the snp mapping data
-            if(isnumeric(plinkBimFilename) && ~plinkBimFilename)
+            if(~exist(plinkBimFullFilename,'file'))
                 fprintf('No SNP mapping file entered or found.  The table SNP_T has not been (re)created.\n');
-            else
-                plinkBimFilename = fullfile(pathname,plinkBimFilename);
-                
+            
+            %get the snp mapping data
+            else            
                 obj.open();
                 
                 tableName = 'snp_map_t';
@@ -157,7 +157,7 @@ classdef CLASS_database_psg < CLASS_database
                 
                 loadStr = sprintf(['load data local infile ''%s'' into table %s '...
                     '(chromosome, @snp, @dunno1, @dunno2,majorallele, minorallele) '...
-                    'set refSNP=substring(@snp from 3)'],plinkBimFilename,tableName);
+                    'set refSNP=substring(@snp from 3)'],plinkBimFullFilename,tableName);
                 mym(loadStr);
                 
                 mym('select * from {S} limit 10',tableName);
