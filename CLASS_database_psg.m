@@ -178,14 +178,14 @@ classdef CLASS_database_psg < CLASS_database
         %>       minor-minor = 2
         %>       missing     = 3
         %> @param Plink files that has been recoded (--recodeAD) and then
-        %> trnasposed.  
+        %> transposed.  
         %         FID (WSC patids) A0001 ...
-        %         IID (stanford ids) WISC6H01...
+        %         IID (stanford/plate ids) WISC5K01...
         %         father 0 0 0 0
         %         mother 0 0 0 0 (delete these 2 rows)
         %         sex 1 2 2 1 -9
         %         pheno 1 1 2 2 -9
-        %         rs111111_G 1 2 0 1
+        %         rs111111_G 1 2 0 1 NA
         %>
         % Author: Hyatt Moore IV
         % created 7/12/2014
@@ -220,8 +220,12 @@ classdef CLASS_database_psg < CLASS_database
                     if(mod(k,100)==0)
                         fprintf('\n');
                     end
+                    if(isnan(str2double(patidCell{k})))
+                        patidCell{k} = strcat('Unknown',patidCell{k});
+                    end
                     loadStr = sprintf('%s,%s',loadStr,patidCell{k});
                     createStr = sprintf('%s %s TINYINT UNSIGNED NOT NULL DEFAULT 3,',createStr,patidCell{k});
+                    
                 end
                 
                 createStr = sprintf('%s PRIMARY KEY (refSNP))',createStr);
