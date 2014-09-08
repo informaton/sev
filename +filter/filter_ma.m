@@ -34,7 +34,7 @@ end
 
 delay = floor((params.order)/2);
 b = ones(params.order,1);
-filtsig = filter(b,1,filtsig)/params.order;
+filtsig = filter(b,1,sigData)/params.order;
 
 %account for the delay...
 filtsig = [filtsig((delay+1):end); zeros(delay,1)];
