@@ -248,7 +248,7 @@ classdef CLASS_channel < handle
                                     if(isempty(filterS.ref_channel_index))
                                         obj.filter_data =feval([filterS.filter_path(2:end),'.',filterS.m_file],obj.getData());
                                     else
-                                        obj.filter_data =feval([filterS.filter_path(2:end),'.',filterS.m_file],obj.channel_index,filterS.ref_channel_index);
+                                        obj.filter_data =feval([filterS.filter_path(2:end),'.',filterS.m_file],obj.getData(),filterS.ref_data);
                                     end
                                 end
                                 
