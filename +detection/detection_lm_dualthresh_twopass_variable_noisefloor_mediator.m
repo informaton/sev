@@ -85,154 +85,167 @@ function detectStruct = detection_lm_dualthresh_twopass_variable_noisefloor_medi
 %                 = inf for nf(x)>30
 
 
+% modified 9/15/2014 - streamline default parameter behavior.
 
-if(nargin<2 || isempty(params))
-   
-    pfile = strcat(mfilename('fullpath'),'.plist');
-    
-    if(exist(pfile,'file'))
-        %load it
-        params = plist.loadXMLPlist(pfile);
-    else
-        %make it and save it for the future
-        params.use_summer = 0;  %apply summer or not.
-        params.threshold_high_uV = 8; %8 uV above resting - presumably resting is 2uV
-        params.threshold_low_uV = 2;
-        params.min_duration_sec = 0.75;
-        params.max_duration_sec = 10.0;
-        params.merge_within_sec = 2;
-        params.summer_order = 2;
-        params.average_power_window_sec = 30;  %calculate average power over consecutive windows of this duration in seconds
-        params.noisefloor_uV_to_engage_variablethreshold = 5;
-        params.noisefloor_uV_to_turnoff_detection = 30;
-        params.noisefloor_scale_uV_to_engage = 8;
-        params.noisefloor_scale = 2;
-        params.median_removal = 1;
-        plist.saveXMLPlist(pfile,params);
-    end
-end
-
-data = data_in;
-
-%merge events that are within 1/20th of a second of each other samples of each other
-dur_samples_below_count = ceil(0.05*params.samplerate);
-    
-%first pass
-[variable_threshold_low_uv, variable_threshold_high_uv, clean_data] = getNoisefloor(data, params,params.samplerate);
-
-new_events = variable_triplethresholdcrossings(clean_data, variable_threshold_high_uv,variable_threshold_low_uv,dur_samples_below_count);
-
-%second pass - adjust the noise floor down to 1/2 the lower baseline threshold
-% twopass = false;
-% twopass= true;
-% if(twopass)
-if(~isempty(new_events))
-    for k=1:size(new_events,1)
-        data(new_events(k,1):new_events(k,2)) = variable_threshold_low_uv(new_events(k,1):new_events(k,2))/2;
-    end
-
-    [variable_threshold_low_uv, variable_threshold_high_uv,clean_data2] = getNoisefloor(data, params,params.samplerate);
-    secondpass_events = variable_triplethresholdcrossings(clean_data2, variable_threshold_high_uv,variable_threshold_low_uv,dur_samples_below_count);
-    if(~isempty(secondpass_events))
-        new_events = sortrows([new_events;secondpass_events],1);
-    end
-end
+% set default parameters
+defaultParams.use_summer = 0;  %apply summer or not.
+defaultParams.threshold_high_uV = 8; %8 uV above resting - presumably resting is 2uV
+defaultParams.threshold_low_uV = 2;
+defaultParams.min_duration_sec = 0.75;
+defaultParams.max_duration_sec = 10.0;
+defaultParams.merge_within_sec = 2;
+defaultParams.summer_order = 2;
+defaultParams.average_power_window_sec = 30;  %calculate average power over consecutive windows of this duration in seconds
+defaultParams.noisefloor_uV_to_engage_variablethreshold = 5;
+defaultParams.noisefloor_uV_to_turnoff_detection = 30;
+defaultParams.noisefloor_scale_uV_to_engage = 8;
+defaultParams.noisefloor_scale = 2;
+defaultParams.median_removal = 1;
 
 
-if(~isempty(new_events))
-
-    if(params.merge_within_sec>0)
-        merge_distance = round(0.1*params.samplerate);
-        new_events = merge_nearby_events(new_events,merge_distance);
-    end    
-
-    if(params.min_duration_sec>0)
-        diff_sec = (new_events(:,2)-new_events(:,1))/params.samplerate;
-        new_events = new_events(diff_sec>=params.min_duration_sec,:);
-    end
-
-    
-    if(params.merge_within_sec>0)
-        merge_distance = round(params.merge_within_sec*params.samplerate);
-        new_events = merge_nearby_events(new_events,merge_distance);
-    end
-    
-end
-
-max_duration = params.max_duration_sec*params.samplerate;
-min_duration = params.min_duration_sec*params.samplerate;
-
-paramStruct = [];
-
-if(~isempty(new_events))
-%     new_events(:,1) = max(new_events(:,1)-ceil(ma.params.order/4),1);
-%     new_events(:,2) = new_events(:,2)-floor(ma.params.order/4); %-dur_samples_below_count;
-    duration = (new_events(:,2)-new_events(:,1));
-    clean_indices = duration<max_duration & duration>min_duration;
-    new_events = new_events(clean_indices,:);
-    
-    num_events = size(new_events,1);
-    if(num_events>0)
-        
-        data = data_in;
-        paramStruct.median = zeros(num_events,1);
-        paramStruct.rms = zeros(num_events,1);
-        paramStruct.abs_amplitude = zeros(num_events,1);
-        paramStruct.dur_sec = zeros(num_events,1);
-        paramStruct.density = zeros(num_events,1);
-        
-        paramStruct.auc = zeros(num_events,1);
-        paramStruct.low_uV = zeros(num_events,1);
-        paramStruct.high_uV = zeros(num_events,1);
-        
-        if(params.median_removal)
-            held_events = true(size(new_events,1),1);
-        end
-        for n=1:num_events
-            abs_datum = abs(data(new_events(n,1):new_events(n,2)));
-            paramStruct.dur_sec(n) = (new_events(n,2)-new_events(n,1)+1)/params.samplerate;
-            paramStruct.median(n) = median(abs_datum);
-            
-            %             paramStruct.rms(n) = sqrt(mean(datum.*datum));
-            paramStruct.rms(n) = sqrt(mean(abs_datum.*abs_datum));
-            paramStruct.abs_amplitude(n) = mean(abs_datum);
-            paramStruct.auc(n) = trapz(abs_datum)/params.samplerate;
-            paramStruct.density(n) = paramStruct.auc(n)/paramStruct.dur_sec(n);
-            paramStruct.low_uV(n) = variable_threshold_low_uv(floor(new_events(n,1)+(new_events(n,2)-new_events(n,1))/2));
-            paramStruct.high_uV(n) = variable_threshold_high_uv(floor(new_events(n,1)+(new_events(n,2)-new_events(n,1))/2));
-            
-            if(params.median_removal)             
-                if(paramStruct.auc(n)<0.5*paramStruct.high_uV(n))
-                    held_events(n) = false;
-                end
-            end   
-
-        end
-        if(params.median_removal)
-            new_events = new_events(held_events,:);
-            paramStruct.dur_sec = paramStruct.dur_sec(held_events);
-            paramStruct.median = paramStruct.median(held_events);
-            paramStruct.rms = paramStruct.rms(held_events);
-            paramStruct.abs_amplitude = paramStruct.abs_amplitude(held_events);
-            paramStruct.auc = paramStruct.auc(held_events);
-            paramStruct.density = paramStruct.density(held_events);
-            paramStruct.low_uV = paramStruct.low_uV(held_events);
-            paramStruct.high_uV = paramStruct.high_uV(held_events);            
-        end
-        
-    end;
-    
-    detectStruct.new_events = new_events;
-    detectStruct.new_data = clean_data;
-    detectStruct.paramStruct = paramStruct;
-
+% return default parameters if no input arguments are provided.
+if(nargin==0)
+    detectStruct = defaultParams;
 else
-    detectStruct.new_events = [];
-    detectStruct.new_data = clean_data;
-    detectStruct.paramStruct = [];
+    
+    if(nargin<2 || isempty(params))
+        
+        pfile =  strcat(mfilename('fullpath'),'.plist');
+        
+        if(exist(pfile,'file'))
+            %load it
+            params = plist.loadXMLPlist(pfile);
+        else
+            %make it and save it for the future            
+            params = defaultParams;
+            plist.saveXMLPlist(pfile,params);
+        end
+    end
+    
+    
+    
+    data = data_in;
+    
+    %merge events that are within 1/20th of a second of each other samples of each other
+    dur_samples_below_count = ceil(0.05*params.samplerate);
+    
+    %first pass
+    [variable_threshold_low_uv, variable_threshold_high_uv, clean_data] = getNoisefloor(data, params,params.samplerate);
+    
+    new_events = variable_triplethresholdcrossings(clean_data, variable_threshold_high_uv,variable_threshold_low_uv,dur_samples_below_count);
+    
+    %second pass - adjust the noise floor down to 1/2 the lower baseline threshold
+    % twopass = false;
+    % twopass= true;
+    % if(twopass)
+    if(~isempty(new_events))
+        for k=1:size(new_events,1)
+            data(new_events(k,1):new_events(k,2)) = variable_threshold_low_uv(new_events(k,1):new_events(k,2))/2;
+        end
+        
+        [variable_threshold_low_uv, variable_threshold_high_uv,clean_data2] = getNoisefloor(data, params,params.samplerate);
+        secondpass_events = variable_triplethresholdcrossings(clean_data2, variable_threshold_high_uv,variable_threshold_low_uv,dur_samples_below_count);
+        if(~isempty(secondpass_events))
+            new_events = sortrows([new_events;secondpass_events],1);
+        end
+    end
+    
+    
+    if(~isempty(new_events))
+        
+        if(params.merge_within_sec>0)
+            merge_distance = round(0.1*params.samplerate);
+            new_events = merge_nearby_events(new_events,merge_distance);
+        end
+        
+        if(params.min_duration_sec>0)
+            diff_sec = (new_events(:,2)-new_events(:,1))/params.samplerate;
+            new_events = new_events(diff_sec>=params.min_duration_sec,:);
+        end
+        
+        
+        if(params.merge_within_sec>0)
+            merge_distance = round(params.merge_within_sec*params.samplerate);
+            new_events = merge_nearby_events(new_events,merge_distance);
+        end
+        
+    end
+    
+    max_duration = params.max_duration_sec*params.samplerate;
+    min_duration = params.min_duration_sec*params.samplerate;
+    
+    paramStruct = [];
+    
+    if(~isempty(new_events))
+        %     new_events(:,1) = max(new_events(:,1)-ceil(ma.params.order/4),1);
+        %     new_events(:,2) = new_events(:,2)-floor(ma.params.order/4); %-dur_samples_below_count;
+        duration = (new_events(:,2)-new_events(:,1));
+        clean_indices = duration<max_duration & duration>min_duration;
+        new_events = new_events(clean_indices,:);
+        
+        num_events = size(new_events,1);
+        if(num_events>0)
+            
+            data = data_in;
+            paramStruct.median = zeros(num_events,1);
+            paramStruct.rms = zeros(num_events,1);
+            paramStruct.abs_amplitude = zeros(num_events,1);
+            paramStruct.dur_sec = zeros(num_events,1);
+            paramStruct.density = zeros(num_events,1);
+            
+            paramStruct.auc = zeros(num_events,1);
+            paramStruct.low_uV = zeros(num_events,1);
+            paramStruct.high_uV = zeros(num_events,1);
+            
+            if(params.median_removal)
+                held_events = true(size(new_events,1),1);
+            end
+            for n=1:num_events
+                abs_datum = abs(data(new_events(n,1):new_events(n,2)));
+                paramStruct.dur_sec(n) = (new_events(n,2)-new_events(n,1)+1)/params.samplerate;
+                paramStruct.median(n) = median(abs_datum);
+                
+                %             paramStruct.rms(n) = sqrt(mean(datum.*datum));
+                paramStruct.rms(n) = sqrt(mean(abs_datum.*abs_datum));
+                paramStruct.abs_amplitude(n) = mean(abs_datum);
+                paramStruct.auc(n) = trapz(abs_datum)/params.samplerate;
+                paramStruct.density(n) = paramStruct.auc(n)/paramStruct.dur_sec(n);
+                paramStruct.low_uV(n) = variable_threshold_low_uv(floor(new_events(n,1)+(new_events(n,2)-new_events(n,1))/2));
+                paramStruct.high_uV(n) = variable_threshold_high_uv(floor(new_events(n,1)+(new_events(n,2)-new_events(n,1))/2));
+                
+                if(params.median_removal)
+                    if(paramStruct.auc(n)<0.5*paramStruct.high_uV(n))
+                        held_events(n) = false;
+                    end
+                end
+                
+            end
+            if(params.median_removal)
+                new_events = new_events(held_events,:);
+                paramStruct.dur_sec = paramStruct.dur_sec(held_events);
+                paramStruct.median = paramStruct.median(held_events);
+                paramStruct.rms = paramStruct.rms(held_events);
+                paramStruct.abs_amplitude = paramStruct.abs_amplitude(held_events);
+                paramStruct.auc = paramStruct.auc(held_events);
+                paramStruct.density = paramStruct.density(held_events);
+                paramStruct.low_uV = paramStruct.low_uV(held_events);
+                paramStruct.high_uV = paramStruct.high_uV(held_events);
+            end
+            
+        end;
+        
+        detectStruct.new_events = new_events;
+        detectStruct.new_data = clean_data;
+        detectStruct.paramStruct = paramStruct;
+        
+    else
+        detectStruct.new_events = [];
+        detectStruct.new_data = clean_data;
+        detectStruct.paramStruct = [];
+    end
+    
+    
 end
-
-
 end
 
 function [variable_threshold_low_uv, variable_threshold_high_uv, clean_data] = getNoisefloor(data, params, samplerate)

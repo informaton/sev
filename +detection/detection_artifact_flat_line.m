@@ -21,10 +21,14 @@ function detectStruct = detection_artifact_flat_line(data,params,stageStruct)
 
 global MARKING;
 
+% modified 9/15/2014 - streamline default parameter behavior.
+
+% initialize default parameters
 defaultParams.win_length_sec = 5;
 defaultParams.win_interval_sec = 5;
 defaultParams.min_power = 0.1;
 
+% return default parameters if no input arguments are provided.
 if(nargin==0)
     detectStruct = defaultParams;
 else
@@ -37,8 +41,7 @@ else
             %load it
             params = plist.loadXMLPlist(pfile);
         else
-            %make it and save it for the future
-            
+            %make it and save it for the future            
             params = defaultParams;
             plist.saveXMLPlist(pfile,params);
         end

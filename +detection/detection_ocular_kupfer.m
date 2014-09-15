@@ -36,72 +36,84 @@ function detectStruct = detection_ocular_kupfer(data_cell,param, stageStruct)
 % end
 
 
-if(nargin<2 || isempty(params))     
-    pfile =  strcat(mfilename('fullpath'),'.plist');
+% modified 9/15/2014 - streamline default parameter behavior.
+
+% initialize default parameters
+defaultParams.threshold_uV = 25; %25uV threshold
+defaultParams.max_synchrony_duration_seconds = .10; %within 100 mseconds of each other
+
+% return default parameters if no input arguments are provided.
+if(nargin==0)
+    detectStruct = defaultParams;
+else
     
-    if(exist(pfile,'file'))
-        %load it
-        params = plist.loadXMLPlist(pfile);
-    else
-        %make it and save it for the future
-        params.threshold_uV = 25; %25uV threshold
-        params.max_synchrony_duration_seconds = .10; %within 100 mseconds of each other
-        plist.saveXMLPlist(pfile,params);
-
-
+    if(nargin<2 || isempty(params))
+        
+        pfile =  strcat(mfilename('fullpath'),'.plist');
+        
+        if(exist(pfile,'file'))
+            %load it
+            params = plist.loadXMLPlist(pfile);
+        else
+            %make it and save it for the future            
+            params = defaultParams;
+            plist.saveXMLPlist(pfile,params);
+        end
     end
-end
-
-OCULAR1.data = data_cell{1};
-samplerate = params.samplerate;
-OCULAR2.data = data_cell{2};
-
-%establish the detection parameters
-
-threshold = params.threshold_uV;
-UTH = threshold; %upper and lower thresholds that need to be crossed...
-LTH = -threshold;
-max_synchrony_duration_seconds = params.max_synchrony_duration_seconds;
-duration_threshold = max_synchrony_duration_seconds*samplerate;
-
-
-%arbitrarily pick one of the two channels to begin with
-%smooth the data with a moving averager
-n = 11;
-b = ones(1,n)/n;
-smooth_oc1 = filter(b,1,OCULAR1.data);
-
-
-oc1_pass1 = thresholdcrossings(abs(smooth_oc1),threshold);
-detectStruct.new_events = zeros(size(oc1_pass1));
-num_events = 0;
-channel_length = numel(OCULAR1.data);
-
-for k=1:size(oc1_pass1,1)
-    start = oc1_pass1(k,1);
-    range = ceil(max(1, start-duration_threshold)):floor(min(start+duration_threshold,channel_length));
-
-    if(OCULAR1.data(start)>UTH)
-        if(any(OCULAR2.data(range)<LTH))
-            num_events = num_events+1;
-            detectStruct.new_events(num_events,:) = oc1_pass1(k,:);
-        end;
-    else
-        if(any(OCULAR2.data(range)>UTH))
-            num_events = num_events+1;
-            detectStruct.new_events(num_events,:) = oc1_pass1(k,:);
-        end;
+    
+    
+    
+    OCULAR1.data = data_cell{1};
+    samplerate = params.samplerate;
+    OCULAR2.data = data_cell{2};
+    
+    %establish the detection parameters
+    
+    threshold = params.threshold_uV;
+    UTH = threshold; %upper and lower thresholds that need to be crossed...
+    LTH = -threshold;
+    max_synchrony_duration_seconds = params.max_synchrony_duration_seconds;
+    duration_threshold = max_synchrony_duration_seconds*samplerate;
+    
+    
+    %arbitrarily pick one of the two channels to begin with
+    %smooth the data with a moving averager
+    n = 11;
+    b = ones(1,n)/n;
+    smooth_oc1 = filter(b,1,OCULAR1.data);
+    
+    
+    oc1_pass1 = thresholdcrossings(abs(smooth_oc1),threshold);
+    detectStruct.new_events = zeros(size(oc1_pass1));
+    num_events = 0;
+    channel_length = numel(OCULAR1.data);
+    
+    for k=1:size(oc1_pass1,1)
+        start = oc1_pass1(k,1);
+        range = ceil(max(1, start-duration_threshold)):floor(min(start+duration_threshold,channel_length));
+        
+        if(OCULAR1.data(start)>UTH)
+            if(any(OCULAR2.data(range)<LTH))
+                num_events = num_events+1;
+                detectStruct.new_events(num_events,:) = oc1_pass1(k,:);
+            end;
+        else
+            if(any(OCULAR2.data(range)>UTH))
+                num_events = num_events+1;
+                detectStruct.new_events(num_events,:) = oc1_pass1(k,:);
+            end;
+            
+        end
         
     end
     
+    detectStruct.new_events = detectStruct.new_events(1:num_events,:);
+    
+    min_duration_sec = 0.1;
+    min_duration_samples = min_duration_sec*samplerate;
+    detectStruct.new_events = CLASS_events.cleanup_events(detectStruct.new_events,min_duration_samples);
+    detectStruct.new_data =  smooth_oc1;%OCULAR1.data;
+    detectStruct.paramStruct = [];
+    
 end
-
-detectStruct.new_events = detectStruct.new_events(1:num_events,:);
-
-min_duration_sec = 0.1;
-min_duration_samples = min_duration_sec*samplerate;
-detectStruct.new_events = CLASS_events.cleanup_events(detectStruct.new_events,min_duration_samples);
-detectStruct.new_data =  smooth_oc1;%OCULAR1.data;
-detectStruct.paramStruct = [];
-
 end

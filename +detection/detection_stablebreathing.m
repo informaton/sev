@@ -27,36 +27,49 @@
 %> @li @c pmax Maximum value of the data covered for each event.
 function detectStruct = detection_stablebreathing(data_cell,params, stageStruct)
 
-if(nargin<2 || isempty(params))
-    pfile = strcat(mfilename('fullpath'),'.plist');
+% modified 9/15/2014 - streamline default parameter behavior.
+
+% initialize default parameters
+defaultParams.scale = 1;
+
+% return default parameters if no input arguments are provided.
+if(nargin==0)
+    detectStruct = defaultParams;
+else
     
-    if(exist(pfile,'file'))
-        %load it
-        params = plist.loadXMLPlist(pfile);
-    else
-        %make it and save it for the future
-        params.?
-        plist.saveXMLPlist(pfile,params);
+    if(nargin<2 || isempty(params))
+        
+        pfile =  strcat(mfilename('fullpath'),'.plist');
+        
+        if(exist(pfile,'file'))
+            %load it
+            params = plist.loadXMLPlist(pfile);
+        else
+            %make it and save it for the future            
+            params = defaultParams;
+            plist.saveXMLPlist(pfile,params);
+        end
     end
-end
-
-% samplerate = params.samplerate;
-
-detectStruct.new_data = data_cell;
-detectStruct.new_events = [1, 300;
-    1100, 1400;
-    3001, 3700];
-
-pmean = [mean(data_cell(1:300)); 
-    mean(data_cell(1100:1400));
-    mean(data_cell(3001:3700))];
-pmax = [max(data_cell(1:300));
-    max(data_cell(1100:1400));
-    max(data_cell(3001:3700))];
-
-
-detectStruct.paramStruct.pmean = pmean;
-detectStruct.paramStruct.pmax = pmax;
+    
+    
+    
+    % samplerate = params.samplerate;
+    
+    detectStruct.new_data = data_cell;
+    detectStruct.new_events = [1, 300;
+        1100, 1400;
+        3001, 3700];
+    
+    pmean = [mean(data_cell(1:300));
+        mean(data_cell(1100:1400));
+        mean(data_cell(3001:3700))];
+    pmax = [max(data_cell(1:300));
+        max(data_cell(1100:1400));
+        max(data_cell(3001:3700))];
+    
+    
+    detectStruct.paramStruct.pmean = pmean;
+    detectStruct.paramStruct.pmax = pmax;
 end
 
 
@@ -69,25 +82,25 @@ end
 % Put all artefacts in struct
 artefact.sat = artefact_sat; artefact.np = artefact_np;
 if ~isempty(ieeg) && ~isempty(iemg)
-% EEG and EMG (artefact_emg: major muscle artefacts disturbing EEG, artefact_eeg: flat line and electrodepop)
-[artefact_eeg artefact_emg] = artefact_eegemg(eeg,hdr.fs(ieeg)); % input EEG to detect EMG artefact, Brunner 1996 paper
-artefact.eeg = artefact_eeg; artefact.emg = artefact_emg;
+    % EEG and EMG (artefact_emg: major muscle artefacts disturbing EEG, artefact_eeg: flat line and electrodepop)
+    [artefact_eeg artefact_emg] = artefact_eegemg(eeg,hdr.fs(ieeg)); % input EEG to detect EMG artefact, Brunner 1996 paper
+    artefact.eeg = artefact_eeg; artefact.emg = artefact_emg;
 end
 
 % Artefact corrections
 % Periods with artefacts in saturation, nasal pressure and major muscle artefacts in EEG are never included, therefore changed to NaN.
 % Saturation
 if ~isnan(artefact.sat)
-for i = 1:size(artefact.sat,1)
-    signal{nsao2}(artefact.sat(i,1):artefact.sat(i,2)) = NaN;
-end
+    for i = 1:size(artefact.sat,1)
+        signal{nsao2}(artefact.sat(i,1):artefact.sat(i,2)) = NaN;
+    end
 end
 
 % Nasal pressure
 if ~isnan(artefact.np)
-for i = 1:size(artefact.np,1)
-    signal{npres}(artefact.np(i,1):artefact.np(i,2)) = NaN;
-end
+    for i = 1:size(artefact.np,1)
+        signal{npres}(artefact.np(i,1):artefact.np(i,2)) = NaN;
+    end
 end
 
 % If the full saturation or nasal pressure channel is contaimned with noise
@@ -96,9 +109,9 @@ if sum(isnan(signal{nsao2}))==size(signal{nsao2},1) || sum(isnan(signal{npres}))
 
 % EEG
 if ~isempty(ieeg) && sum(sum(~isnan(artefact.eeg)))~=0
-for i = 1:size(artefact.eeg,1)
-    eeg(artefact.eeg(i,1):artefact.eeg(i,2)) = NaN;
-end
+    for i = 1:size(artefact.eeg,1)
+        eeg(artefact.eeg(i,1):artefact.eeg(i,2)) = NaN;
+    end
 end
 
 
@@ -157,12 +170,12 @@ heartrate = [start_stop_matrix(:,1) paramStruct.inst_hr]; % heart rate index, he
 % "hdr" order of signals: nsao2 = 1; npres = 2; nrib = 3; nab = 4; neeg = 5; nemg = 6; necg = 7; % signal index when loaded into "signal" cell
 PSGorder = [nsao2 npres neeg nemg];
 if isempty(ieeg) || isempty(iemg)
-TimeLockFeat = cell(6,1); % used to output features for each sleep stage
-tlockfeat_out = cell(6,1); tlockfeat_evnum = nan(6,6);
-tlockevents.desat=NaN; tlockevents.br=NaN; tlockevents.brfreq=NaN; tlockevents.delta=NaN; tlockevents.theta=NaN;
-tlockevents.alpha=NaN; tlockevents.beta=NaN; tlockevents.eegratio=NaN; tlockevents.emg=NaN; tlockevents.hr=NaN;
+    TimeLockFeat = cell(6,1); % used to output features for each sleep stage
+    tlockfeat_out = cell(6,1); tlockfeat_evnum = nan(6,6);
+    tlockevents.desat=NaN; tlockevents.br=NaN; tlockevents.brfreq=NaN; tlockevents.delta=NaN; tlockevents.theta=NaN;
+    tlockevents.alpha=NaN; tlockevents.beta=NaN; tlockevents.eegratio=NaN; tlockevents.emg=NaN; tlockevents.hr=NaN;
 else
-[TimeLockFeat tlockevents tlockfeat_out tlockfeat_evnum] = features_timelock(timelock.tlock,eeg,emg,signal{nsao2},signal{npres},timelock.excl,breath.pressure,timelock.selected,desat.desat,nasaldrop.npdrop,heartrate,hdr,PSGorder,STA,patname(1:14),NaN);
+    [TimeLockFeat tlockevents tlockfeat_out tlockfeat_evnum] = features_timelock(timelock.tlock,eeg,emg,signal{nsao2},signal{npres},timelock.excl,breath.pressure,timelock.selected,desat.desat,nasaldrop.npdrop,heartrate,hdr,PSGorder,STA,patname(1:14),NaN);
 end
 
 features.desat = desat_feat;
@@ -175,4 +188,5 @@ features.tlock.var4 = tlockfeat_evnum;
 
 
 
+end
 end

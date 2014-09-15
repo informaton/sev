@@ -21,55 +21,63 @@
 function detectStruct = detection_artifact_hp_20hz(data,params,stageStruct)
 % Author Hyatt Moore IV
 % modified 3/1/2013 - remove global references and use varargin
+% modified 9/15/2014 - streamline default parameter behavior.
 
+% initialize default parameters
+defaultParams.scale_factor=1.5;
+defaultParams.rms_short_sec=2;
+defaultParams.rms_long_min=5;
+defaultParams.additional_bufer_sec = 1; %add this to the left and right of each event.
 
-% this allows direct input of parameters from outside function calls, which
-%can be particularly useful in the batch job mode
-if(nargin<2 || isempty(params))
+defaultParams.merge_within_sec = 5;
+
+% return default parameters if no input arguments are provided.
+if(nargin==0)
+    detectStruct = defaultParams;
+else
     
-    pfile = strcat(mfilename('fullpath'),'.plist');
-    
-    if(exist(pfile,'file'))
-        %load it
-        params = plist.loadXMLPlist(pfile);
-    else
-        %make it and save it for the future
-        params.scale_factor=1.5;
-        params.rms_short_sec=2;
-        params.rms_long_min=5;
-        params.additional_bufer_sec = 1; %add this to the left and right of each event.
+    if(nargin<2 || isempty(params))
         
-        params.merge_within_sec = 5;
+        pfile =  strcat(mfilename('fullpath'),'.plist');
         
-        plist.saveXMLPlist(pfile,params);
+        if(exist(pfile,'file'))
+            %load it
+            params = plist.loadXMLPlist(pfile);
+        else
+            %make it and save it for the future            
+            params = defaultParams;
+            plist.saveXMLPlist(pfile,params);
+        end
     end
+    
+  
+    samplerate = params.samplerate;
+    
+    n = 100;
+    delay = (n)/2;
+    
+    start = 20;
+    b = fir1(n,start/samplerate*2,'high');
+    
+    hp_20Hz_data = filter(b,1,data);
+    %account for the delay...
+    hp_20Hz_data = [hp_20Hz_data((delay+1):end); zeros(delay,1)];
+    
+    longparams.win_length_samples = params.rms_long_min*60*samplerate;
+    hp_20Hz_rms_long = filter.nlfilter_quickrms(hp_20Hz_data,longparams);
+    
+    shortparams.win_length_samples = params.rms_short_sec*samplerate;
+    hp_20Hz_rms_short = filter.nlfilter_quickrms(hp_20Hz_data,shortparams);
+    
+    %initialize variables here, to make sure we don't run into problems later
+    %with repeat file loads and not resetting these values...
+    hp_20Hz_crossings = thresholdcrossings(hp_20Hz_rms_short,hp_20Hz_rms_long*params.scale_factor);
+    buffer_samples = params.additional_buffer_sec*samplerate;  %tack on extra buffer to the edges.
+    
+    
+    detectStruct.new_data = hp_20Hz_data;
+    detectStruct.new_events = CLASS_events.buffer_then_merge_nearby_events(hp_20Hz_crossings,samplerate,buffer_samples,numel(data));
+    detectStruct.paramStruct = [];
+end
 end
 
-samplerate = params.samplerate;
-
-n = 100;
-delay = (n)/2;
-
-start = 20;
-b = fir1(n,start/samplerate*2,'high');
-
-hp_20Hz_data = filter(b,1,data);
-%account for the delay...
-hp_20Hz_data = [hp_20Hz_data((delay+1):end); zeros(delay,1)];
-
-longparams.win_length_samples = params.rms_long_min*60*samplerate;
-hp_20Hz_rms_long = filter.nlfilter_quickrms(hp_20Hz_data,longparams);
-
-shortparams.win_length_samples = params.rms_short_sec*samplerate;
-hp_20Hz_rms_short = filter.nlfilter_quickrms(hp_20Hz_data,shortparams);
-
-%initialize variables here, to make sure we don't run into problems later
-%with repeat file loads and not resetting these values...
-hp_20Hz_crossings = thresholdcrossings(hp_20Hz_rms_short,hp_20Hz_rms_long*params.scale_factor);
-buffer_samples = params.additional_buffer_sec*samplerate;  %tack on extra buffer to the edges.
-
-
-detectStruct.new_data = hp_20Hz_data;
-detectStruct.new_events = CLASS_events.buffer_then_merge_nearby_events(hp_20Hz_crossings,samplerate,buffer_samples,numel(data));
-detectStruct.paramStruct = [];
-end

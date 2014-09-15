@@ -35,6 +35,13 @@ classdef  CLASS_settings < handle
         %visibleObj;
     end
     
+    properties(Constant)
+        
+        %> @brief Prefix string for calling detection package methods (i.e.
+        %> 'detection.')
+        detectorPackagePrefixStr = 'detection.';     
+    end
+    
     methods(Static)
         
         % ======================================================================
@@ -252,7 +259,55 @@ classdef  CLASS_settings < handle
             detectionStruct.batch_mode_label = batch_mode_label;
             detectionStruct.params = params; %for storage of parameters as necessary
             
-        end %end loadDetectionMethodsInf        
+        end %end loadDetectionMethodsInf   
+        
+                % --------------------------------------------------------------------
+        % @brief Initializes all .plist files in the +detection directory
+        % to their algorithms' (.m file) default parameters as obtained by
+        % calling the algorithm's method function (.m file) with zero
+        % arguments.
+        %> @param detectionPath String of the fullpathname where detection
+        %> methods are stored on disk.
+        %> @param detectionInfFilename String of the filename (located in
+        %> detectionPath) with information describing each detection
+        %> method's parameters.
+        
+        function resetDetectionParameters(detectionPath, detectionInfFilename)
+            methods = CLASS_settings.loadDetectionMethodsInf(detectionPath,detectionInfFilename);
+
+            if(isstruct(methods)&& isfield(methods,'mfile'))
+                try
+                    for m=1:numel(methods.mfile)
+                        param_gui = methods.param_gui{m};
+                        if(~isempty(param_gui) && ~strcmpi(param_gui,'none'))
+                            mfile = methods.mfile{m};
+                            pfile = fullfile(detectionPath,[methods.mfile{m},'.plist']);
+                            if(exist(fullfile(detectionPath,strcat(mfile,'.m')),'file'))
+                                %get defaults and sciddadle.
+                                try
+                                    params = feval(strcat(CLASS_settings.detectorPackagePrefixStr,mfile));
+                                    plist.saveXMLPlist(pfile,params);
+                                catch me
+                                    fprintf('--------------\n')
+                                    showME(me);
+                                    fprintf('There was an error with loading defaults from %s.  Check that the file exists.\n',mfile);
+                                    fprintf('--------------\n')
+                                end
+                            else
+                                fprintf('There was an error with loading defaults from %s.  Check that the file exists.\n',mfile);
+                            end
+                        end
+                    end
+                catch me
+                    showME(me);
+                    fprintf('There was an error with loading defaults on file %u of %u.\n',m,numel(methods.mfile));
+                end
+                
+            else
+                fprintf('Unable to load detection method information file (%s)\n',fullfilename(detectionPath,detectionInfFilename));
+            end
+        end            
+        
 
     end
     
@@ -274,7 +329,10 @@ classdef  CLASS_settings < handle
         % =================================================================
         function obj = CLASS_settings(rootpathname,parameters_filename)
             %initialize settings in SEV....
+            
+            
             if(nargin==0)
+                obj.rootpathname = fileparts(mfilename('fullpath'));
                 
             else
                 obj.rootpathname = rootpathname;
@@ -471,34 +529,13 @@ classdef  CLASS_settings < handle
         %> @param obj instance of CLASS_settings class.
         function initializeDetectors(obj)
             detectionPath = fullfile(obj.rootpathname,obj.VIEW.detection_path);
-            methods = obj.loadDetectionMethodsInf(detectionPath,obj.VIEW.detection_inf_file);
-
-            for m=1:numel(methods)
-                param_gui = methods.param_gui{m};
-                if(~isempty(param_gui) && ~strcmpi(param_gui,'none'))
-                    mfile = fullfile(pwd,'+detection',[methods.mfile{m},'.m']);
-                    pfile = fullfile(pwd,'+detection',[methods.mfile{m},'.plist']);
-                    if(exist(mfile,'file'))
-                        %get defaults and sciddadle.
-                        params = feval(mfile);
-                        try
-                            plist.saveXMLPlist(pfile,params);
-                            
-                        catch me
-                            fprintf('--------------\n')
-                            showME(me);
-                            fprintf('There was an error with loading defaults from %s.  Check that the file exists.',mfile);
-                            fprintf('--------------\n')
-                        end
-                    else
-                        fprintf('There was an error with loading defaults from %s.  Check that the file exists.',mfile);
-                    end
-                end                
-            end            
+            obj.resetDetectionParameters(detectionPath,obj.VIEW.detection_inf_file);
         end
         
+
         
-        function initializeFilters()
+        
+        function initializeFilters(obj)
             
             
         end

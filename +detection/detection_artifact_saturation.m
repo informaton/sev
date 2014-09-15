@@ -21,115 +21,130 @@
 %> Modified Aug. 15 2014 to include a max threshold and check diff 
 function detectStruct = detection_artifact_saturation(srcSig,params,stageStruct)
 
-if(nargin<2 || isempty(params))
+
+
+% modified 9/15/2014 - streamline default parameter behavior.
+
+% initialize default parameters
+defaultParams.equipment_delay = 4;  % equipment uses the previous 8 heart beats to determine saturation (50% forward and backward used).
+
+
+% return default parameters if no input arguments are provided.
+if(nargin==0)
+    detectStruct = defaultParams;
+else
     
-    pfile = strcat(mfilename('fullpath'),'.plist');
-    
-    if(exist(pfile,'file'))
-        %load it
-        params = plist.loadXMLPlist(pfile);
-    else
-        %make it and save it for the future
-        params.equipment_delay = 4;  % equipment uses the previous 8 heart beats to determine saturation (50% forward and backward used).
-        plist.saveXMLPlist(pfile,params);
+    if(nargin<2 || isempty(params))
         
+        pfile =  strcat(mfilename('fullpath'),'.plist');
+        
+        if(exist(pfile,'file'))
+            %load it
+            params = plist.loadXMLPlist(pfile);
+        else
+            %make it and save it for the future            
+            params = defaultParams;
+            plist.saveXMLPlist(pfile,params);
+        end
     end
-end
-
-Fs = params.samplerate;
-% begin hkoch code:
-
-eq_delay = params.equipment_delay; 
-
-% Median of signal must be within 70-110% saturation (above 100 if drift in
-% equipment), else flipped
-if median(srcSig)<70 || median(srcSig)>110 % OUTPUT if signal is flipped
-    flip = -1;
-else
-    flip = 1;
-end
-outSig = flip*srcSig; % signal adjusted if flipped
-
-% if flipped/shifted crazy
-if sum(sign(outSig)) < 0
-    artefact = [1 size(srcSig,1)];
     
-% if flat line
-elseif sum(diff(outSig)) == 0
-    artefact = [1 size(srcSig,1)];
-    return
-
-% Initially check if complete signal is disrupted with noise (C0674_7 has this problem) - used to be > 4 and 0.04*size...
-elseif sum(abs(diff(srcSig))>2)/size(srcSig,1) >= 0.05
-    artefact = [1 size(srcSig,1)];
     
-else
     
-    % Equipment is turned off/wrong monitoring when saturation drops below 50% saturation.
-    [idx_zero idx_up idx_down] = zerocrossing(outSig-50); % find crossing with 50%
-    % Noise when above 110%
-    [idx_zero2 idx_up2 idx_down2] = zerocrossing(outSig-110); % find crossing with 105%, more than 100% saturation is not possible but high threshold due to drift
-
-
-    %% Min threshold
-    if ~isempty(idx_zero) || ~isempty(idx_zero2)
+    Fs = params.samplerate;
+    % begin hkoch code:
+    
+    eq_delay = params.equipment_delay;
+    
+    % Median of signal must be within 70-110% saturation (above 100 if drift in
+    % equipment), else flipped
+    if median(srcSig)<70 || median(srcSig)>110 % OUTPUT if signal is flipped
+        flip = -1;
+    else
+        flip = 1;
+    end
+    outSig = flip*srcSig; % signal adjusted if flipped
+    
+    % if flipped/shifted crazy
+    if sum(sign(outSig)) < 0
+        artefact = [1 size(srcSig,1)];
         
-        if ~isempty(idx_zero)
-            if isempty(idx_down) % if zero crossings but no "down" detected
-                idx_down = 1;
-            elseif isempty(idx_up) % if zero crossings but no "up" detected
-                idx_up = size(outSig,1);
-            end
-            if idx_down(1) < idx_up(1) && size(idx_down,1)==size(idx_up,1)+1 % if first down is before first up
-                idx_up = [idx_up;size(outSig,1)];
-            elseif idx_down(1) > idx_up(1) % if first up is before first down
-                if size(idx_down,1)==size(idx_up,1)
-                    idx_down = [1;idx_down];
+        % if flat line
+    elseif sum(diff(outSig)) == 0
+        artefact = [1 size(srcSig,1)];
+        return
+        
+        % Initially check if complete signal is disrupted with noise (C0674_7 has this problem) - used to be > 4 and 0.04*size...
+    elseif sum(abs(diff(srcSig))>2)/size(srcSig,1) >= 0.05
+        artefact = [1 size(srcSig,1)];
+        
+    else
+        
+        % Equipment is turned off/wrong monitoring when saturation drops below 50% saturation.
+        [idx_zero idx_up idx_down] = zerocrossing(outSig-50); % find crossing with 50%
+        % Noise when above 110%
+        [idx_zero2 idx_up2 idx_down2] = zerocrossing(outSig-110); % find crossing with 105%, more than 100% saturation is not possible but high threshold due to drift
+        
+        
+        %% Min threshold
+        if ~isempty(idx_zero) || ~isempty(idx_zero2)
+            
+            if ~isempty(idx_zero)
+                if isempty(idx_down) % if zero crossings but no "down" detected
+                    idx_down = 1;
+                elseif isempty(idx_up) % if zero crossings but no "up" detected
+                    idx_up = size(outSig,1);
+                end
+                if idx_down(1) < idx_up(1) && size(idx_down,1)==size(idx_up,1)+1 % if first down is before first up
                     idx_up = [idx_up;size(outSig,1)];
-                elseif size(idx_down,1)+1==size(idx_up,1)
-                    idx_down = [1;idx_down];
+                elseif idx_down(1) > idx_up(1) % if first up is before first down
+                    if size(idx_down,1)==size(idx_up,1)
+                        idx_down = [1;idx_down];
+                        idx_up = [idx_up;size(outSig,1)];
+                    elseif size(idx_down,1)+1==size(idx_up,1)
+                        idx_down = [1;idx_down];
+                    end
                 end
+                % Add "eq_delay" second on each end to ensure stability in the signal
+                idx_down = idx_down-eq_delay*Fs; idx_up = idx_up+eq_delay*Fs;
             end
-            % Add "eq_delay" second on each end to ensure stability in the signal
-            idx_down = idx_down-eq_delay*Fs; idx_up = idx_up+eq_delay*Fs;
-        end
-        
-        
-        %% Max threshold
-        if ~isempty(idx_zero2)
-            if isempty(idx_down2) % if zero crossings but no "down" detected
-                idx_down2 = size(outSig,1);
-            elseif isempty(idx_up2) % if zero crossings but no "up" detected
-                idx_up2 = 1;
-            end
-            if idx_down2(1) < idx_up2(1)
-                if size(idx_down2,1)==size(idx_up2,1)+1 % if first down is before first up
-                    idx_up2 = [1;idx_up2];
-                elseif size(idx_down2,1)==size(idx_up2,1)
-                    idx_up2 = [1;idx_up2]; idx_down2 = [idx_down2;size(outSig,1)];
+            
+            
+            %% Max threshold
+            if ~isempty(idx_zero2)
+                if isempty(idx_down2) % if zero crossings but no "down" detected
+                    idx_down2 = size(outSig,1);
+                elseif isempty(idx_up2) % if zero crossings but no "up" detected
+                    idx_up2 = 1;
                 end
-            elseif idx_down2(1) > idx_up2(1) && size(idx_down2,1)+1==size(idx_up2,1) % if first up is before first down
-                idx_down2 = [idx_down2;size(outSig,1)];
+                if idx_down2(1) < idx_up2(1)
+                    if size(idx_down2,1)==size(idx_up2,1)+1 % if first down is before first up
+                        idx_up2 = [1;idx_up2];
+                    elseif size(idx_down2,1)==size(idx_up2,1)
+                        idx_up2 = [1;idx_up2]; idx_down2 = [idx_down2;size(outSig,1)];
+                    end
+                elseif idx_down2(1) > idx_up2(1) && size(idx_down2,1)+1==size(idx_up2,1) % if first up is before first down
+                    idx_down2 = [idx_down2;size(outSig,1)];
+                end
+                idx_up2 = idx_up2-eq_delay*Fs; idx_down2 = idx_down2+eq_delay*Fs;
             end
-            idx_up2 = idx_up2-eq_delay*Fs; idx_down2 = idx_down2+eq_delay*Fs;
+            
+            art50 = [idx_down idx_up]; % [start stop] for periods below 50
+            art110 = [idx_up2 idx_down2]; % [start stop] for periods above 110
+            artefact = eventoverlap(sort([art50 ; art110],'ascend')); % OUTPUT: artefact [start stop] for each artefact event
+            
+            artefact(artefact<1) = 1; % may be negative because delay is extracted
+            
+            
+        else
+            artefact = [NaN NaN]; % if no artefact events
+            
         end
-        
-        art50 = [idx_down idx_up]; % [start stop] for periods below 50
-        art110 = [idx_up2 idx_down2]; % [start stop] for periods above 110
-        artefact = eventoverlap(sort([art50 ; art110],'ascend')); % OUTPUT: artefact [start stop] for each artefact event
-        
-        artefact(artefact<1) = 1; % may be negative because delay is extracted
-        
-        
-    else
-        artefact = [NaN NaN]; % if no artefact events
-        
     end
+    
+    detectStruct.new_events = artefact;
+    detectStruct.new_data = outSig;
+    detectStruct.paramStruct = [];
 end
-
-detectStruct.new_events = artefact;
-detectStruct.new_data = outSig;
-detectStruct.paramStruct = [];
 end
 
 function [idx_zero idx_up idx_down] = zerocrossing(sig)

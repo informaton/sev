@@ -3,12 +3,12 @@
 <plist version="1.0">
 <dict>
 	<key>scale_factor</key>
-	<real>2.000000</real>
+	<real>1.500000</real>
 	<key>rms_short_sec</key>
-	<real>1.000000</real>
+	<real>2.000000</real>
 	<key>rms_long_min</key>
-	<real>30.000000</real>
-	<key>additional_buffer_sec</key>
+	<real>5.000000</real>
+	<key>additional_bufer_sec</key>
 	<real>1.000000</real>
 	<key>merge_within_sec</key>
 	<real>5.000000</real>

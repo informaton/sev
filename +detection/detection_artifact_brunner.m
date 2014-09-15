@@ -28,23 +28,23 @@ function detectStruct = detection_artifact_brunner(data,params,stageStruct)
 
 % Implemented by  Hyat Moore IV
 % modified 3/1/2013 - remove global references and use varargin
+% modified 9/15/2014 - streamline default parameter behavior.
 
-
-
-% this allows direct input of parameters from outside function calls, which
-%can be particularly useful in the batch job mode
 
 pfile = strcat(mfilename('fullpath'),'.plist');
 
-%make it and save it for the future
+% set default parameters
 defaultParams.long_window_sec = 180;
 defaultParams.short_window_sec = 4;
 defaultParams.threshold_scale = 4;
         
+% return default parameters if no arguments are provided
 if(nargin==0)     
     plist.saveXMLPlist(pfile,defaultParams);
     detectStruct = defaultParams;    
 else    
+    
+    % load existing or default parameters if 1 argument is provided.
     if(nargin<2 || isempty(params))
         if(exist(pfile,'file'))
             %load it

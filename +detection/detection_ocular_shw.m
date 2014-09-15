@@ -39,75 +39,86 @@ function detectStruct = detection_ocular_shw(data,params,stageStruct)
 % global variable and optional_params input
 % modified: 3/10/13 - better call to lpf
 
-%this allows direct input of parameters from outside function calls, which
-%can be particularly useful in the batch job mode
+% modified 9/15/2014 - streamline default parameter behavior.
 
-if(nargin<2 || isempty(params))
-    pfile = strcat(mfilename('fullpath'),'.plist');
+% initialize default parameters
+defaultParams.filter_order = 10;
+defaultParams.low_pass_hz = 14;
+defaultParams.moving_window_sec = 0.15;
+defaultParams.threshold_uv = 70;
+defaultParams.merge_within_sec = 0.05;
+
+
+% return default parameters if no input arguments are provided.
+if(nargin==0)
+    detectStruct = defaultParams;
+else
     
-    if(exist(pfile,'file'))
-        %load it
-        params = plist.loadXMLPlist(pfile);
-    else
-        %make it and save it for the future
-        params.filter_order = 10;
-        params.low_pass_hz = 14;
-        params.moving_window_sec = 0.15;
-        params.threshold_uv = 70;
-        params.merge_within_sec = 0.05;
+    if(nargin<2 || isempty(params))
         
-        plist.saveXMLPlist(pfile,params);
+        pfile =  strcat(mfilename('fullpath'),'.plist');
+        
+        if(exist(pfile,'file'))
+            %load it
+            params = plist.loadXMLPlist(pfile);
+        else
+            %make it and save it for the future            
+            params = defaultParams;
+            plist.saveXMLPlist(pfile,params);
+        end
     end
+    
+    
+    
+    samplerate = params.samplerate;
+    %1. adaptively filter F3 channel
+    
+    %%2. apply lowpass filter (0.5-8)
+    lpf_params.order=params.filter_order;
+    lpf_params.freq_hz = params.low_pass_hz;
+    lpf_params.samplerate = samplerate;
+    filtdata = filter.fir_lp(data,lpf_params);
+    
+    % delay_lp = (params.filter_order)/2;
+    %
+    % Bbandpass = fir1(params.filter_order,params.low_pass_hz/samplerate*2,'low');
+    %
+    % filtdata = filter(Bbandpass,1,data);
+    
+    %num pairings  ...
+    
+    
+    %% apply differentiator
+    
+    differentiator_params.order=4;
+    filtdata  = filter.filter_differentiator(filtdata,differentiator_params);
+    
+    
+    % B_diff = 1/8*[1 2 0 -2 -1];
+    % delay_diff = floor(numel(B_diff)/2);
+    % filtdata = filter(B_diff,1,filtdata);
+    
+    %% square the data
+    filtdata = filtdata.^2;
+    
+    %% moving window average/integration
+    smooth_params.order=ceil(params.moving_window_sec * samplerate);
+    smooth_params.rms = 0;
+    integrated_data = filter.filter_ma(filtdata,smooth_params)*smooth_params.order;
+    
+    % win_len = ceil(params.moving_window_sec * samplerate);
+    % B_ma = ones(1,win_len);
+    % avgdata = filter(B_ma,1,filtdata);
+    %
+    % %account for the delay...
+    % delay = delay_diff+delay_lp;
+    % avgdata = [avgdata(delay+1:end); zeros(delay,1)];
+    
+    %merge events that are within 1/25th of a second of each other samples of each other
+    new_events = thresholdcrossings(integrated_data, params.threshold_uv);
+    merge_distance = round(params.merge_within_sec*samplerate);
+    detectStruct.new_events = CLASS_events.merge_nearby_events(new_events,merge_distance);
+    
+    detectStruct.new_data = integrated_data;
+    detectStruct.paramStruct = [];
 end
-
-samplerate = params.samplerate;
-%1. adaptively filter F3 channel
-
-%%2. apply lowpass filter (0.5-8)
-lpf_params.order=params.filter_order;
-lpf_params.freq_hz = params.low_pass_hz;
-lpf_params.samplerate = samplerate;
-filtdata = filter.fir_lp(data,lpf_params);
-
-% delay_lp = (params.filter_order)/2;
-% 
-% Bbandpass = fir1(params.filter_order,params.low_pass_hz/samplerate*2,'low');
-% 
-% filtdata = filter(Bbandpass,1,data);
-
-%num pairings  ...
-
-
-%% apply differentiator
-
-differentiator_params.order=4;
-filtdata  = filter.filter_differentiator(filtdata,differentiator_params);
-
-
-% B_diff = 1/8*[1 2 0 -2 -1];
-% delay_diff = floor(numel(B_diff)/2);
-% filtdata = filter(B_diff,1,filtdata);
-
-%% square the data
-filtdata = filtdata.^2;
-
-%% moving window average/integration
-smooth_params.order=ceil(params.moving_window_sec * samplerate);
-smooth_params.rms = 0;
-integrated_data = filter.filter_ma(filtdata,smooth_params)*smooth_params.order;
-
-% win_len = ceil(params.moving_window_sec * samplerate);
-% B_ma = ones(1,win_len);
-% avgdata = filter(B_ma,1,filtdata);
-% 
-% %account for the delay...
-% delay = delay_diff+delay_lp;
-% avgdata = [avgdata(delay+1:end); zeros(delay,1)];
-
-%merge events that are within 1/25th of a second of each other samples of each other
-new_events = thresholdcrossings(integrated_data, params.threshold_uv);
-merge_distance = round(params.merge_within_sec*samplerate);
-detectStruct.new_events = CLASS_events.merge_nearby_events(new_events,merge_distance);
-
-detectStruct.new_data = integrated_data;
-detectStruct.paramStruct = [];

@@ -36,93 +36,97 @@ function detectStruct = detection_ocular_tan(data,params, stageStruct)
 %% implementation by Hyatt Moore IV
 % modified: 3/1/2013 - updates for channel_cell_data and varargin vice
 % global variable and optional_params input
+% modified 9/15/2014 - streamline default parameter behavior.
 
-% global PSD;
+% initialize default parameters
+defaultParams.win_length_sec = 2;
+defaultParams.win_interval_sec = 2;
+defaultParams.threshold = 0.6;%the paper showed that power in the band of interest represented 65% of the total spectrum's power
 
-% this allows direct input of parameters from outside function calls, which
-%can be particularly useful in the batch job mode
-if(nargin<2 || isempty(params))
+% return default parameters if no input arguments are provided.
+if(nargin==0)
+    detectStruct = defaultParams;
+else
     
-    pfile = strcat(mfilename('fullpath'),'.plist');
-    
-    if(exist(pfile,'file'))
-        %load it
-        params = plist.loadXMLPlist(pfile);
-    else
-        %make it and save it for the future
+    if(nargin<2 || isempty(params))
         
-        params.win_length_sec = 2;
-        params.win_interval_sec = 2;
-        params.threshold = 0.6;%the paper showed that power in the band of interest represented 65% of the total spectrum's power
-%         params.REM_stage = 5;
-        params.merge_within_sec = 0.1;
-        plist.saveXMLPlist(pfile,params);        
+        pfile =  strcat(mfilename('fullpath'),'.plist');
+        
+        if(exist(pfile,'file'))
+            %load it
+            params = plist.loadXMLPlist(pfile);
+        else
+            %make it and save it for the future            
+            params = defaultParams;
+            plist.saveXMLPlist(pfile,params);
+        end
     end
-end
-
-samplerate = params.samplerate;
-
-win_length_sec = params.win_length_sec;
-win_interval_sec = params.win_interval_sec;
-
-params.low_freq = 0.3;
-params.high_freq = 1.0;
-% REM_stage = params.REM_stage;
-% 
-% REM_epochs = find(STAGES.line == REM_stage);
-% 
-% 
-% samplesPerEpoch = DEFAULTS.standard_epoch_sec*sample_rate;
-% REM_indices = repmat(1:samplesPerEpoch,numel(REM_epochs),1);
-% 
-% REM_start_indices = (REM_epochs-1)*samplesPerEpoch; %should be a row vector
-% 
-% REM_indices = REM_indices + repmat(REM_start_indices,1,size(REM_indices,2));
-% REM_indices = REM_indices'; %transpose for the following step
-% REM_indices = REM_indices(:); %make it a single, sorted vector
-% 
-% rem_data = data(REM_indices);
-
-wintype = 'hann';
-removemean = 1;
-%calculate the power in the bands of interest and compare to threshold
-PSD_settings.removemean = removemean;
-PSD_settings.interval = win_interval_sec;
-PSD_settings.FFT_window_sec=win_length_sec;
-PSD_settings.wintype = wintype;
-
-[psd_all psd_x psd_nfft] = calcPSD(data,samplerate,PSD_settings);
-
-% [psd_all psd_x psd_nfft] = calcPSD(data,win_length_sec,win_interval_sec,channel_obj.sample_rate,PSD.wintype,PSD.removemean);
-
-sum_all = sum(psd_all(:,psd_x>0),2); %should be a row vector
-sum_band_of_interest = sum(psd_all(:,(psd_x>=params.low_freq & psd_x<=params.high_freq)),2);
-
-
-%find the periodograms that broke the threshold
-paramStruct.pct_of_power = (sum_band_of_interest./sum_all);
-detection_indices = find(paramStruct.pct_of_power>params.threshold); %will give a row vector of indices that need to be converted to the original location in the raw data
-paramStruct.pct_of_power = paramStruct.pct_of_power(detection_indices);
-
-%convert these periodograms to the location in the the data of interest by
-%converting the indices to samples using the window interval and the
-%sample rate
-periodogram_start_indices = (detection_indices-1)*samplerate*win_interval_sec+1;
-
-%obtain the starting indices in terms of the entire study using the
-%rem_indices vector
-% starts = REM_indices(periodogram_start_indices);
-starts = periodogram_start_indices;
-stops = starts-1+win_length_sec*samplerate;  %or ..detectStruct.detectStruct.new_data(:)*event_length;
-
-new_events = [starts(:), stops(:)];
-min_samples = params.merge_within_sec*samplerate;
-[new_events, merged_indices] = CLASS_events.merge_nearby_events(new_events,min_samples);
-paramStruct.pct_of_power(merged_indices) = [];
-detectStruct.new_events = new_events;
-
-detectStruct.new_data = data;
-detectStruct.paramStruct = paramStruct;
-
-
+    
+    
+    
+    samplerate = params.samplerate;
+    
+    win_length_sec = params.win_length_sec;
+    win_interval_sec = params.win_interval_sec;
+    
+    params.low_freq = 0.3;
+    params.high_freq = 1.0;
+    % REM_stage = params.REM_stage;
+    %
+    % REM_epochs = find(STAGES.line == REM_stage);
+    %
+    %
+    % samplesPerEpoch = DEFAULTS.standard_epoch_sec*sample_rate;
+    % REM_indices = repmat(1:samplesPerEpoch,numel(REM_epochs),1);
+    %
+    % REM_start_indices = (REM_epochs-1)*samplesPerEpoch; %should be a row vector
+    %
+    % REM_indices = REM_indices + repmat(REM_start_indices,1,size(REM_indices,2));
+    % REM_indices = REM_indices'; %transpose for the following step
+    % REM_indices = REM_indices(:); %make it a single, sorted vector
+    %
+    % rem_data = data(REM_indices);
+    
+    wintype = 'hann';
+    removemean = 1;
+    %calculate the power in the bands of interest and compare to threshold
+    PSD_settings.removemean = removemean;
+    PSD_settings.interval = win_interval_sec;
+    PSD_settings.FFT_window_sec=win_length_sec;
+    PSD_settings.wintype = wintype;
+    
+    [psd_all psd_x psd_nfft] = calcPSD(data,samplerate,PSD_settings);
+    
+    % [psd_all psd_x psd_nfft] = calcPSD(data,win_length_sec,win_interval_sec,channel_obj.sample_rate,PSD.wintype,PSD.removemean);
+    
+    sum_all = sum(psd_all(:,psd_x>0),2); %should be a row vector
+    sum_band_of_interest = sum(psd_all(:,(psd_x>=params.low_freq & psd_x<=params.high_freq)),2);
+    
+    
+    %find the periodograms that broke the threshold
+    paramStruct.pct_of_power = (sum_band_of_interest./sum_all);
+    detection_indices = find(paramStruct.pct_of_power>params.threshold); %will give a row vector of indices that need to be converted to the original location in the raw data
+    paramStruct.pct_of_power = paramStruct.pct_of_power(detection_indices);
+    
+    %convert these periodograms to the location in the the data of interest by
+    %converting the indices to samples using the window interval and the
+    %sample rate
+    periodogram_start_indices = (detection_indices-1)*samplerate*win_interval_sec+1;
+    
+    %obtain the starting indices in terms of the entire study using the
+    %rem_indices vector
+    % starts = REM_indices(periodogram_start_indices);
+    starts = periodogram_start_indices;
+    stops = starts-1+win_length_sec*samplerate;  %or ..detectStruct.detectStruct.new_data(:)*event_length;
+    
+    new_events = [starts(:), stops(:)];
+    min_samples = params.merge_within_sec*samplerate;
+    [new_events, merged_indices] = CLASS_events.merge_nearby_events(new_events,min_samples);
+    paramStruct.pct_of_power(merged_indices) = [];
+    detectStruct.new_events = new_events;
+    
+    detectStruct.new_data = data;
+    detectStruct.paramStruct = paramStruct;
+    
+end 
 end

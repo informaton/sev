@@ -29,43 +29,54 @@ function detectStruct = detection_ocular_dualthreshold(data, params, stageStruct
 % Date: 5/10/2012
 %modified 3/1/2013 - remove global references and use varargin
 %modified 11/5/2013 - Update and use params and stageStruct instead of varargin
+% modified 9/15/2014 - streamline default parameter behavior.
 
-if(nargin<2 || isempty(params))
-    pfile = strcat(mfilename('fullpath'),'.plist');
+% initialize default parameters
+defaultParams.threshold_high_uv = 30;
+defaultParams.threshold_low_uv = 10;
+defaultParams.merge_within_sec = 0.05;
+defaultParams.min_dur_sec = 0.1;
+
+% return default parameters if no input arguments are provided.
+if(nargin==0)
+    detectStruct = defaultParams;
+else
     
-    if(exist(pfile,'file'))
-        %load it
-        params = plist.loadXMLPlist(pfile);
-    else
-        %make it and save it for the future
-        params.threshold_high_uv = 30;
-        params.threshold_low_uv = 10;
-        params.merge_within_sec = 0.05;
-        params.min_dur_sec = 0.1;
-        plist.saveXMLPlist(pfile,params);
+    if(nargin<2 || isempty(params))
         
-    end
-end
-
-
-samplerate = params.samplerate;
-
-%merge events that are within 1/25th of a second of each other samples of each other
-new_events = dualthresholdcrossings(abs(data), params.threshold_high_uv,params.threshold_low_uv);
-% new_events = triplethresholdcrossings(data, params.threshold_high_uv,params.threshold_low_uv, params.dur_below_samplecount)
-if(~isempty(new_events))
-    
-    if(params.merge_within_sec>0)
-        merge_distance = round(params.merge_within_sec*samplerate);
-        new_events = CLASS_events.merge_nearby_events(new_events,merge_distance);
+        pfile =  strcat(mfilename('fullpath'),'.plist');
+        
+        if(exist(pfile,'file'))
+            %load it
+            params = plist.loadXMLPlist(pfile);
+        else
+            %make it and save it for the future            
+            params = defaultParams;
+            plist.saveXMLPlist(pfile,params);
+        end
     end
     
-    if(params.min_dur_sec>0)
-        diff_sec = (new_events(:,2)-new_events(:,1))/samplerate;
-        new_events = new_events(diff_sec>=params.min_dur_sec,:);
+    
+    
+    samplerate = params.samplerate;
+    
+    %merge events that are within 1/25th of a second of each other samples of each other
+    new_events = dualthresholdcrossings(abs(data), params.threshold_high_uv,params.threshold_low_uv);
+    % new_events = triplethresholdcrossings(data, params.threshold_high_uv,params.threshold_low_uv, params.dur_below_samplecount)
+    if(~isempty(new_events))
+        
+        if(params.merge_within_sec>0)
+            merge_distance = round(params.merge_within_sec*samplerate);
+            new_events = CLASS_events.merge_nearby_events(new_events,merge_distance);
+        end
+        
+        if(params.min_dur_sec>0)
+            diff_sec = (new_events(:,2)-new_events(:,1))/samplerate;
+            new_events = new_events(diff_sec>=params.min_dur_sec,:);
+        end
     end
+    detectStruct.new_events = new_events;
+    detectStruct.new_data = data;
+    detectStruct.paramStruct = [];
 end
-detectStruct.new_events = new_events;
-detectStruct.new_data = data;
-detectStruct.paramStruct = [];
 end

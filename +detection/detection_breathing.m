@@ -27,249 +27,260 @@
 %  Added to SEV 8/22/2014, Hyatt Moore IV
 function detectStruct = detection_breathing(srcSigCell,params,stageStruct)
 
-if(nargin<2 || isempty(params))
+% modified 9/15/2014 - streamline default parameter behavior.
+
+% initialize default parameters
+defaultParams.window_dur_min = 5; % Moving window duration  in minutes
+defaultParams.window_overlap = 0.5; % Overlap moving window (0.5 = 50% overlap)
+defaultParams.peak_inter_sec = 1.4; % sec. between peaks, used to be 1.25
+
+% return default parameters if no input arguments are provided.
+if(nargin==0)
+    detectStruct = defaultParams;
+else
     
-    pfile = strcat(mfilename('fullpath'),'.plist');
-    
-    if(exist(pfile,'file'))
-        %load it        
-        params = plist.loadXMLPlist(pfile);
+    if(nargin<2 || isempty(params))
         
-    else
-        %make it and save it for the future
-        params.window_dur_min = 5; % Moving window duration  in minutes
-        params.window_overlap = 0.5; % Overlap moving window (0.5 = 50% overlap)
-        params.peak_inter_sec = 1.4; % sec. between peaks, used to be 1.25
-
-        plist.saveXMLPlist(pfile,params);        
-    end
-end
-
-%% Initial settings
-PRES = srcSigCell{1};
-RIB = srcSigCell{2};
-ABDOM = srcSigCell{3};
-
-Fs = params.samplerate;
-peak_inter_sec = params.peak_inter_sec; % sec. between peaks, used to be 1.25
-% num_ep = 10; % mov. window duration [1 epoch = 30 sec.], 10 = 5 minutes
-ws = floor(Fs*params.window_dur_min*60);% window size in samples
-olap = params.window_overlap; % overlap, moving window
-lbw = floor(olap*ws); % length between windows
-sigw = floor(size(PRES,1)/lbw); % number of windows
-avg_breath_duration_sec = 3; % short/average duration of breath [sec.] => 20 breaths/min [used to be... 4; % average/long breath [sec.] => 15 breaths/min]
-
-% LOOP moving window
-% pres_amplitude = [];
-% Fpres_minidx=[];
-% Fpres_amp=[];
-Fpres_maxidx=[];
-beltshift=[];
-% n=1;
-
-for e = 1:sigw-1
-    % ribbelt=[];
-    % abdomenbelt=[];
-    % pres_minidx=[];
-    % pres_minidx=[];
-    % gr_am=[];
-    % mth_del=[];
-    % event_th=[];
-    % e_stop=[];
-    % e_start=[];
-    % base=[];
-    
-    st = (e-1)*lbw+1; % window start
-    w = st:st+ws-1; % define window
-    
-    
-    % Go through nasal pressure signal using 5 minute windows with 1 minute
-    % step size. If 90% of the window is excluded (NaN) => exclude window.
-    if sum(isnan(PRES(w)))/ws > 0.9
-        continue
+        pfile =  strcat(mfilename('fullpath'),'.plist');
+        
+        if(exist(pfile,'file'))
+            %load it
+            params = plist.loadXMLPlist(pfile);
+        else
+            %make it and save it for the future            
+            params = defaultParams;
+            plist.saveXMLPlist(pfile,params);
+        end
     end
     
     
-    %% Original signal in period
-    % Normalize signals
-    pressure = PRES(w)./nanstd(PRES(w))-nanmedian(PRES(w)./nanstd(PRES(w)));
-    ribbelt = RIB(w)./std(RIB(w))-median(RIB(w)./std(RIB(w))); % lowpass filtered, changes 2 May
-    abdomenbelt = ABDOM(w)./std(ABDOM(w))-median(ABDOM(w)./std(ABDOM(w))); % lowpass filtered, changes 2 May
     
+    %% Initial settings
+    PRES = srcSigCell{1};
+    RIB = srcSigCell{2};
+    ABDOM = srcSigCell{3};
     
-    %% Delay adjusted
-    % Belts are shifted to align with pressure
-    [cbr, lagsbr] = xcorr(pressure,ribbelt);
-    [cba, lagsba] = xcorr(pressure,abdomenbelt);
-    [valcbr idxcbr] = max(cbr); [valcba idxcba] = max(cba);
-    tdelaybr = ceil(lagsbr(idxcbr)); tdelayba = ceil(lagsba(idxcba));
+    Fs = params.samplerate;
+    peak_inter_sec = params.peak_inter_sec; % sec. between peaks, used to be 1.25
+    % num_ep = 10; % mov. window duration [1 epoch = 30 sec.], 10 = 5 minutes
+    ws = floor(Fs*params.window_dur_min*60);% window size in samples
+    olap = params.window_overlap; % overlap, moving window
+    lbw = floor(olap*ws); % length between windows
+    sigw = floor(size(PRES,1)/lbw); % number of windows
+    avg_breath_duration_sec = 3; % short/average duration of breath [sec.] => 20 breaths/min [used to be... 4; % average/long breath [sec.] => 15 breaths/min]
     
-    % Calculate breathing frequency
-    nfft = 4*2^nextpow2(size(pressure,1));
-    f = (Fs/2*linspace(0,1,nfft/2+1))';
-    for n = 1:3
-        if n == 1
-            sig = pressure;
-        elseif n == 2
-            sig = ribbelt;
-        elseif n == 3
-            sig = abdomenbelt;
+    % LOOP moving window
+    % pres_amplitude = [];
+    % Fpres_minidx=[];
+    % Fpres_amp=[];
+    Fpres_maxidx=[];
+    beltshift=[];
+    % n=1;
+    
+    for e = 1:sigw-1
+        % ribbelt=[];
+        % abdomenbelt=[];
+        % pres_minidx=[];
+        % pres_minidx=[];
+        % gr_am=[];
+        % mth_del=[];
+        % event_th=[];
+        % e_stop=[];
+        % e_start=[];
+        % base=[];
+        
+        st = (e-1)*lbw+1; % window start
+        w = st:st+ws-1; % define window
+        
+        
+        % Go through nasal pressure signal using 5 minute windows with 1 minute
+        % step size. If 90% of the window is excluded (NaN) => exclude window.
+        if sum(isnan(PRES(w)))/ws > 0.9
+            continue
         end
         
-        fp = abs(fft(sig,nfft)).^2/size(sig,1)/Fs; % periodogram
-        fp = fp(1:nfft/2+1);        % one-sided power spectrum
-        [valmax idxmax] = max(fp);
-        Freq(n) = f(idxmax);
+        
+        %% Original signal in period
+        % Normalize signals
+        pressure = PRES(w)./nanstd(PRES(w))-nanmedian(PRES(w)./nanstd(PRES(w)));
+        ribbelt = RIB(w)./std(RIB(w))-median(RIB(w)./std(RIB(w))); % lowpass filtered, changes 2 May
+        abdomenbelt = ABDOM(w)./std(ABDOM(w))-median(ABDOM(w)./std(ABDOM(w))); % lowpass filtered, changes 2 May
+        
+        
+        %% Delay adjusted
+        % Belts are shifted to align with pressure
+        [cbr, lagsbr] = xcorr(pressure,ribbelt);
+        [cba, lagsba] = xcorr(pressure,abdomenbelt);
+        [valcbr idxcbr] = max(cbr); [valcba idxcba] = max(cba);
+        tdelaybr = ceil(lagsbr(idxcbr)); tdelayba = ceil(lagsba(idxcba));
+        
+        % Calculate breathing frequency
+        nfft = 4*2^nextpow2(size(pressure,1));
+        f = (Fs/2*linspace(0,1,nfft/2+1))';
+        for n = 1:3
+            if n == 1
+                sig = pressure;
+            elseif n == 2
+                sig = ribbelt;
+            elseif n == 3
+                sig = abdomenbelt;
+            end
+            
+            fp = abs(fft(sig,nfft)).^2/size(sig,1)/Fs; % periodogram
+            fp = fp(1:nfft/2+1);        % one-sided power spectrum
+            [valmax idxmax] = max(fp);
+            Freq(n) = f(idxmax);
+        end
+        maxFreq = median(Freq); % phase is median of most present frequency
+        
+        % Ensure signal is moved right way (pressure is always delayed compared to belts => belts are delayed)
+        if tdelaybr < 0 && tdelaybr-floor((1/maxFreq)*Fs)>0
+            tdelaybr = tdelaybr-floor((1/maxFreq)*Fs); % samples ribbelt is moved
+        end
+        beltshift = [beltshift tdelaybr]; % save "beltshift" to adjust belt for calculating belt amplitudes correctly
+        
+        % Align belts to nasal pressure
+        ribbelt(size(ribbelt,1)-tdelaybr-1:size(ribbelt,1))=[];
+        abdomenbelt(size(abdomenbelt,1)-tdelaybr-1:size(abdomenbelt,1))=[];
+        ribbelt = [repmat(NaN,tdelaybr,1); ribbelt]; % belts are moved according to chest due to paradoxial breathing, therefore abdomen is moved to chest
+        abdomenbelt = [repmat(NaN,tdelaybr,1); abdomenbelt];
+        
+        % Check if breathing frequency in the ribbelt is within normal ragne (ribbelt="Freq(2)"). If not, the breathing frequency is hardcoded to "ceil(1/Freq(2))"
+        % Calculate duration of one breath (sec.).
+        if Freq(2) > 1 || Freq(2) < 0.2 % if rib frequency is more than 1 Hz or less than 0.2 Hz (60 breaths/min and less than 12 breaths/min)
+            ribphase = avg_breath_duration_sec; % average/long duration of breath (in sec.)
+        else ribphase = ceil(1/Freq(2));
+        end
+        
+        % Save rib phase for evaluation
+        rp(e,1) = Freq(2);
+        rp(e,2) = ribphase;
+        
+        
+        %% Derive max in nasal pressure
+        % Calculate max and min index for each breath using "nasalpresmax.m"
+        [pres_maxidx] = nasalpresmax(pressure,ribbelt,abdomenbelt,ribphase,peak_inter_sec,Fs);
+        
+        % Save each loop run in same vector
+        Fpres_maxidx = [Fpres_maxidx ; pres_maxidx'+st];
+        
+        
+    end % end window loop
+    fpres_maxidx = sort(unique(Fpres_maxidx),'ascend');
+    
+    % Remove close max peaks
+    ac = [fpres_maxidx;NaN]-[NaN;fpres_maxidx];
+    acidx = find(abs(ac)<peak_inter_sec*Fs);
+    fpres_maxidx(acidx)=[];
+    
+    
+    %% Derive min in nasal pressure
+    % Estimate min in nasal pressure, defined as minimum between two max peaks
+    fpres_minidx = zeros(size(fpres_maxidx,1)-1,1);
+    for i = 1:size(fpres_maxidx,1)-1
+        [pres_minval pres_minlocs] = min(PRES(fpres_maxidx(i):fpres_maxidx(i+1)));
+        fpres_minidx(i) = fpres_maxidx(i)+pres_minlocs-1;
     end
-    maxFreq = median(Freq); % phase is median of most present frequency
     
-    % Ensure signal is moved right way (pressure is always delayed compared to belts => belts are delayed)
-    if tdelaybr < 0 && tdelaybr-floor((1/maxFreq)*Fs)>0
-        tdelaybr = tdelaybr-floor((1/maxFreq)*Fs); % samples ribbelt is moved
-    end
-    beltshift = [beltshift tdelaybr]; % save "beltshift" to adjust belt for calculating belt amplitudes correctly
-    
-    % Align belts to nasal pressure
-    ribbelt(size(ribbelt,1)-tdelaybr-1:size(ribbelt,1))=[];
-    abdomenbelt(size(abdomenbelt,1)-tdelaybr-1:size(abdomenbelt,1))=[];
-    ribbelt = [repmat(NaN,tdelaybr,1); ribbelt]; % belts are moved according to chest due to paradoxial breathing, therefore abdomen is moved to chest
-    abdomenbelt = [repmat(NaN,tdelaybr,1); abdomenbelt];
-    
-    % Check if breathing frequency in the ribbelt is within normal ragne (ribbelt="Freq(2)"). If not, the breathing frequency is hardcoded to "ceil(1/Freq(2))"
-    % Calculate duration of one breath (sec.).
-    if Freq(2) > 1 || Freq(2) < 0.2 % if rib frequency is more than 1 Hz or less than 0.2 Hz (60 breaths/min and less than 12 breaths/min)
-        ribphase = avg_breath_duration_sec; % average/long duration of breath (in sec.)
-    else ribphase = ceil(1/Freq(2));
+    if(~isempty(fpres_maxidx))
+        fpres_maxidx(1)=[];
     end
     
-    % Save rib phase for evaluation
-    rp(e,1) = Freq(2);
-    rp(e,2) = ribphase;
+    
+    %% Check if nasal pressure is flipped
+    % Use amplitude values to determine if nasal pressure is flipped. Use ratio
+    % between max and min values.
+    po = abs(PRES(fpres_maxidx(1:end)));
+    ne = abs(PRES(fpres_minidx(1:end)));
+    po_ne = nanmedian(po./ne); % "true direction of signal" contains larger negative values (in WSC due to device filtering, short time constant)
+    if po_ne >=1 % nasal pressure is flipped
+        pressureflip = -1;
+        Imin = fpres_maxidx(1:end-1);
+        Imax = fpres_minidx(2:end);
+    else pressureflip = 1;
+        Imin = fpres_minidx;
+        Imax = fpres_maxidx;
+    end
     
     
-    %% Derive max in nasal pressure
-    % Calculate max and min index for each breath using "nasalpresmax.m"
-    [pres_maxidx] = nasalpresmax(pressure,ribbelt,abdomenbelt,ribphase,peak_inter_sec,Fs);
+    %% OUTPUT for min/max index in each breath
+    % Remove first and last index due to amplitude calculation
+    pressure_event = [Imin(1:end-2) Imax(1:end-2)]; % breath start/stop (min/max nasal pressure)
+    % If start/stop same sample number, delete
+    pressure_event(pressure_event(:,2)-pressure_event(:,1)==0,:)=[];
     
-    % Save each loop run in same vector
-    Fpres_maxidx = [Fpres_maxidx ; pres_maxidx'+st];
     
     
-end % end window loop
-fpres_maxidx = sort(unique(Fpres_maxidx),'ascend');
-
-% Remove close max peaks
-ac = [fpres_maxidx;NaN]-[NaN;fpres_maxidx];
-acidx = find(abs(ac)<peak_inter_sec*Fs);
-fpres_maxidx(acidx)=[];
-
-
-%% Derive min in nasal pressure
-% Estimate min in nasal pressure, defined as minimum between two max peaks
-fpres_minidx = zeros(size(fpres_maxidx,1)-1,1);
-for i = 1:size(fpres_maxidx,1)-1
-    [pres_minval pres_minlocs] = min(PRES(fpres_maxidx(i):fpres_maxidx(i+1)));
-    fpres_minidx(i) = fpres_maxidx(i)+pres_minlocs-1;
+    % %% Estimate start of inspiration and expiration
+    % % Determine start of inspiration and expiration. Use pressure interval with
+    % % most samples (= knee) to define the start inspiration. Tend to be two
+    % % bumps in the knee, according to Oscar the middle bump is the most precise
+    % % for "knee detection".
+    % tiny = 3; % look tiny after to ensure unstable signal is not causing wrong detection
+    % for i = 1:size(pressure_event,1)-1
+    %
+    %     % Use percentile of np samples to determine knee.
+    %     [pre_midpb pre_p40 pre_p60] = pop_quantile(pressureflip*PRES(pressure_event(i,1):pressure_event(i,2)),0.3,0.6,20);
+    %
+    %     % Only derive insp/exp if non-NaN
+    %     if ~isnan(pre_midpb)
+    %         insp_start1 = pressure_event(i,1)+find(pressureflip*PRES(pressure_event(i,1):pressure_event(i,2)) ...
+    %             >= pre_midpb,1,'first'); % look 10 percent lower than median to ensure search if wide enough
+    %
+    %         if insp_start1+tiny < pressure_event(i,2)
+    %             % Zero crossing for median (standard clean example)
+    %             [idx_zero idx_up idx_down] = zerocrossing(pressureflip*PRES(insp_start1+tiny:pressure_event(i,2))-pressureflip*PRES(insp_start1));
+    %             % Look 10 percent lower than median to ensure search if wide enough for minimum detection
+    %             insp_start1_te = pressure_event(i,1)+find(pressureflip*PRES(pressure_event(i,1):pressure_event(i,2)) ...
+    %                 >= pre_midpb-0.5*pressureflip*PRES(pressure_event(i,2)),1,'first');
+    %             te = find(diff(pressureflip*PRES(insp_start1_te+tiny:pressure_event(i,2)))==0);
+    %
+    %             if ~isempty(te)
+    %                 [teval tempminidx] = min(pressureflip*PRES(insp_start1+tiny+te-1));
+    %             else tempminidx = [];
+    %             end
+    %
+    %         else idx_down = []; tempminidx = [];
+    %         end
+    %
+    %         % Three ways to set start inspiration sample number
+    %         if isempty(idx_down) && isempty(tempminidx)
+    %             insp_start(i) = pressure_event(i,1)+floor((pressure_event(i,2)-pressure_event(i,1))/2);
+    %         elseif isempty(idx_down)
+    %             insp_start(i) = insp_start1+tiny+tempminidx(1);
+    %         else insp_start(i) = insp_start1+idx_down(1)-1; % select first idx_down
+    %         end
+    %
+    %         % If start inspiration is set close to min pressure or max pressure, move inspiration/expiration to half way between min/max pressure
+    %         if (pressureflip*PRES(pressure_event(i,1))+(pressureflip*PRES(insp_start(i))))/abs(pressure_event(i,1)-pressure_event(i,2)) < -0.8 || ...
+    %                 (pressureflip*PRES(pressure_event(i,2))-(pressureflip*PRES(insp_start(i))))/pressureflip*PRES(pressure_event(i,2)) > 0.9
+    %             insp_start(i) = pressure_event(i,1)+(ceil((pressure_event(i,2)-pressure_event(i,1))/1.5));
+    %         end
+    %
+    %         % Start expiration is defined to be when the nasal pressure crosses the amplitude of the knee (to handle baseline drift)
+    %         [idx_zero2 idx_up2 idx_down2] = zerocrossing(pressureflip*PRES(pressure_event(i,2):pressure_event(i+1,1))-pressureflip*PRES(insp_start(i)));
+    %         if isempty(idx_down2)
+    %             exp_start(i) = pressure_event(i,2)+floor((pressure_event(i+1,1)-pressure_event(i,2))/2);
+    %         else
+    %             exp_start(i) = pressure_event(i,2)+idx_down2(1);
+    %         end
+    %
+    %         % If NaN (due to electrode-pop or signal values zero continue NaN
+    %     else
+    %         insp_start(i) = NaN;
+    %         exp_start(i) = NaN;
+    %     end
+    % end
+    
+    %should i exclude the Nan's?
+    % pressure_startInspExp = [insp_start' exp_start'];
+    
+    
+    
+    detectStruct.new_events = pressure_event;
+    detectStruct.new_data = srcSigCell{1};
+    detectStruct.paramStruct = [];
 end
-
-if(~isempty(fpres_maxidx))
-    fpres_maxidx(1)=[];
-end
-
-
-%% Check if nasal pressure is flipped
-% Use amplitude values to determine if nasal pressure is flipped. Use ratio
-% between max and min values.
-po = abs(PRES(fpres_maxidx(1:end)));
-ne = abs(PRES(fpres_minidx(1:end)));
-po_ne = nanmedian(po./ne); % "true direction of signal" contains larger negative values (in WSC due to device filtering, short time constant)
-if po_ne >=1 % nasal pressure is flipped
-    pressureflip = -1;
-    Imin = fpres_maxidx(1:end-1);
-    Imax = fpres_minidx(2:end);
-else pressureflip = 1;
-    Imin = fpres_minidx;
-    Imax = fpres_maxidx;
-end
-
-
-%% OUTPUT for min/max index in each breath
-% Remove first and last index due to amplitude calculation
-pressure_event = [Imin(1:end-2) Imax(1:end-2)]; % breath start/stop (min/max nasal pressure)
-% If start/stop same sample number, delete
-pressure_event(pressure_event(:,2)-pressure_event(:,1)==0,:)=[];
-
-
-
-% %% Estimate start of inspiration and expiration
-% % Determine start of inspiration and expiration. Use pressure interval with
-% % most samples (= knee) to define the start inspiration. Tend to be two
-% % bumps in the knee, according to Oscar the middle bump is the most precise
-% % for "knee detection".
-% tiny = 3; % look tiny after to ensure unstable signal is not causing wrong detection
-% for i = 1:size(pressure_event,1)-1
-%     
-%     % Use percentile of np samples to determine knee.
-%     [pre_midpb pre_p40 pre_p60] = pop_quantile(pressureflip*PRES(pressure_event(i,1):pressure_event(i,2)),0.3,0.6,20);
-%     
-%     % Only derive insp/exp if non-NaN
-%     if ~isnan(pre_midpb)
-%         insp_start1 = pressure_event(i,1)+find(pressureflip*PRES(pressure_event(i,1):pressure_event(i,2)) ...
-%             >= pre_midpb,1,'first'); % look 10 percent lower than median to ensure search if wide enough
-%         
-%         if insp_start1+tiny < pressure_event(i,2)
-%             % Zero crossing for median (standard clean example)
-%             [idx_zero idx_up idx_down] = zerocrossing(pressureflip*PRES(insp_start1+tiny:pressure_event(i,2))-pressureflip*PRES(insp_start1));
-%             % Look 10 percent lower than median to ensure search if wide enough for minimum detection
-%             insp_start1_te = pressure_event(i,1)+find(pressureflip*PRES(pressure_event(i,1):pressure_event(i,2)) ...
-%                 >= pre_midpb-0.5*pressureflip*PRES(pressure_event(i,2)),1,'first');
-%             te = find(diff(pressureflip*PRES(insp_start1_te+tiny:pressure_event(i,2)))==0);
-%             
-%             if ~isempty(te)
-%                 [teval tempminidx] = min(pressureflip*PRES(insp_start1+tiny+te-1));
-%             else tempminidx = [];
-%             end
-%             
-%         else idx_down = []; tempminidx = [];
-%         end
-%         
-%         % Three ways to set start inspiration sample number
-%         if isempty(idx_down) && isempty(tempminidx)
-%             insp_start(i) = pressure_event(i,1)+floor((pressure_event(i,2)-pressure_event(i,1))/2);
-%         elseif isempty(idx_down)
-%             insp_start(i) = insp_start1+tiny+tempminidx(1);
-%         else insp_start(i) = insp_start1+idx_down(1)-1; % select first idx_down
-%         end
-%         
-%         % If start inspiration is set close to min pressure or max pressure, move inspiration/expiration to half way between min/max pressure
-%         if (pressureflip*PRES(pressure_event(i,1))+(pressureflip*PRES(insp_start(i))))/abs(pressure_event(i,1)-pressure_event(i,2)) < -0.8 || ...
-%                 (pressureflip*PRES(pressure_event(i,2))-(pressureflip*PRES(insp_start(i))))/pressureflip*PRES(pressure_event(i,2)) > 0.9
-%             insp_start(i) = pressure_event(i,1)+(ceil((pressure_event(i,2)-pressure_event(i,1))/1.5));
-%         end
-%         
-%         % Start expiration is defined to be when the nasal pressure crosses the amplitude of the knee (to handle baseline drift)
-%         [idx_zero2 idx_up2 idx_down2] = zerocrossing(pressureflip*PRES(pressure_event(i,2):pressure_event(i+1,1))-pressureflip*PRES(insp_start(i)));
-%         if isempty(idx_down2)
-%             exp_start(i) = pressure_event(i,2)+floor((pressure_event(i+1,1)-pressure_event(i,2))/2);
-%         else
-%             exp_start(i) = pressure_event(i,2)+idx_down2(1);
-%         end
-%         
-%         % If NaN (due to electrode-pop or signal values zero continue NaN
-%     else
-%         insp_start(i) = NaN; 
-%         exp_start(i) = NaN;
-%     end
-% end
-
-%should i exclude the Nan's?
-% pressure_startInspExp = [insp_start' exp_start'];
-
-
-
-detectStruct.new_events = pressure_event;
-detectStruct.new_data = srcSigCell{1};
-detectStruct.paramStruct = [];
 end
 
 function [idx_zero idx_up idx_down] = zerocrossing(sig)

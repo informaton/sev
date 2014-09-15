@@ -26,55 +26,73 @@
 %> @li @c .paramStruct Empty value returned (i.e. []).
 %> @note global MARKING is used here for PSD settings @e removemean and
 %> @e wintype.
-function detectStruct = detection_artifact_flat_line_with_sao2(channel_data_cell,varargin)
+function detectStruct = detection_artifact_flat_line_with_sao2(channel_data_cell,params,varargin)
 
 %written Hyatt Moore IV
 % modified: added varargin parameter
 global MARKING;
-if(nargin<2 || isempty(params))
-    pfile =  strcat(mfilename('fullpath'),'.plist');
+
+
+
+
+% modified 9/15/2014 - streamline default parameter behavior.
+
+
+pfile = strcat(mfilename('fullpath'),'.plist');
+
+% set default parameters
+defaultParams.win_length_sec = 5;
+defaultParams.win_interval_sec = 5;
+defaultParams.min_power = 0.1;
+defaultParams.saO2_min_pct = 10; %this is 10%
+        
+% return default parameters if no arguments are provided
+if(nargin==0)     
+    plist.saveXMLPlist(pfile,defaultParams);
+    detectStruct = defaultParams;    
+else    
     
-    if(exist(pfile,'file'))
-        %load it
-        params = plist.loadXMLPlist(pfile);
-    else
-        %make it and save it for the future
-        params.win_length_sec = 5;
-        params.win_interval_sec = 5;
-        params.min_power = 0.1;
-        params.saO2_min_pct = 10; %this is 10%
-        plist.saveXMLPlist(pfile,params);
+    % load existing or default parameters if 1 argument is provided.
+    if(nargin<2 || isempty(params))
+        if(exist(pfile,'file'))
+            %load it
+            params = plist.loadXMLPlist(pfile);
+        else        
+            params = defaultParams;
+            plist.saveXMLPlist(pfile,defaultParams);            
+        end
     end
-end
 
-src_data = channel_data_cell{1};
-samplerate = params.samplerate;
-saO2_data = channel_data_cell{2};
-
-saO2_detections = thresholdcrossings(saO2_data<params.saO2_min_pct,0);
-num_detections = size(saO2_detections,1);
-second_pass_detections =  true(num_detections,1);
-
-win_length_sec = params.win_length_sec;
-win_interval_sec = params.win_interval_sec;
-
-PSD_settings.removemean = MARKING.SETTINGS.PSD.removemean;
-PSD_settings.interval = win_interval_sec;
-PSD_settings.FFT_window_sec=win_length_sec;
-PSD_settings.wintype = MARKING.SETTINGS.PSD.wintype;
-
-for k=1:num_detections
-    psd_all = calcPSD(src_data(saO2_detections(k,1):saO2_detections(k,2)),...
-        samplerate,PSD_settings);
-
-    if(all(psd_all(:,2:end)'<params.min_power))
-        second_pass_detections(k)=true;
+    
+    src_data = channel_data_cell{1};
+    samplerate = params.samplerate;
+    saO2_data = channel_data_cell{2};
+    
+    saO2_detections = thresholdcrossings(saO2_data<params.saO2_min_pct,0);
+    num_detections = size(saO2_detections,1);
+    second_pass_detections =  true(num_detections,1);
+    
+    win_length_sec = params.win_length_sec;
+    win_interval_sec = params.win_interval_sec;
+    
+    PSD_settings.removemean = MARKING.SETTINGS.PSD.removemean;
+    PSD_settings.interval = win_interval_sec;
+    PSD_settings.FFT_window_sec=win_length_sec;
+    PSD_settings.wintype = MARKING.SETTINGS.PSD.wintype;
+    
+    for k=1:num_detections
+        psd_all = calcPSD(src_data(saO2_detections(k,1):saO2_detections(k,2)),...
+            samplerate,PSD_settings);
+        
+        if(all(psd_all(:,2:end)'<params.min_power))
+            second_pass_detections(k)=true;
+        end;
     end;
-end;
-
-detectStruct.new_events = saO2_detections; %(second_pass_detections,:);
-detectStruct.new_data = src_data;
-detectStruct.paramStruct = [];
+    
+    detectStruct.new_events = saO2_detections; %(second_pass_detections,:);
+    detectStruct.new_data = src_data;
+    detectStruct.paramStruct = [];
+end
     
 end
 

@@ -19,18 +19,30 @@ function detectStruct = detection_artifact_electrode_pop(data,params,stageStruct
 
 % Author Hyatt Moore IV
 % modified 3/1/2013 - remove global references and use varargin
-
-% this allows direct input of parameters from outside function calls, which
-%can be particularly useful in the batch job mode
+% modified 9/15/2014 - streamline default parameter behavior.
 
 
 
-if(nargin==0)
-    detectStruct = getDefaultParams();
+% set default parameters
+defaultParams.win_length_sec = 3;
+defaultParams.win_interval_sec = 3;
+
+% return default parameters if no arguments are provided
+if(nargin==0)     
+    detectStruct = defaultParams;    
 else    
-    if(nargin<2 && isempty(params))
-        pfile =  strcat(mfilename('fullpath'),'.plist');
-        params = getDefaultParams(pfile);
+    
+    % load existing or default parameters if 1 argument is provided.
+    if(nargin<2 || isempty(params))
+        pfile = strcat(mfilename('fullpath'),'.plist');
+
+        if(exist(pfile,'file'))
+            %load it
+            params = plist.loadXMLPlist(pfile);
+        else        
+            params = defaultParams;
+            plist.saveXMLPlist(pfile,defaultParams);            
+        end
     end
     
     if(iscell(data))
@@ -69,18 +81,4 @@ end
 
 end
 
-function defaultParams = getDefaultParams(pfile)
-    if(nargin<1)
-        pfile = [];
-    end
-    if(exist(pfile,'file'))
-        %load it
-        defaultParams = plist.loadXMLPlist(pfile);
-    else
-        pfile =  strcat(mfilename('fullpath'),'.plist');
-        %make it and save it for the future        
-        defaultParams.win_length_sec = 3;
-        defaultParams.win_interval_sec = 3;
-        plist.saveXMLPlist(pfile,defaultParams);
-    end
-end
+

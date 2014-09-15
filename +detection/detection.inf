@@ -19,9 +19,8 @@ detection_artifact_noisefloor artifact_noisefloor 1 plist_editor_dlg noisefloor_
 detection_artifact_brunner ArtifactBrunner 1 plist_editor_dlg A
 detection_plm_calculator plm_calculator 2 plist_editor_dlg plm_calc
 detection_rr_simple rr_simple 1 plist_editor_dlg RR_interval_simple
-detection_rr_interval rr_interval 1 plist_editor_dlg RR_interval
 detection_mscohere MagSqrCoherency 2 plist_editor_dlg mscoherency
 detection_psd Power_spectral_density 1 plist_editor_dlg PSD
-detection_handj  handj 10 plist_editor_dlg handj
+detection_dummy  dummy 10 plist_editor_dlg dummy
 detection_nasalpres_amplitude_HK nasalpres_amplitude_HK 5 plist_editor_dlg nasalpres_amplitude_HK
 
