@@ -2670,9 +2670,9 @@ classdef CLASS_UI_marking < handle
             end;
         end
         
-        function detectMethodStruct = getDetectionMethodsStruct(obj)
-           detectMethodStruct = CLASS_events_container.loadDetectionMethodsInf(fullfile(obj.SETTINGS.rootpathname,obj.SETTINGS.VIEW.detection_path),obj.SETTINGS.VIEW.detection_inf_file);
-        end
+%         function detectMethodStruct = getDetectionMethodsStruct(obj)
+%            detectMethodStruct = CLASS_settings.loadDetectionMethodsInf(fullfile(obj.SETTINGS.rootpathname,obj.SETTINGS.VIEW.detection_path),obj.SETTINGS.VIEW.detection_inf_file);
+%         end
         
     end
     methods(Static)

@@ -22,55 +22,65 @@ function detectStruct = detection_artifact_electrode_pop(data,params,stageStruct
 
 % this allows direct input of parameters from outside function calls, which
 %can be particularly useful in the batch job mode
-if(nargin<2 && isempty(params))
+
+
+
+if(nargin==0)
+    detectStruct = getDefaultParams();
+else    
+    if(nargin<2 && isempty(params))
+        pfile =  strcat(mfilename('fullpath'),'.plist');
+        params = getDefaultParams(pfile);
+    end
     
-    pfile =  strcat(mfilename('fullpath'),'.plist');
+    if(iscell(data))
+        data = data{1};
+    end
+    samplerate = params.samplerate;
     
+    win_length_sec = params.win_length_sec;
+    win_interval_sec = params.win_interval_sec;
+    
+    PSD_settings.removemean = true;
+    PSD_settings.interval = win_interval_sec;
+    PSD_settings.FFT_window_sec=win_length_sec;
+    PSD_settings.wintype = 'rectwin';
+    
+    psd_all = calcPSD(data,samplerate,PSD_settings);
+    
+    
+    % [psd_all psd_x psd_nfft] = calcPSD(data,win_length_sec,win_interval_sec,samplerate,PSD.wintype,PSD.removemean);
+    
+    
+    % event_indices = any(psd_all(:,2:end)'>5); %this vector contains good events
+    % detectStruct.new_events = find(event_indices==0);
+    
+    event_indices = any(psd_all(:,2:end)'>1000); %this vector contains good events
+    detectStruct.new_events = find(event_indices);
+    
+    event_length = samplerate*win_interval_sec;
+    starts = (detectStruct.new_events(:)-1)*event_length+1;
+    stops = starts+event_length-1;  %or ..detectStruct.new_events(:)*event_length;
+    
+    detectStruct.new_events = [starts(:),stops(:)];
+    detectStruct.new_data = data;
+    detectStruct.paramStruct = [];
+end
+
+end
+
+function defaultParams = getDefaultParams(pfile)
+    if(nargin<1)
+        pfile = [];
+    end
     if(exist(pfile,'file'))
         %load it
-        params = plist.loadXMLPlist(pfile);
+        defaultParams = plist.loadXMLPlist(pfile);
     else
-        %make it and save it for the future
-        
-        params.win_length_sec = 3;
-        params.win_interval_sec = 3;
-        plist.saveXMLPlist(pfile,params);
-        
-        
+        pfile =  strcat(mfilename('fullpath'),'.plist');
+        %make it and save it for the future        
+        defaultParams.win_length_sec = 3;
+        defaultParams.win_interval_sec = 3;
+        plist.saveXMLPlist(pfile,defaultParams);
     end
-end
-
-if(iscell(data))
-    data = data{1};
-end
-samplerate = params.samplerate;
-
-win_length_sec = params.win_length_sec;
-win_interval_sec = params.win_interval_sec;
-
-PSD_settings.removemean = true;
-PSD_settings.interval = win_interval_sec;
-PSD_settings.FFT_window_sec=win_length_sec;
-PSD_settings.wintype = 'rectwin';
-
-psd_all = calcPSD(data,samplerate,PSD_settings);
-
-
-% [psd_all psd_x psd_nfft] = calcPSD(data,win_length_sec,win_interval_sec,samplerate,PSD.wintype,PSD.removemean);
-
-
-% event_indices = any(psd_all(:,2:end)'>5); %this vector contains good events
-% detectStruct.new_events = find(event_indices==0);
-
-event_indices = any(psd_all(:,2:end)'>1000); %this vector contains good events
-detectStruct.new_events = find(event_indices);
-
-event_length = samplerate*win_interval_sec;
-starts = (detectStruct.new_events(:)-1)*event_length+1;
-stops = starts+event_length-1;  %or ..detectStruct.new_events(:)*event_length;
-
-detectStruct.new_events = [starts(:),stops(:)];
-detectStruct.new_data = data;
-detectStruct.paramStruct = [];
-
 end

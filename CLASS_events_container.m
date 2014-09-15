@@ -1114,29 +1114,7 @@ classdef CLASS_events_container < handle
            end
         end
         
-        % =================================================================
-        %> @brief
-        %> @param obj instance of CLASS_events_container class.
-        %> @param
-        %> @retval 
-        % =================================================================
-        function sourceStruct = getSourceStruct(obj,event_index)
-            %this method is not referenced and may be dropped in the future
-            %determine if there is a gui to use for this method to
-            %adjust the parameters/properties of the detection
-            %algorithm
-            global MARKING;
-            childobj = obj.getEventObj(event_index);
-            detection_struct = MARKING.getDetectionMethodsStruct();
-            gui_ind = find(strcmp(childobj.label,detection_struct.evt_label));
-            if(~isempty(gui_ind))
-                sourceStruct.channel_indices = childobj.class_channel_index;
-                sourceStruct.algorithm = [MARKING.SETTINGS.VIEW.detection_path(2:end),'.',detection_struct.param_gui{gui_ind}.mfile];
-                sourceStruct.editor = detection_struct.param_gui{gui_ind};
-            else
-                sourceStruct = [];
-            end
-        end
+
             
         % =================================================================
         %> @brief updateEvent in SEV; adds or modifies existing event
@@ -2758,54 +2736,7 @@ classdef CLASS_events_container < handle
             
         end
         
-        
-        function detection_struct = loadDetectionMethodsInf(detection_path,detection_inf_file)
-            %loads a struct from the detection.inf file which contains the
-            %various detection methods and parameters that the sev has
-            %preloaded - or from filter.inf
-            if(nargin<2)
-                if(nargin<1)
-                    detection_path = '+detection';
-                end
-                [~, name, ~] = fileparts(detection_path);
-                name = strrep(name,'+','');
-                detection_inf_file = strcat(name,'.inf');
-            end
-            
-            detection_inf = fullfile(detection_path,detection_inf_file);
-            
-            if(exist(detection_inf,'file'))
-                [mfile, evt_label, num_reqd_indices, param_gui, batch_mode_label] = textread(detection_inf,'%s%s%n%s%s','commentstyle','shell');
-                params = cell(numel(mfile),1);
-            else
-                detection_files = dir(fullfile(detection_path,'detection_*.m'));
-                num_files = numel(detection_files);
-                mfile = cell(num_files,1);
-                [mfile{:}]=detection_files.name;
-                
-                num_reqd_indices = zeros(num_files,1);
-                evt_label = mfile;
-                
-                params = cell(num_files,1);
-                param_gui = cell(num_files,1);
-                batch_mode_label = cell(num_files,1);
-                batch_mode_label(:) = {'Unspecified'};
-                param_gui(:)={'none'}; %expand none to fill this up..
-                %                     http://blogs.mathworks.com/loren/2008/01/24/deal-or-n
-                %                     o-deal/
-                
-            end
-            
-            detection_struct.mfile = mfile;
-            detection_struct.evt_label = evt_label;
-            detection_struct.num_reqd_indices = num_reqd_indices;
-            detection_struct.param_gui = param_gui;
-            detection_struct.batch_mode_label = batch_mode_label;
-            detection_struct.params = params; %for storage of parameters as necessary
-            
-        end %end loadDetectionMethodsInf
-        
-        
+
         
 
         
@@ -2854,3 +2785,29 @@ classdef CLASS_events_container < handle
     end
     
 end
+
+
+
+%         % =================================================================
+%         %> @brief
+%         %> @param obj instance of CLASS_events_container class.
+%         %> @param
+%         %> @retval 
+%         % =================================================================
+%         function sourceStruct = getSourceStruct(obj,event_index)
+%             %this method is not referenced and may be dropped in the future
+%             %determine if there is a gui to use for this method to
+%             %adjust the parameters/properties of the detection
+%             %algorithm
+%             global MARKING;
+%             childobj = obj.getEventObj(event_index);
+%             detection_struct = MARKING.getDetectionMethodsStruct();
+%             gui_ind = find(strcmp(childobj.label,detection_struct.evt_label));
+%             if(~isempty(gui_ind))
+%                 sourceStruct.channel_indices = childobj.class_channel_index;
+%                 sourceStruct.algorithm = [MARKING.SETTINGS.VIEW.detection_path(2:end),'.',detection_struct.param_gui{gui_ind}.mfile];
+%                 sourceStruct.editor = detection_struct.param_gui{gui_ind};
+%             else
+%                 sourceStruct = [];
+%             end
+%         end

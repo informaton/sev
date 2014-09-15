@@ -20,38 +20,43 @@ classdef CLASS_database_psg < CLASS_database
     methods
         
         % ======================================================================
-        %> @brief Creates patidmap_t table for the PSG database using a
-        %> text file which places the column names in the first row, and
-        %> the respective id's in the rows below.  The first row is the
-        %> primary key.
+        %> @brief Creates plateid_map_t table for the PSG database using a
+        %> text file which has one header row.  The first column is the
+        %> plate id, the second column is the WSC id, and the third column
+        %> is the imputation type.
         %> @param obj Instance of CLASS_database_psg
-        %> @param STA_pathname Directory containing .STA hypnograms, the staging
-        %> files for WSC sleep studies (string)
-        %> @note If StageStats_T already exists, it is first dropped and
-        %> then created again.
+        %> @param mapping_txt_file Text file which has one header row.  Columns are as follows:
+        %> - @c plateid plate id (1)
+        %> - @c patid WSC id (2)
+        %> - @c method Imputation type (3) can be affy500 or affy6
         % =================================================================
-        function create_and_populate_patidmap_t(obj,mapping_txt_file)
+        function create_and_populate_plateid_map_t(obj,mapping_txt_file)
             if(nargin<2 || isempty(mapping_txt_file))
                 mapping_txt_file =uigetfullfile({'*.txt','Cohort mapping file (*.txt)'},'Select mapping text file');
             end            
           
             if(~isempty(mapping_txt_file) && exist(mapping_txt_file,'file'))
                 
-                fid = fopen(mapping_txt_file,'r');
-                header = textscan(fgetl(fid),'%s');
-                fclose(fid);
+                %fid = fopen(mapping_txt_file,'r');
+                %header = textscan(fgetl(fid),'%s');
+                %fclose(fid);
                 
-                columnNames = header{1};
+                %columnNames = header{1};
+                
                 nCols = numel(columnNames);
                 
-                if(nCols>1)
-                     tableName = 'patidmap_t';
+                if(nCols>2)
+                     tableName = 'plateid_map_t';
                      dropStr = ['drop table if exists ',tableName];
-                     createStr = ['CREATE TABLE IF NOT EXISTS ',tableName,'('];
+                     createStr = ['CREATE TABLE IF NOT EXISTS ',tableName,'(',...
+                                    'plateID VARCHAR(10) NOT NULL,',...
+                                    'patid char(5) not null',...
+                                    'method enum(''affy500k'',''affy6'',''minimac'',''direct'') default null'
+                                    ' primary key (plateID)'];
                      
-                     for k=1:nCols
-                         createStr = sprintf('%s %s VARCHAR(20) NOT NULL,',createStr,columnNames{k});
-                     end
+                     %                      for k=1:nCols
+                     %                          createStr = sprintf('%s %s VARCHAR(20) NOT NULL,',createStr,columnNames{k});
+                     %                      end
                      createStr = sprintf('%s PRIMARY KEY (%s))',createStr,columnNames{1});
                      loadStr = sprintf('load data local infile ''%s'' into table %s fields terminated by ''\\t'' lines terminated by ''\\r'' ignore 1 lines',mapping_txt_file,tableName);
                      
@@ -62,7 +67,7 @@ classdef CLASS_database_psg < CLASS_database
                      mym('select * from {S} limit 4',tableName);
                      obj.close();
                 else
-                   fprintf('Mapping file must have at least 2 columns for the table to be created'); 
+                   fprintf('Mapping file must have at least 3 columns for the table to be created'); 
                 end                
             end             
         end

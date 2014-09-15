@@ -387,6 +387,97 @@ classdef  CLASS_settings < handle
             end
         end
         
+        
+        %> @brief Parses the detection methods information file as a
+        %> struct.
+        %> @note This had previously been part of the
+        %> CLASS_events_container class.
+        %> param detectionPath
+        %> param detectionInfFile
+        %> @retval detectionStruct Struct describing the contents of the
+        %> detection methods' information file.  Fields include:
+        %> - @c mfile Cell of function names (.m files sans '.m')
+        %> corresponding to each detection method.
+        %> - @c evt_label Cell of string labels describing each detection
+        %> method.
+        %> - @c num_reqd_indices Vector containing the number of channels required for each
+        %> method.
+        %> - @c param_gui Cell of strings listing editor function for adjusting each detection
+        %> methods parameters. (e.g. plist_editor_dlg)
+        %> - @c batch_mode_label (This is going to be removed)
+        %> - @c params Parameters for each detection method; place holder for use anon (i.e. [] initially)
+        function detectionStruct = loadDetectionMethodsInf(detectionPath,detectionInfFile)
+            %loads a struct from the detection.inf file which contains the
+            %various detection methods and parameters that the sev has
+            %preloaded - or from filter.inf
+            if(nargin<2)
+                if(nargin<1)
+                    detectionPath = '+detection';
+                end
+                [~, name, ~] = fileparts(detectionPath);
+                name = strrep(name,'+','');
+                detectionInfFile = strcat(name,'.inf');
+            end
+            
+            detection_inf = fullfile(detectionPath,detectionInfFile);
+            
+            if(exist(detection_inf,'file'))
+                fid = fopen(detection_inf,'r');
+                T = textscan(fid,'%s%s%n%s%s','commentstyle','#');
+                [mfile, evt_label, num_reqd_indices, param_gui, batch_mode_label] = T{:};
+                fclose(fid);
+                params = cell(numel(mfile),1);
+            else
+                detection_files = dir(fullfile(detectionPath,'detection_*.m'));
+                num_files = numel(detection_files);
+                mfile = cell(num_files,1);
+                [mfile{:}]=detection_files.name;
+                
+                num_reqd_indices = zeros(num_files,1);
+                evt_label = mfile;
+                
+                params = cell(num_files,1);
+                param_gui = cell(num_files,1);
+                batch_mode_label = cell(num_files,1);
+                batch_mode_label(:) = {'Unspecified'};
+                param_gui(:)={'none'}; %expand none to fill this up..
+                %                     http://blogs.mathworks.com/loren/2008/01/24/deal-or-n
+                %                     o-deal/
+                
+            end
+            
+            detectionStruct.mfile = mfile;
+            detectionStruct.evt_label = evt_label;
+            detectionStruct.num_reqd_indices = num_reqd_indices;
+            detectionStruct.param_gui = param_gui;
+            detectionStruct.batch_mode_label = batch_mode_label;
+            detectionStruct.params = params; %for storage of parameters as necessary
+            
+        end %end loadDetectionMethodsInf
+        
+        
+        
+        % --------------------------------------------------------------------
+        % @brief Initializes all .plist files in the +detection directory
+        % to their algorithms' (.m file) default parameters as obtained by
+        % calling the algorithm's method function (.m file) with zero
+        % arguments.
+        %> @param obj instance of CLASS_settings class.
+        function initializeDetectors(obj)
+            methods = CLASS_events_container.loadDetectionMethodsInf(obj.VIEW.detection_path,obj.VIEW.detection_inf_file);
+            for m=1:numel(methods)
+                
+                
+            end
+            
+        end
+        
+        
+        function initializeFilters()
+            
+            
+        end
+        
         % --------------------------------------------------------------------
         %> @brief sets default values for the class parameters listed in
         %> the input argument <i>fieldNames</i>.

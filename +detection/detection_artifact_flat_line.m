@@ -1,4 +1,4 @@
-%> @file
+%> @file detection_artifact_flat_line.cpp
 %> @brief Detects sections of data that have <i>flat lined</i>.
 %======================================================================
 %> @brief Determines flat lined section of input data.

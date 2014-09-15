@@ -82,7 +82,7 @@ classdef CLASS_events_toolbox_dialog < handle
                 units = 'points';
                 
                 
-                methods = CLASS_events_container.loadDetectionMethodsInf(obj.detection_path,obj.detection_inf_file);
+                methods = CLASS_settings.loadDetectionMethodsInf(obj.detection_path,obj.detection_inf_file);
                 
                 methods.mfile{end+1} = '';
                 methods.evt_label{end+1} = 'Create New';
@@ -386,12 +386,14 @@ function method_propertiesCallback(hObject,eventdata,handles)
             feval(preference_function,detection_label); %saves changes
         catch me1
             %perhaps their is no .plist file?
+            showME(me1);
             try
                %run the detection method with no arguments to produce the
                %.plist data
                feval(strcat('detection.',handles.user.methods.mfile{method_index})); 
             catch me2
                 %perhaps it failed, but the .plist data may exist now
+                showME(me1);
                 feval(preference_function,detection_label); %saves changes %let current error be thrown if still have problems at this point.
                 %if not then just go ahead and crash here with me3
             end
