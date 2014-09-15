@@ -381,7 +381,7 @@ function method_propertiesCallback(hObject,eventdata,handles)
     detection_labels = get(handles.popup.method,'string');
     method_index = get(handles.popup.method,'value');
     detection_label = detection_labels{method_index};
-    if(~isempty(preference_function))
+    if(~isempty(preference_function) && strcmpi(preference_function,'none'))
         try
             feval(preference_function,detection_label); %saves changes
         catch me1

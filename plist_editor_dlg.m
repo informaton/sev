@@ -24,7 +24,7 @@ function varargout = plist_editor_dlg(varargin)
 % last modified: 10.9.12
 % Edit the above text to modify the response to help plist_editor_dlg
 
-% Last Modified by GUIDE v2.5 17-Sep-2012 08:38:03
+% Last Modified by GUIDE v2.5 15-Sep-2014 13:00:34
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -70,10 +70,14 @@ else
 end
 if(numel(varargin)>1)
     handles.user.detection_path = varargin{2};
+    handles.user.detection_packageName = '';
 else
-    handles.user.detection_path = '+detection';
+    dPath = fileparts(mfilename('fullpath'));
+    handles.user.detection_path = fullfile(dPath,'+detection');
+    import(fullfile(handles.user.detection_path,'detection.*'));
+    handles.user.detection_packageName = 'detection.';
 end
-methods = CLASS_events_container.loadDetectionMethodsInf(handles.user.detection_path);
+methods = CLASS_settings.loadDetectionMethodsInf(handles.user.detection_path);
 
 %just use the ones that I have already
 good_ind = strcmp('plist_editor_dlg',methods.param_gui);
@@ -115,6 +119,7 @@ if(~isempty(input_pStruct))
     %ensure that the input_pStruct has the same fields as the property I
     %want....
     handles.user.cur_num_properties = set_method_fields(handles,input_pStruct);
+    
 else
     handles = menu_methods_Callback(handles.menu_methods,[],handles);
 end
@@ -124,7 +129,8 @@ set(gcf,'visible','on');
 % resizePanelForAddedControls(handles.pan_properties,2,20);
 % resizePanelAndParentForAddedControls(handles.pan_properties,2);
 % sizePanelAndParentForUIControls(handles.pan_properties,9,handles);
-sizePanelAndParentForUIControls(handles.pan_properties,handles.user.cur_num_properties,handles);
+
+handles = resizePanelAndFigureForUIControls(handles.pan_properties,handles.user.cur_num_properties,handles);
 
 % Update handles structure
 guidata(hObject, handles);
@@ -146,6 +152,7 @@ if(nargout>0)
 end
 delete(gcf);
 
+
 function pStruct = save_plist(handles)
 %saves the params and returns as output argument, pStruct
 pfilename=fullfile(handles.user.detection_path,...
@@ -153,13 +160,14 @@ pfilename=fullfile(handles.user.detection_path,...
 pStruct = get_params(handles);
 plist.saveXMLPlist(pfilename,pStruct);
 
+
 function pStruct = get_params(handles)
 for k=1:handles.user.cur_num_properties
     handles_key_name = ['handles.text_key_',num2str(k)];
     handles_value_name = ['handles.edit_value_',num2str(k)];
     key = get(eval(handles_key_name),'string');
     str_value = get(eval(handles_value_name),'string');
-    num_value = str2num(str_value);
+    num_value = str2double(str_value);
     if(isempty(num_value))
         pStruct.(key) = str_value;
     else
@@ -167,7 +175,6 @@ for k=1:handles.user.cur_num_properties
     end
     
 end
-
 
 % --- Executes on selection change in menu_methods.
 function handles = menu_methods_Callback(hObject, eventdata, handles)
@@ -187,8 +194,24 @@ selection_ind = get(hObject,'value');
 handles.user.selected_method_ind = selection_ind;
 
 selected_plist_filename = fullfile(handles.user.detection_path,[handles.user.methods.mfile{selection_ind},'.plist']);
-settings = plist.loadXMLPlist(selected_plist_filename);
+
+if(exist(selected_plist_filename,'file'))
+    settings = plist.loadXMLPlist(selected_plist_filename);
+else
+    settings = feval(strcat(handles.user.detection_packageName,handles.user.methods.mfile{selection_ind}));
+end
+
+num_properties = min(numel(fieldnames(settings)),handles.user.MAX_NUM_PROPERTIES);
+% handles = resizePanelAndParentForUIControls(handles.pan_properties,num_properties,handles);
+handles = resizePanelAndFigureForUIControls(handles.pan_properties,num_properties,handles);
+
 handles.user.cur_num_properties = set_method_fields(handles,settings);
+
+% save the results that were previously non existant.
+if(~exist(selected_plist_filename,'file'))
+   save_plist(handles); 
+end
+
 guidata(hObject,handles);
 
 
@@ -222,7 +245,6 @@ function menu_methods_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
-
 
 
 % --- Executes on button press in push_close.
@@ -424,3 +446,20 @@ function edit_value_7_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
+
+
+function push_setDefault_Callback(hObject, eventdata, handles)
+selection_ind = get(handles.menu_methods,'value');
+handles.user.selected_method_ind = selection_ind;
+
+% selected_m_filename = fullfile(handles.user.detection_path,[handles.user.methods.mfile{selection_ind},'.m']);
+
+try
+    settings = feval(strcat(handles.user.detection_packageName,handles.user.methods.mfile{selection_ind}));
+    set_method_fields(handles,settings);
+    save_plist(handles);    
+catch me
+    warndlg(sprintf('Default settings not provided by this method (%s)',handles.user.methods.mfile{selection_ind}),'Warning','modla');
+    showME(me);
+end
+
