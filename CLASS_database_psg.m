@@ -3,7 +3,7 @@
 % ======================================================================
 %> @brief The class is designed for database development, functionality, and 
 %> interaction with PSG based sleep study cohorts and the SEV.
-%> @note: A MySQL database must be installed on the local host for class
+%> @note A MySQL database must be installed on the local host for class
 %> instantiations to operate correctly.
 classdef CLASS_database_psg < CLASS_database
     
@@ -126,10 +126,10 @@ classdef CLASS_database_psg < CLASS_database
         %> @note 6	rs7754266	0	94609	G	A
         %> @note 6	rs1929630	0	99536	A	C
         %> @note 6	rs4959515	0	110391	A	G
-        %
-        %       major-major = 0
-        %       major-minor = 1
-        %       minor-minor = 2
+        %> @note 
+        %> @note       major-major = 0
+        %> @note       major-minor = 1
+        %> @note       minor-minor = 2
         %
         % Author: Hyatt Moore IV
         % created 7/9/2014
