@@ -1750,7 +1750,6 @@ classdef CLASS_UI_marking < handle
             set(handles.menu_batch,'enable','on');
             
             set(handles.menu_help,'enable','on');
-            set(handles.menu_help_defaults,'enable','on');
             set(handles.menu_help_restart,'enable','on');
             
             set(obj.toolbarhandle.loadedf_push,'enable','on');
