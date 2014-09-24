@@ -1524,10 +1524,12 @@ classdef CLASS_channels_container < handle
            src_indices = cell(numel(filterArrayStruct),1);
            [src_indices{:}]=filterArrayStruct.src_channel_index;
            src_indices = cell2mat(src_indices);
-           obj.filterArrayStruct = filterArrayStruct;
+           
            for chan_index = 1:obj.num_channels
                filterS = filterArrayStruct(src_indices==chan_index);
                if(~isempty(filterS))
+                   emptyFilters = false(size(filterS));
+                   
                    for f=1:numel(filterS) %multiple filters per channel allowed
                        
                        %go through any reference channels required by the
@@ -1544,8 +1546,9 @@ classdef CLASS_channels_container < handle
                        else
                            filterS(f).ref_data = [];
                        end
+                       emptyFilters(f) = isempty(filterS(f).m_file);
                    end
-                   
+                   filterS = filterS(~emptyFilters);
                    obj.cell_of_channels{chan_index}.filter(filterS);
                    %if not in batch mode then update the events for adjusted
                    %channels....
@@ -1559,6 +1562,12 @@ classdef CLASS_channels_container < handle
                    end
                end
            end
+           
+           emptyFilterInputs = false(size(filterArrayStruct));
+           for f=1:numel(emptyFilterInputs)
+               emptyFilterInputs(f) = isempty(filterArrayStruct(f).m_file);
+           end
+           obj.filterArrayStruct = filterArrayStruct(~emptyFilterInputs);
        end
        
        

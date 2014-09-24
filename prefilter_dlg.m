@@ -80,14 +80,30 @@ handles.user.CHANNELS_CONTAINER = [];
 
 if(numel(varargin)>0)
     handles.user.channel_label = varargin{1};
-    if(numel(varargin)>3)
-        filter_inf_path = varargin{4};
-        if(numel(varargin)>4)
-            filter_inf_file = varargin{5};
-            if(numel(varargin)>5)
-                handles.user.CHANNELS_CONTAINER = varargin{6};                
+    if(numel(varargin)>1)
+        filterArrayStruct = varargin{2};
+        if(numel(varargin)>2)
+            channel_labl_index = varargin{3};
+            if(numel(varargin)>3)
+                filter_inf_path = varargin{4};
+                if(numel(varargin)>4)
+                    filter_inf_file = varargin{5};
+                    if(numel(varargin)>5)
+                        handles.user.CHANNELS_CONTAINER = varargin{6};
+                    else
+                        handles.user.CHANNELS_CONTAINER = [];
+                    end
+                else
+                    filter_inf_file = '';
+                end
+            else
+                filter_inf_path = [];
             end
+        else
+           channel_labl_index = []; 
         end
+    else
+        filterArrayStruct = [];
     end
 else
     handles.user.channel_label = {'No channels provided'};
@@ -106,53 +122,37 @@ numOptions =  numel(handles.user.filterInf.evt_label);
 
 handles.user.none_evt_index = numOptions;
 
-if(numel(varargin)>1 && ~isempty(varargin{2}))
-    filterArrayStruct = varargin{2};
-    index = find((strcmp(handles.user.filterInf.mfile,filterArrayStruct(1).m_file)&...
-        numel(filterArrayStruct(1).ref_channel_index)==handles.user.filterInf.num_reqd_indices));
-    evt_labl_index = index;
-    channel_labl_index = filterArrayStruct(1).src_channel_index;
-    ref_channel_index = filterArrayStruct(1).ref_channel_index;
-    handles.user.paramCell = cell(size(filterArrayStruct));
-    [handles.user.paramCell{:}] = filterArrayStruct.params;
-else
-    filterArrayStruct = [];
-    handles.user.paramCell = cell(1,1);
-    evt_labl_index = handles.user.none_evt_index;
-    channel_labl_index = 1;
-    ref_channel_index = [1 1];
-    index = 1;
-end
 
-if(numel(varargin)>2 && ~isempty(varargin{3}) && varargin{3}>0 && varargin{3}<=numel(handles.user.channel_label))
-   channel_labl_index = varargin{3};
-   set(handles.menu_src_channel_1,'enable','off'); 
-end
 
 handles.user.new_row_y_delta = 2; %separation amount between rows
-handles.user.num_rows = 1;
-set(handles.push_remove_row,'enable','off');
+handles.user.num_rows = 1;  %start on the first row.
+set(handles.push_remove_row,'enable','off'); %can't remove the initial filter..
 
-cur_row = num2str(handles.user.num_rows);
-set(handles.(['menu_filter_',cur_row]),'string',handles.user.filterInf.evt_label,'value',evt_labl_index,'userdata',evt_labl_index);
-set(handles.(['menu_src_channel_',cur_row]),'string',handles.user.channel_label,'value',channel_labl_index);
+nFilters = numel(filterArrayStruct)+1;
+handles.user.paramCell = cell(nFilters,1);
 
-updateFilterSelection(handles,handles.user.num_rows);
-
-%update the reference channels as applicable
-for r=1:handles.user.filterInf.num_reqd_indices(index)
-    set(handles.(['menu_ref',num2str(r),'_',cur_row]),'value',ref_channel_index(r));
+if(nFilters>1)
+    [handles.user.paramCell{1:nFilters-1}] = filterArrayStruct.params;
 end
 
-for k=2:numel(filterArrayStruct)
-    handles =push_add_row_Callback(handles.push_add_row, [], handles);
+
+for k=1:nFilters
     cur_row = num2str(handles.user.num_rows);
     
-    index = find((strcmp(handles.user.filterInf.mfile,filterArrayStruct(k).m_file)&...
-        numel(filterArrayStruct(k).ref_channel_index)==handles.user.filterInf.num_reqd_indices));
-    evt_labl_index = index;
-    channel_labl_index = filterArrayStruct(k).src_channel_index;
-    ref_channel_index = filterArrayStruct(k).ref_channel_index;
+    if(k==nFilters)
+        evt_labl_index = handles.user.none_evt_index;
+        channel_labl_index = 1;
+        ref_channel_index = [1 1];
+        index = 1;
+    else
+        index = find((strcmp(handles.user.filterInf.mfile,filterArrayStruct(k).m_file)&...
+            numel(filterArrayStruct(k).ref_channel_index)==handles.user.filterInf.num_reqd_indices));
+        evt_labl_index = index;
+        channel_labl_index = filterArrayStruct(k).src_channel_index;
+        ref_channel_index = filterArrayStruct(k).ref_channel_index;
+        handles =push_add_row_Callback(handles.push_add_row, [], handles);
+
+    end
 
     set(handles.(['menu_filter_',cur_row]),'string',handles.user.filterInf.evt_label,'value',evt_labl_index);
     set(handles.(['menu_src_channel_',cur_row]),'string',handles.user.channel_label,'value',channel_labl_index);
@@ -164,6 +164,8 @@ for k=2:numel(filterArrayStruct)
         set(handles.(['menu_ref',num2str(r),'_',cur_row]),'value',ref_channel_index(r));
     end
 end
+
+
 
 % store handles structure
 guidata(hObject, handles);
@@ -336,7 +338,7 @@ for cur_row = 1:handles.user.num_rows
     end
 end
 
-handles.output = handles.output(~none_evt_indices);
+% handles.output = handles.output(~none_evt_indices);
 
 guidata(hObject,handles);
 uiresume(gcf);
@@ -437,8 +439,8 @@ if(~isempty(param_gui) && ~strcmp(param_gui,'none'))
             params = feval(param_gui,curParams);
         end
     else
-        %check if there is a .plist file first?
-        
+        % params_gui (plist_editor_dlg) will take care of checking if
+        % params file exists and will create it if not.
         params = feval(param_gui,filter_label,'+filter',curParams);
     end
     if(~isempty(params))
