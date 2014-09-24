@@ -533,7 +533,7 @@ classdef  CLASS_settings < handle
         
         % --------------------------------------------------------------------
         %> @brief Initializes all .plist files in the +filter directory
-        %> to their algorithms' (.m file) default parameters as obtained by
+        %> to tsynchheir algorithms' (.m file) default parameters as obtained by
         %> calling the filter (.m file) with zero arguments.
         %> @param obj instance of CLASS_settings class.        
         % --------------------------------------------------------------------
@@ -671,7 +671,9 @@ classdef  CLASS_settings < handle
             end
             for p=1:numel(props)
                 pname = props{p};
-                copyObj.(pname) = obj.(pname);
+                if(~strcmpi('detectorPackagePrefixStr',pname))
+                    copyObj.(pname) = obj.(pname);
+                end
             end
         end
  

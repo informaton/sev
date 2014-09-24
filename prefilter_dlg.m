@@ -68,41 +68,53 @@ function prefilter_dlg_OpeningFcn(hObject, eventdata, handles, varargin)
 % varargin{3} = filter path
 % varargin{4} = filter filename for filter.inf data
 % varargin{5} = instance of CLASS_channels_container
-handles.output = [];
-
-filter_inf_file = 'filter.inf'; 
-filter_inf_path = '+filter';
-
-handles.user.CHANNELS_CONTAINER = [];
 
 if(numel(varargin)>0)
     handles.user.channel_label = varargin{1};
-    if(numel(varargin)>1)
-        filterArrayStruct = varargin{2};
-            if(numel(varargin)>2)
-                filter_inf_path = varargin{3};
-                if(numel(varargin)>3)
-                    filter_inf_file = varargin{4};
-                    if(numel(varargin)>4)
-                        handles.user.CHANNELS_CONTAINER = varargin{5};
-                    else
-                        handles.user.CHANNELS_CONTAINER = [];
-                    end
-                else
-                    filter_inf_file = '';
-                end
-            else
-                filter_inf_path = [];
-            end
-      
-    else
-        filterArrayStruct = [];
+    
+    %make it a cell because of how I handle indexing for this variable.
+    if(~iscell(handles.user.channel_label))
+        handles.user.channel_label = {handles.user.channel_label};
     end
 else
     handles.user.channel_label = {'No channels provided'};
 end
 
+if(numel(varargin)>1)
+    filterArrayStruct = varargin{2};
+else
+    filterArrayStruct = [];
+end
 
+if(numel(varargin)>2)
+    filter_inf_path = varargin{3}; 
+else
+    filter_inf_path = '+filter';
+end
+
+if(numel(varargin)>3)
+    filter_inf_file = varargin{4};
+else
+    filter_inf_file = 'filter.inf';
+end
+
+if(numel(varargin)>4)
+    handles.user.CHANNELS_CONTAINER = varargin{5};
+else
+    handles.user.CHANNELS_CONTAINER = [];
+end
+
+handles.output = [];
+ 
+% keep track of event indices that were returned as 'none'.  I used to
+% remove 'none' entries directly in this code and not return them to the
+% user, but this caused difficulty when trying to remove the last filter
+% (i.e. if a user wanted to turn filtering off for a channel); however I
+% could not completely switch to this as the batch mode needs to know when
+% a user not entered anything, and I would rather prevent having to write
+% another for loop externally to find the none indices since it has already
+% been done here.
+handles.user.none_evt_indices = [];
 
 %load the filter detection methods
 handles.user.filterInf=CLASS_settings.loadParametersInf(filter_inf_path,filter_inf_file);
@@ -161,7 +173,12 @@ for k=1:nFilters
     set(handles.(['menu_filter_',cur_row]),'string',handles.user.filterInf.evt_label,'value',evt_labl_index);
     set(handles.(['menu_src_channel_',cur_row]),'string',handles.user.channel_label,'value',channel_labl_index);
     
-    updateFilterSelection(handles,handles.user.num_rows);    
+    updateFilterSelection(handles,handles.user.num_rows); 
+    
+    params = handles.user.paramCell{k};
+    if(~isempty(params))
+        set(handles.(['push_settings_',cur_row]),'userdata',params);
+    end
     
     %update the reference channels as applicable
     for r=1:handles.user.filterInf.num_reqd_indices(index)
@@ -234,6 +251,9 @@ function varargout = prefilter_dlg_OutputFcn(hObject, eventdata, handles)
 
 % Get default command line output from handles structure
 varargout{1} = handles.output;
+if(nargout>1)
+    varargout{2}= handles.user.none_evt_indices;
+end
 delete(hObject);
 
 
@@ -365,6 +385,7 @@ for cur_row = 1:handles.user.num_rows
     end
 end
 
+handles.user.none_evt_indices = none_evt_indices;
 % handles.output = handles.output(~none_evt_indices);
 
 guidata(hObject,handles);

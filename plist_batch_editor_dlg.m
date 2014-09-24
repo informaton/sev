@@ -47,33 +47,67 @@ end
 
 
 % --- Executes just before plist_batch_editor_dlg is made visible.
-function plist_batch_editor_dlg_OpeningFcn(hObject, ~, handles, selected_method_label,varargin)
+function plist_batch_editor_dlg_OpeningFcn(hObject, ~, handles, varargin)
 % This function has no output args, see OutputFcn.
 % hObject    handle to figure
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 % varargin   command line arguments to plist_batch_editor_dlg (see VARARGIN)
 
-% Choose default command line output for plist_batch_editor_dlg
-global DEFAULTS;
-
+% varargin{1} = string label for specific settings that are being adjusted
+% this is a filter, artifact, or event detector.  Leave blank to access all
+% classifier or filter methods found in the specified directory (varargin{2})
+% varargin{2} = this is the directory of the filter or detector path
+% varargin{3} = ROC output path.
+% varargin{4} = batch parameters struct to be used when generated from a
+% previous entry
+% varargin{5} = roc parameters struct to be used when generated from a
+% previous entry
 
 handles.output = []; %default to null output, in which case the user cancels this decision..
-if(~isfield(DEFAULTS,'roc_truth_directory'))
-    DEFAULTS.roc_truth_directory = pwd;
-end
-% if(numel(varargin)>1 && ~isempty(varargin{2}))
-%     handles.user.detection_path = varargin{2};
-% 
-% else
-%     handles.user.detection_path = '+detection';
-% end
-handles.user.detection_path = '+detection';
 
-methods = CLASS_events_container.loadDetectionMethodsInf(handles.user.detection_path);
+if(numel(varargin)>0)
+    selected_method_label = varargin{1};
+else
+    selected_method_label = '';
+end
+if(numel(varargin)>1)
+    handles.user.parametersInfPathname = varargin{2}; 
+else
+    %default is to load detection methods
+    dPath = fileparts(mfilename('fullpath'));
+    handles.user.parametersInfPathname = fullfile(dPath,'+detection');
+end
+
+handles.user.detection_packageName = '';
+if(exist(handles.user.parametersInfPathname,'dir'))
+    [~,f,~] = fileparts(handles.user.parametersInfPathname);
+    if(~isempty(f)&&f(1)=='+')
+        handles.user.detection_packageName = strcat(f(2:end),'.');
+        import(fullfile(handles.user.parametersInfPathname,strcat(handles.user.detection_packageName,'*')));
+    end
+end
+
+if(numel(varargin)>2)
+    handles.user.roc_truth_directory = varargin{3};
+else
+    handles.user.roc_truth_directory = [];
+end
+if(numel(varargin)>3)
+    batchSettingsStruct = varargin{4};
+else
+    batchSettingsStruct = [];
+end
+if(numel(varargin)>4)
+    rocStruct = varargin{5};
+else
+    rocStruct = [];
+end
+
+methods = CLASS_settings.loadParametersInf(handles.user.parametersInfPathname);
 
 %just use the ones that I have already
-good_ind = strcmp('plist_editor_dlg',methods.param_gui);
+good_ind = strcmpi('plist_editor_dlg',methods.param_gui);
 f_names = fieldnames(methods);
 for k=1:numel(f_names)
     handles.user.methods.(f_names{k}) = methods.(f_names{k})(good_ind);
@@ -92,30 +126,32 @@ set(handles.menu_methods,'string',handles.user.methods.evt_label,'value',selecte
 handles.user.selected_method_ind = selected_method_ind;
 handles.user.MAX_NUM_PROPERTIES = 7;
 
-
 handles.user.selected_method_ind = selected_method_ind;
 
-if(numel(varargin)>0 && ~isempty(varargin{1}.pBatchStruct))
-   settings = varargin{1}.pBatchStruct; 
-else
-    selected_plist_filename = fullfile(handles.user.detection_path,[handles.user.methods.mfile{selected_method_ind},'.plist']);
-    plist_settings = plist.loadXMLPlist(selected_plist_filename);
+if(isempty(batchSettingsStruct))
+    selected_plist_filename = fullfile(handles.user.parametersInfPathname,[handles.user.methods.mfile{selected_method_ind},'.plist']);
+    
+    if(exist(selected_plist_filename,'file'))
+        plist_settings = plist.loadXMLPlist(selected_plist_filename);
+    else
+        plist_settings = feval(strcat(handles.user.detection_packageName,handles.user.methods.mfile{selected_method_ind}));
+    end
     
     names = fieldnames(plist_settings);
-    settings = cell(numel(names),1);
+    batchSettingsStruct = cell(numel(names),1);
     for k=1:numel(names)
-        settings{k}.key = names{k};
-        settings{k}.start = plist_settings.(names{k});
-        settings{k}.stop = plist_settings.(names{k});
-        settings{k}.num_steps = 1;
+        batchSettingsStruct{k}.key = names{k};
+        batchSettingsStruct{k}.start = plist_settings.(names{k});
+        batchSettingsStruct{k}.stop = plist_settings.(names{k});
+        batchSettingsStruct{k}.num_steps = 1;
     end
     
 end
 
-handles = menu_methods_Callback(handles.menu_methods,[],handles,settings);
+handles = menu_methods_Callback(handles.menu_methods,[],handles,batchSettingsStruct);
 
-if(numel(varargin)>0 && ~isempty(varargin{1}.rocStruct))
-    check_roc_Callback(handles.check_roc, [], handles, varargin{1}.rocStruct);
+if(~isempty(rocStruct))
+    check_roc_Callback(handles.check_roc, [], handles, rocStruct);
 end
 
 % Update handles structure
@@ -267,7 +303,6 @@ function check_roc_Callback(hObject, eventdata, handles,optional_rocStruct)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Hint: get(hObject,'Value') returns toggle state of check_roc
-global DEFAULTS;
 
 if(nargin==4 && ~isempty(optional_rocStruct))
     set(hObject,'value',1);
@@ -281,7 +316,7 @@ end
 if(get(hObject,'value'))
     
     if(isempty(pathname))
-        suggested_pathname = DEFAULTS.roc_truth_directory;
+        suggested_pathname = handles.user.roc_truth_directory;
         if(isdir(fullfile(suggested_pathname,'output')))
             suggested_pathname = fullfile(suggested_pathname,'output');
         end
@@ -296,7 +331,7 @@ if(get(hObject,'value'))
 
     if(pathname~=0)
         files = dir(pathname);
-        DEFAULTS.roc_truth_directory = pathname;
+        handles.user.roc_truth_directory = pathname;
         if(numel(files)>0)
             files_c = cell(numel(files),1);
             [files_c{:}] = files(:).name;

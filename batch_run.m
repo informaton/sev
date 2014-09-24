@@ -557,14 +557,17 @@ event_method_values = get(flipud(findobj(handles.panel_events,'-regexp','tag','m
 event_channel1_values = get(flipud(findobj(handles.panel_events,'-regexp','tag','channel1')),'value');
 event_channel2_values = get(flipud(findobj(handles.panel_events,'-regexp','tag','channel2')),'value');
 
+%obtain the userdata and value fields of the multichannel source button.
 event_multichannel_data = get(flipud(findobj(handles.panel_events,'tag','buttonEventSelectSources')),'userdata');
 event_multichannel_value = get(flipud(findobj(handles.panel_events,'tag','buttonEventSelectSources')),'value');
-
 
 event_settings_handles = flipud(findobj(handles.panel_events,'-regexp','tag','settings'));
 event_save_image_choices = get(flipud(findobj(handles.panel_events,'-regexp','tag','images')),'value');
 
 % convert from cell structures where needed.
+if(iscell(event_settings_handles))
+    event_settings_handles = cell2mat(event_settings_handles);
+end
 if(iscell(event_method_values))
     event_method_values = cell2mat(event_method_values);
     
@@ -574,14 +577,8 @@ if(iscell(event_method_values))
     event_multichannel_data = cell2mat(event_multichannel_data);
     event_multichannel_value = cell2mat(event_multichannel_value);
     
-    event_settings_handles = cell2mat(event_settings_handles);
     event_save_image_choices = cell2mat(event_save_image_choices);
-else
-    event_multichannel_value = {event_multichannel_value};
-    
-end;
-
-
+end
 
 
 % The user can select 'none' for an event.  We want to remove these.
@@ -604,7 +601,7 @@ for k = 1:num_selected_events
     eventStruct.save2img = event_save_image_choices(k);
 
     %if we are using a multiple channel sourced event method
-    if(event_multichannel_value{k})
+    if(event_multichannel_value(k))
         eventStruct.channel_labels = EDF_labels(event_multichannel_data(k).selectedIndices);        
     else
         eventStruct.channel_labels = EDF_labels(event_channel_values(k,1:num_reqd_channels));
@@ -910,6 +907,8 @@ end
 
 function settings_callback(hObject,~,~)
 global GUI_TEMPLATE;
+global MARKING;
+
 % choice = userdata.choice;
 
 % userdata = get(hObject,'userdata');
@@ -917,7 +916,18 @@ global GUI_TEMPLATE;
 % userdata.pBatchStruct = [];
 % userdata.rocStruct = [];
 userdata = get(hObject,'userdata');
-[pBatchStruct,rocStruct] = plist_batch_editor_dlg(GUI_TEMPLATE.detection.labels{userdata.choice},userdata);
+if(~isempty(userdata) && isfield(userdata,'pBatchStruct'))
+    paramStruct = userdata.pBatchStruct;
+end
+if(~isempty(userdata) && isfield(userdata,'rocStruct'))
+    rocStruct = userdata.rocStruct;
+end
+
+detectionPath = fullfile(MARKING.SETTINGS.rootpathname,MARKING.SETTINGS.VIEW.detection_path);
+% detectionFilename = MARKING.SETTINGS.VIEW.detection_inf_file;
+rocPath = fullfile(MARKING.SETTINGS.BATCH_PROCESS.output_path.parent,MARKING.SETTINGS.BATCH_PROCESS.output_path.roc);
+detectionLabels = GUI_TEMPLATE.detection.labels{userdata.choice};
+[pBatchStruct,rocStruct] = plist_batch_editor_dlg(detectionLabels,detectionPath,rocPath,paramStruct,rocStruct);
 if(~isempty(pBatchStruct))
     userdata.pBatchStruct =pBatchStruct;
     userdata.rocStruct = rocStruct;
@@ -1908,7 +1918,10 @@ global GUI_TEMPLATE;
 
 settings = get(hObject,'userdata');
 cur_channel_index = get(menuchannels_h,'value');
-settings = prefilter_dlg(GUI_TEMPLATE.EDF.labels,settings,cur_channel_index);
+
+[settings, noneEventIndices] = prefilter_dlg(GUI_TEMPLATE.EDF.labels{cur_channel_index},settings);
+settings(noneEventIndices) = [];
+
 
 %the user did not cancel and a settings structure exists
 if(~isempty(settings))

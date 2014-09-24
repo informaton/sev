@@ -66,12 +66,10 @@ function plist_editor_dlg_OpeningFcn(hObject, eventdata, handles, varargin)
 handles.output = [];
 if(numel(varargin)>1)
     handles.user.parametersInfPathname = varargin{2}; 
-
 else
     %default is to load detection methods
     dPath = fileparts(mfilename('fullpath'));
     handles.user.parametersInfPathname = fullfile(dPath,'+detection');
-    
 end
 
 handles.user.detection_packageName = '';

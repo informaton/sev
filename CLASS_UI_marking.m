@@ -333,7 +333,7 @@ classdef CLASS_UI_marking < handle
         function updateSettings_PSD_callback(obj,varargin)
             global CHANNELS_CONTAINER;
             wasModified = obj.SETTINGS.update_callback('PSD');
-            if(~isempty(CHANNELS_CONTAINER) && wasModified) 
+            if(~isempty(CHANNELS_CONTAINER) && wasModified && isfield(obj.SETTINGS.PSD,'channel_ind') && ~isempty(obj.SETTINGS.PSD.channel_ind)) 
                     CHANNELS_CONTAINER.current_spectrum_channel_index = obj.SETTINGS.PSD.channel_ind;
                     CHANNELS_CONTAINER.showPSD(obj.SETTINGS.PSD);
             end
@@ -342,7 +342,7 @@ classdef CLASS_UI_marking < handle
         function updateSettings_MUSIC_callback(obj,varargin)
             global CHANNELS_CONTAINER;
             wasModified = obj.SETTINGS.update_callback('MUSIC');
-            if(~isempty(CHANNELS_CONTAINER) && wasModified)
+            if(~isempty(CHANNELS_CONTAINER) && wasModified && isfield(obj.SETTINGS.MUSIC,'channel_ind') && ~isempty(obj.SETTINGS.MUSIC.channel_ind))
                 CHANNELS_CONTAINER.current_spectrum_channel_index = obj.SETTINGS.MUSIC.channel_ind;
                 CHANNELS_CONTAINER.showMUSIC(obj.SETTINGS.MUSIC);
             end
