@@ -19,3 +19,7 @@ auxiliary/matlab_workspace.mat
 *.plist
 
 prefilter_dlg.bak
+
+*.plist
+
++filter/nlfilter_median.plist

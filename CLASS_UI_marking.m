@@ -776,7 +776,7 @@ classdef CLASS_UI_marking < handle
                 channel_label_str{k} = CHANNELS_CONTAINER.cell_of_channels{k}.EDF_label;
             end
             
-            filter_struct = prefilter_dlg(channel_label_str,CHANNELS_CONTAINER.filterArrayStruct,[],obj.SETTINGS.VIEW.filter_path,obj.SETTINGS.VIEW.filter_inf_file,CHANNELS_CONTAINER);
+            filter_struct = prefilter_dlg(channel_label_str,CHANNELS_CONTAINER.filterArrayStruct,obj.SETTINGS.VIEW.filter_path,obj.SETTINGS.VIEW.filter_inf_file,CHANNELS_CONTAINER);
             
             %filter_struct has the following fields
             % src_channel_index   (the index of the event_container EDF channel)

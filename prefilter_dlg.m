@@ -65,12 +65,9 @@ function prefilter_dlg_OpeningFcn(hObject, eventdata, handles, varargin)
 % varargin{2} = filterArrayStruct - an array of filters passed in which
 % will be used to populate this gui so that the user does not have to
 % repeate previous options.
-% varargin{3} = vector of channel label indices, preselected indices that
-% will be used to determine which is included when only one channel is
-% going to be filtered/edited, and does not allow changing of the source
-% channel
-% varargin{4} = filter path
-% varargin{5} = filter filename for filter.inf data
+% varargin{3} = filter path
+% varargin{4} = filter filename for filter.inf data
+% varargin{5} = instance of CLASS_channels_container
 handles.output = [];
 
 filter_inf_file = 'filter.inf'; 
@@ -82,14 +79,12 @@ if(numel(varargin)>0)
     handles.user.channel_label = varargin{1};
     if(numel(varargin)>1)
         filterArrayStruct = varargin{2};
-        if(numel(varargin)>2)
-            channel_labl_index = varargin{3};
-            if(numel(varargin)>3)
-                filter_inf_path = varargin{4};
-                if(numel(varargin)>4)
-                    filter_inf_file = varargin{5};
-                    if(numel(varargin)>5)
-                        handles.user.CHANNELS_CONTAINER = varargin{6};
+            if(numel(varargin)>2)
+                filter_inf_path = varargin{3};
+                if(numel(varargin)>3)
+                    filter_inf_file = varargin{4};
+                    if(numel(varargin)>4)
+                        handles.user.CHANNELS_CONTAINER = varargin{5};
                     else
                         handles.user.CHANNELS_CONTAINER = [];
                     end
@@ -99,15 +94,16 @@ if(numel(varargin)>0)
             else
                 filter_inf_path = [];
             end
-        else
-           channel_labl_index = []; 
-        end
+      
     else
         filterArrayStruct = [];
     end
 else
     handles.user.channel_label = {'No channels provided'};
 end
+
+
+
 %load the filter detection methods
 handles.user.filterInf=CLASS_settings.loadParametersInf(filter_inf_path,filter_inf_file);
 handles.user.filterInf.evt_label{end+1} = 'None';
@@ -118,11 +114,20 @@ handles.user.filterInf.param_gui{end+1} = '';
 handles.user.filterInf.params{end+1} = [];
 handles.user.filter_path = filter_inf_path;
 
+
+% import the filter methods.
+handles.user.filter_packageName = '';
+if(exist(handles.user.filter_path,'dir'))
+    [~,f,~] = fileparts(handles.user.filter_path);
+    if(~isempty(f)&&f(1)=='+')
+        handles.user.filter_packageName = strcat(f(2:end),'.');
+        import(fullfile(handles.user.filter_path,strcat(handles.user.filter_packageName,'*')));
+    end
+end
+
 numOptions =  numel(handles.user.filterInf.evt_label);
 
 handles.user.none_evt_index = numOptions;
-
-
 
 handles.user.new_row_y_delta = 2; %separation amount between rows
 handles.user.num_rows = 1;  %start on the first row.
@@ -134,7 +139,6 @@ handles.user.paramCell = cell(nFilters,1);
 if(nFilters>1)
     [handles.user.paramCell{1:nFilters-1}] = filterArrayStruct.params;
 end
-
 
 for k=1:nFilters
     cur_row = num2str(handles.user.num_rows);
@@ -165,8 +169,6 @@ for k=1:nFilters
     end
 end
 
-
-
 % store handles structure
 guidata(hObject, handles);
 
@@ -192,13 +194,36 @@ for k = handles.user.filterInf.num_reqd_indices(filter_index)+1:2
     set(handles.(['menu_ref',num2str(k),'_',cur_row]),'enable','off','string',handles.user.channel_label);
 end
 
-if(strcmp(handles.user.filterInf.param_gui{filter_index},'none'))
-    set(handles.(['push_settings_',cur_row]),'enable','off');
+param_gui = handles.user.filterInf.param_gui{filter_index};
+if(strcmpi(param_gui,'none') || isempty(param_gui))
+    set(handles.(['push_settings_',cur_row]),'enable','off','userdata',[]);
 else
-    set(handles.(['push_settings_',cur_row]),'enable','on');
+    
+    % obtain the parameters for the selected filter method and assign to the 'userdata'
+    % filed of the settings widget for the current row.  
+    filterInf = handles.user.filterInf;
+    pFile = fullfile(handles.user.filter_path,strcat(filterInf.mfile{filter_index},'.plist'));
+    
+    mFile = strcat(filterInf.mfile{filter_index},'.m');
+    mFullFilename = fullfile(handles.user.filter_path,mFile);
+    
+    if(exist(pFile,'file'))
+        params = plist.loadXMLPlist(pFile);
+    elseif(exist(mFullFilename,'file'))
+        params = feval(strcat(handles.user.filter_packageName,mFile));
+        if(strcmpi(param_gui,'plist_editor_dlg'))
+            plist.saveXMLPlist(pFile,params);
+        end
+    else
+        params = [];
+        fprintf('The filter (%s) could not be found!\n\t"%s" not found.\n',mFile,mFullFilename);
+    end
+    
+%     if(exist(
+%     params = getFilterParams();
+%     params = feval(param_gui,filter_label,'+filter',curParams);
+    set(handles.(['push_settings_',cur_row]),'enable','on','userdata',params);
 end
-
-
 
 %% --- Outputs from this function are returned to the command line.
 function varargout = prefilter_dlg_OutputFcn(hObject, eventdata, handles) 
@@ -325,6 +350,8 @@ for cur_row = 1:handles.user.num_rows
         handles.output(cur_row).ref_channel_index(end+1) = get(handles.(['menu_ref',num2str(k),'_',cur_row_str]),'value');
         handles.output(cur_row).ref_channel_label{end+1} = handles.user.channel_label{handles.output(cur_row).ref_channel_index(k)};
     end
+    
+    % do not return parameters in case where no filter is selected ('none')
     if(filter_choice==handles.user.none_evt_index)
         none_evt_indices(cur_row) = true;
     else
@@ -417,20 +444,15 @@ filter_index = get(handles.(menu_tag),'value');
 
 param_gui = handles.user.filterInf.param_gui{filter_index};
 filter_label = handles.user.filterInf.evt_label{filter_index};
-filter_mfile = handles.user.filterInf.mfile{filter_index};
+
+% filter_mfile = handles.user.filterInf.mfile{filter_index};
 
 cur_row = str2double(cur_row{1});
 
 if(~isempty(param_gui) && ~strcmp(param_gui,'none'))
-    %keep track of the last filter index to avoid bug of finding previous
-    %parameters being sent to the edit gui again.
-    last_filter_index = get(handles.(menu_tag),'userdata');
-
-    if(last_filter_index==filter_index)
-        curParams = handles.user.paramCell{cur_row};
-    else
-        curParams = [];
-    end
+    
+    curParams = get(hObject,'userdata');
+    
     if(strcmpi(param_gui,'wavelet_dlg'))
         channel_index = get(handles.(sprintf('menu_src_channel_%u',cur_row)),'value');
         if(~isempty(handles.user.CHANNELS_CONTAINER))
