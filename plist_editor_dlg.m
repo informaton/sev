@@ -55,7 +55,8 @@ function plist_editor_dlg_OpeningFcn(hObject, eventdata, handles, varargin)
 % varargin   command line arguments to plist_editor_dlg (see VARARGIN)
 %
 % varargin{1} = string label for specific settings that are being adjusted
-% this is a filter, artifact, or event detector
+% this is a filter, artifact, or event detector.  Leave blank to access all
+% classifier or filter methods found in the specified directory (varargin{2})
 % varargin{2} = this is the directory of the filter or detector path
 % varargin{3} = parameters to be used instead of the ones loaded from the
 % xml file, when included
@@ -63,21 +64,32 @@ function plist_editor_dlg_OpeningFcn(hObject, eventdata, handles, varargin)
 % Choose default command line output for plist_editor_dlg
 
 handles.output = [];
+if(numel(varargin)>1)
+    handles.user.parametersInfPathname = varargin{2}; 
+
+else
+    %default is to load detection methods
+    dPath = fileparts(mfilename('fullpath'));
+    handles.user.parametersInfPathname = fullfile(dPath,'+detection');
+    
+end
+
+handles.user.detection_packageName = '';
+if(exist(handles.user.parametersInfPathname,'dir'))
+    [~,f,~] = fileparts(handles.user.parametersInfPathname);
+    if(~isempty(f)&&f(1)=='+')
+        handles.user.detection_packageName = strcat(f(2:end),'.');
+        import(fullfile(handles.user.parametersInfPathname,strcat(handles.user.detection_packageName,'*')));
+    end
+end
+
 if(numel(varargin)>2)
     input_pStruct = varargin{3};
 else
     input_pStruct = [];
 end
-if(numel(varargin)>1)
-    handles.user.detection_path = varargin{2};
-    handles.user.detection_packageName = '';
-else
-    dPath = fileparts(mfilename('fullpath'));
-    handles.user.detection_path = fullfile(dPath,'+detection');
-    import(fullfile(handles.user.detection_path,'detection.*'));
-    handles.user.detection_packageName = 'detection.';
-end
-methods = CLASS_settings.loadDetectionMethodsInf(handles.user.detection_path);
+
+methods = CLASS_settings.loadParametersInf(handles.user.parametersInfPathname);
 
 %just use the ones that I have already
 good_ind = strcmp('plist_editor_dlg',methods.param_gui);
@@ -87,13 +99,13 @@ for k=1:numel(f_names)
 end
 
 %find the event that is being classified here...
-if(numel(varargin)>0)
+if(numel(varargin)>0 && ~isempty(varargin{1}))
     selected_method_label = varargin{1};
     selected_method_ind = find(strcmp(selected_method_label,handles.user.methods.evt_label));
     
     if(isempty(selected_method_ind))
         %is the algorithm input instead of the label? - try again
-        selected_method_label = strrep(selected_method_label,'detection.','');
+        selected_method_label = strrep(selected_method_label,handles.user.detection_packageName,'');
         selected_method_ind = find(strcmp(selected_method_label,handles.user.methods.mfile));
     
         if(isempty(selected_method_ind))
@@ -118,14 +130,14 @@ handles.user.modified = false;
 if(~isempty(input_pStruct))
     %ensure that the input_pStruct has the same fields as the property I
     %want....
-    handles.user.cur_num_properties = set_method_fields(handles,input_pStruct);
+    handles = set_method_fields(handles,input_pStruct);
     
 else
     handles = menu_methods_Callback(handles.menu_methods,[],handles);
 end
 
 handles.output = get_params(handles);
-set(gcf,'visible','on');
+set(hObject,'visible','on');
 % resizePanelForAddedControls(handles.pan_properties,2,20);
 % resizePanelAndParentForAddedControls(handles.pan_properties,2);
 % sizePanelAndParentForUIControls(handles.pan_properties,9,handles);
@@ -155,7 +167,7 @@ delete(gcf);
 
 function pStruct = save_plist(handles)
 %saves the params and returns as output argument, pStruct
-pfilename=fullfile(handles.user.detection_path,...
+pfilename=fullfile(handles.user.parametersInfPathname,...
     [handles.user.methods.mfile{handles.user.selected_method_ind},'.plist']);
 pStruct = get_params(handles);
 plist.saveXMLPlist(pfilename,pStruct);
@@ -193,7 +205,7 @@ end
 selection_ind = get(hObject,'value');
 handles.user.selected_method_ind = selection_ind;
 
-selected_plist_filename = fullfile(handles.user.detection_path,[handles.user.methods.mfile{selection_ind},'.plist']);
+selected_plist_filename = fullfile(handles.user.parametersInfPathname,[handles.user.methods.mfile{selection_ind},'.plist']);
 
 if(exist(selected_plist_filename,'file'))
     settings = plist.loadXMLPlist(selected_plist_filename);
@@ -205,7 +217,7 @@ num_properties = min(numel(fieldnames(settings)),handles.user.MAX_NUM_PROPERTIES
 % handles = resizePanelAndParentForUIControls(handles.pan_properties,num_properties,handles);
 handles = resizePanelAndFigureForUIControls(handles.pan_properties,num_properties,handles);
 
-handles.user.cur_num_properties = set_method_fields(handles,settings);
+handles = set_method_fields(handles,settings);
 
 % save the results that were previously non existant.
 if(~exist(selected_plist_filename,'file'))
@@ -215,13 +227,13 @@ end
 guidata(hObject,handles);
 
 
-function num_properties = set_method_fields(handles,settings)
+function handles = set_method_fields(handles,settings)
 %fill in the available properties
 names = fieldnames(settings);
 
 
-num_properties = min(numel(names),handles.user.MAX_NUM_PROPERTIES);
-for k=1:num_properties
+handles.user.cur_num_properties = min(numel(names),handles.user.MAX_NUM_PROPERTIES);
+for k=1:handles.user.cur_num_properties
     set(eval(['handles.text_key_',num2str(k)]),'string',names{k},'enable','on');
     set(eval(['handles.edit_value_',num2str(k)]),'string',settings.(names{k}),'enable','on');
 end
@@ -452,12 +464,13 @@ function push_setDefault_Callback(hObject, eventdata, handles)
 selection_ind = get(handles.menu_methods,'value');
 handles.user.selected_method_ind = selection_ind;
 
-% selected_m_filename = fullfile(handles.user.detection_path,[handles.user.methods.mfile{selection_ind},'.m']);
+% selected_m_filename = fullfile(handles.user.parametersInfPathname,[handles.user.methods.mfile{selection_ind},'.m']);
 
 try
     settings = feval(strcat(handles.user.detection_packageName,handles.user.methods.mfile{selection_ind}));
-    set_method_fields(handles,settings);
+    handles = set_method_fields(handles,settings);
     save_plist(handles);    
+    guidata(hObject,handles);
 catch me
     warndlg(sprintf('Default settings not provided by this method (%s)',handles.user.methods.mfile{selection_ind}),'Warning','modla');
     showME(me);

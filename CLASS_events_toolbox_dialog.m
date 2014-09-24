@@ -77,7 +77,7 @@ classdef CLASS_events_toolbox_dialog < handle
             elseif(isempty(obj.dialog_handle)||~ishandle(obj.dialog_handle))
                 max_num_sources = 18;  %maximum number of sources that can be drawn...
                 max_width = 0; %keep track of the width and get the largest chunk as the dialog grows/changes
-                delta = 15;
+                delta = 20;
                 cur_pos = [delta, delta, 0 0]; %bottom left position 
                 units = 'points';
                 
@@ -146,7 +146,7 @@ classdef CLASS_events_toolbox_dialog < handle
                 %III.  Synthesize the channel or not...
                 text.synth_channel = uicontrol('style','text','parent',obj.dialog_handle,...
                     'string','Channel Name:','units',units,'enable','off');
-                extent = get(text.synth_channel,'extent');
+                extent = get(text.synth_channel,'extent')+[0 0 40 0];
                 set(text.synth_channel,'position',[cur_pos(1:2),extent(3:4)]);
                 cur_pos(1) = cur_pos(1)+extent(3)+delta/2;
                 
@@ -215,9 +215,9 @@ classdef CLASS_events_toolbox_dialog < handle
                 cur_pos(1) = cur_pos(1)+extent(3)+delta/2;
                 
                 popup.num_sources = uicontrol('style','popupmenu','units',units,...
-                    'parent',obj.dialog_handle,'string',num2str([1:max_num_sources]'),'value',obj.num_sources,...
-                    'horizontalalignment','left');
-                extent = get(popup.num_sources,'extent')+[0 0 40 0];
+                    'parent',obj.dialog_handle,'string',num2str((1:max_num_sources)'),'value',obj.num_sources,...
+                    'horizontalalignment','center');
+                extent = get(popup.num_sources,'extent')+[0 0 60 0];
                     
                 set(popup.num_sources,'units',units','position',[cur_pos(1:2),extent(3:4)]);
                 
@@ -246,27 +246,29 @@ classdef CLASS_events_toolbox_dialog < handle
                 
                 text.method_select = uicontrol('style','text','parent',obj.dialog_handle,...
                     'string','Method:','units',units);
-                extent = get(text.method_select,'extent');
-                set(text.method_select,'position',[cur_pos(1:2),extent(3:4)]);
+                extent = get(text.method_select,'extent')+[0 0 0 0];
+                set(text.method_select,'position',[cur_pos(1:2),extent(3:4)],'fontsize',12);
                 
                 cur_pos(1) = cur_pos(1)+extent(3)+delta/2;
               
                 popup.method = uicontrol('style','popupmenu','units',units,...
                     'parent',obj.dialog_handle,'string',methods.evt_label,'value',1,...
-                    'horizontalalignment','left');
+                    'horizontalalignment','left','fontsize',12);
                 
-                extent = get(popup.method,'extent')+[0 0 40 0];
+                extent = get(popup.method,'extent')+[0 0 80 0];
                     
                 set(popup.method,'units',units','position',[cur_pos(1:2),extent(3:4)]);
 
+                cur_pos = get(popup.method,'position');
                 cur_pos(1) = cur_pos(1)+extent(3)+delta/2;
+                cur_pos(2) = cur_pos(2)-cur_pos(4)*10/18;  %menu's seem to go from the middle and buttons start from the bottom.
                 
                 button.method_properties = uicontrol('style','pushbutton',...
                     'units',units,'parent',obj.dialog_handle,...
-                    'string','properties');
+                    'string','properties','fontsize',12);
                 
-                extent = get(button.method_properties,'extent')*1.2;
-                cur_pos(2) = cur_pos(2)-delta/2;
+                extent = get(button.method_properties,'extent')+[0 0 15 10];
+                %cur_pos(2) = cur_pos(2)-delta/2;
                     
                 set(button.method_properties,'position',[cur_pos(1:2),extent(3:4)]);
     
@@ -381,7 +383,7 @@ function method_propertiesCallback(hObject,eventdata,handles)
     detection_labels = get(handles.popup.method,'string');
     method_index = get(handles.popup.method,'value');
     detection_label = detection_labels{method_index};
-    if(~isempty(preference_function) && strcmpi(preference_function,'none'))
+    if(~isempty(preference_function) && ~strcmpi(preference_function,'none'))
         try
             feval(preference_function,detection_label); %saves changes
         catch me1

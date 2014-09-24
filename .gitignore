@@ -13,3 +13,7 @@ _sev.parameters.txt
 palidromes.txt
 
 auxiliary/matlab_workspace.mat
+
+*.plist
+
+*.plist

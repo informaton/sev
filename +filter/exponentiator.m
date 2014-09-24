@@ -1,24 +1,39 @@
-function filtsig = exponentiator(src_index, optional_params)
-% Exponentiator - point by point exponentiation of input dat
-% written by Hyatt Moore IV, May 31, 2012
-global CHANNELS_CONTAINER;
-if(numel(src_index)<=20)
-    data = CHANNELS_CONTAINER.getData(src_index);
-else
-    data = src_index;
-end
-if(nargin==2 && ~isempty(optional_params))
-    params = optional_params;
-else
-    pfile = strcat(mfilename('fullpath'),'.plist');
-    
-    if(exist(pfile,'file'))
-        params = plist.loadXMLPlist(pfile);
-    else
-        %make it and save it for the future
-        params.pow=2; %number of samples to use
-        plist.saveXMLPlist(pfile,params);
-    end
-end
+%> @file exponentiator.cpp
+%> @brief Exponentiator - point by point exponentiation of input signal.
+%> @param data Input signal.
+%> @param params Structure of field/value parameter pairs that to adjust filter's
+%> behavior.  Field is:
+%> - @c pow The power to raise each sample by.
+%> @retval filtsig The exponentiated signal.
+%> @note written by Hyatt Moore IV, May 31, 2012
+%> @note modified 9/24/2014 - streamline default parameter behavior.
+%> Calling method with no parameters returns the default params struct for
+%> this method.
+%> @note modified 9/24/2014 - removed antiquated global reference.
+function filtsig = exponentiator(data, params)
 
-filtsig = data.^params.pow;
+
+% initialize default parameters
+defaultParams.pow = 2;
+% return default parameters if no input arguments are provided.
+if(nargin==0)
+    filtsig = defaultParams;
+else
+    
+    if(nargin<2 || isempty(params))
+        
+        pfile =  strcat(mfilename('fullpath'),'.plist');
+        
+        if(exist(pfile,'file'))
+            %load it
+            params = plist.loadXMLPlist(pfile);
+        else
+            %make it and save it for the future            
+            params = defaultParams;
+            plist.saveXMLPlist(pfile,params);
+        end
+    end
+    
+
+    filtsig = data.^params.pow;
+end

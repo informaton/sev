@@ -3,39 +3,52 @@
 %> delay value.
 %======================================================================
 %> @brief Delay or advance (negative delay) filter.
-%> @param Vector of sample data to filter.
+%> @param srcData Vector of sample data to filter.
 %> @param params Structure of field/value parameter pairs that to adjust filter's behavior.
-%> - samples2delay = 100 (non integer values will be rounded).
-%> @retval The delayed signal. 
+%> - @c samples2delay = 100 (non integer values will be rounded).
 %> @note  y(n)=x(n-k) %input negative values to advance
-% written by Hyatt Moore IV on September 13, 2012
-% Modified 8/21/2014
+%> @retval filtsig The delayed signal. 
+%> written by Hyatt Moore IV on September 13, 2012
+%> Modified 8/21/2014
+%> @note modified 9/24/2014 - streamline default parameter behavior.
+%> Calling method with no parameters returns the default params struct for
+%> this method.
 function filtsig = nlfilter_delay(srcData, params)
 % delay or advance
 
-% this allows direct input of parameters from outside function calls, which
-%can be particularly useful in the batch job mode
-if(nargin<2 || isempty(params))
-    pfile = strcat(mfilename('fullpath'),'.plist');
-    
-    if(exist(pfile,'file'))
-        %load it
-        params = plist.loadXMLPlist(pfile);
-    else
-        %make it and save it for the future
-        params.samples2delay=100;  %input negative values to advance...
-        plist.saveXMLPlist(pfile,params);
-    end
-end
+% initialize default parameters
 
-samples2delay = round(params.samples2delay);  %ensure we are dealing with integer values here
-
-if(samples2delay>0)
-    filtsig = [zeros(samples2delay,1);srcData(1:end-samples2delay)];
-elseif(samples2delay<0)
-    samples2delay = abs(samples2delay);
-    filtsig = [srcData(samples2delay+1:end); zeros(samples2delay,1)];
+defaultParams.samples2delay = 0; %input negative values to advance...
+% return default parameters if no input arguments are provided.
+if(nargin==0)
+    filtsig = defaultParams;
 else
-    %do nothing - no shifting occurred
-    filtsig = srcData;
+    
+    if(nargin<2 || isempty(params))
+        
+        pfile =  strcat(mfilename('fullpath'),'.plist');
+        
+        if(exist(pfile,'file'))
+            %load it
+            params = plist.loadXMLPlist(pfile);
+        else
+            %make it and save it for the future            
+            params = defaultParams;
+            plist.saveXMLPlist(pfile,params);
+        end
+    end
+
+    
+    
+    samples2delay = round(params.samples2delay);  %ensure we are dealing with integer values here
+    
+    if(samples2delay>0)
+        filtsig = [zeros(samples2delay,1);srcData(1:end-samples2delay)];
+    elseif(samples2delay<0)
+        samples2delay = abs(samples2delay);
+        filtsig = [srcData(samples2delay+1:end); zeros(samples2delay,1)];
+    else
+        %do nothing - no shifting occurred
+        filtsig = srcData;
+    end
 end

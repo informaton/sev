@@ -348,6 +348,20 @@ classdef CLASS_UI_marking < handle
             end
         end
         
+        
+        function resetSettings_callback(obj,hObject,eventdata,settingsName)
+            %settingsName is a string specifying the settings to update:
+            %   'CLASSIFIER','FILTER
+            if(strcmpi(settingsName,'filter'))
+                obj.SETTINGS.initializeFilters();
+            elseif(strcmpi(settingsName,'classifier'))
+                obj.SETTINGS.initializeDetectors();
+            else
+                fprintf('Unrecognized settings name (%s)\n',settingsName);                
+            end
+        end
+
+        
         function updateSettings_callback(obj,hObject,eventdata,settingsName)
             %settingsName is a string specifying the settings to update:
             %   'PSD','MUSIC','CLASSIFIER','BATCH_PROCESS','VIEW'
@@ -402,7 +416,12 @@ classdef CLASS_UI_marking < handle
             set(handles.menu_settings_power_music,'callback',@obj.updateSettings_MUSIC_callback);
             set(handles.menu_settings_roc,'callback',@obj.updatePreferencesROC_callback);
             set(handles.menu_settings_classifiers,'callback',{@obj.updateSettings_callback,'CLASSIFIER'});
+            set(handles.menu_settings_filters,'callback',{@obj.updateSettings_callback,'FILTER'});
             set(handles.menu_settings_defaults,'callback',{@obj.updateSettings_callback,'DEFAULTS'});
+            
+            set(handles.menu_settings_reset_classifiers,'callback',{@obj.resetSettings_callback,'CLASSIFIER'});
+            set(handles.menu_settings_reset_filters,'callback',{@obj.resetSettings_callback,'FILTER'});
+            
             set(handles.menu_settings_saveChannelConfig,'callback',@obj.menu_settings_saveChannelConfig_callback);
 
             %batch mode
@@ -1724,6 +1743,7 @@ classdef CLASS_UI_marking < handle
 %             set(handles.menu_settings_roc,'enable','on'); %wait until
 %             there are at least two events to examine.
             set(handles.menu_settings_classifiers,'enable','on');
+            set(handles.menu_settings_filters,'enable','on');
             set(handles.menu_settings_defaults,'enable','on');            
             
             set(handles.menu_batch_run,'enable','on');
@@ -2670,10 +2690,7 @@ classdef CLASS_UI_marking < handle
             end;
         end
         
-%         function detectMethodStruct = getDetectionMethodsStruct(obj)
-%            detectMethodStruct = CLASS_settings.loadDetectionMethodsInf(fullfile(obj.SETTINGS.rootpathname,obj.SETTINGS.VIEW.detection_path),obj.SETTINGS.VIEW.detection_inf_file);
-%         end
-        
+       
     end
     methods(Static)
         % --------------------------------------------------------------------

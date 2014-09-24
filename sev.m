@@ -32,7 +32,7 @@ function varargout = sev(varargin)
 % loadSTAGES(stages_filename,num_epochs)
 % Edit the above text to modify the response to help sev
 
-% Last Modified by GUIDE v2.5 28-Oct-2013 11:33:49
+% Last Modified by GUIDE v2.5 24-Sep-2014 10:24:08
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 0;
@@ -103,9 +103,8 @@ sev_pathname = fileparts(mfilename('fullpath'));
 
 guidata(hObject, handles);
 try
-    
-    MARKING = CLASS_UI_marking(hObject,sev_pathname); 
-    
+    handles.user.parameters_filename = '_sev.parameters.txt';
+    MARKING = CLASS_UI_marking(hObject,sev_pathname,handles.user.parameters_filename); 
 catch me
     %     me.message
     %     me.stack(1)
@@ -113,7 +112,7 @@ catch me
     fprintf(1,['The default settings file may be corrupted or inaccessible.',...
         '  This can occur when installing the software on a new computer or from editing the settings file externally.',...
         '\nChoose OK in the popup dialog to correct the settings file.\n']);
-    menu_help_defaults_Callback([],[],[]);   
+    menu_settings_reset_defaults_Callback([],[],handles);   
 end
     
 if(numel(varargin)==1 &&  strcmpi(varargin{1},'batch'))
@@ -302,15 +301,19 @@ function sev_main_fig_WindowButtonMotionFcn(hObject, eventdata, handles)
 
 
 
-
+% --------------------------------------------------------------------
+function menu_help_restart_Callback(hObject, eventdata, handles)
+% hObject    handle to menu_help_restart (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+sev_restart();
 
 % --------------------------------------------------------------------
-function menu_help_defaults_Callback(hObject, eventdata, handles)
+function menu_settings_reset_defaults_Callback(hObject, eventdata, handles)
 % hObject    handle to menu_help_defaults (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 % Construct a questdlg with three options
-global DEFAULTS;
 
 choice = questdlg({'Click OK to reset setting parameters.';' ';
                    ' This may be necessary when copying ';
@@ -320,17 +323,7 @@ choice = questdlg({'Click OK to reset setting parameters.';' ';
 	'OK','Cancel','Cancel');
 % Handle response
 if(strncmp(choice,'OK',2))    
-    delete(DEFAULTS.parameters_filename);
+    delete(handles.user.parameters_filename);
 %     helpdlg(sprintf('Parameter settings (%s) have been removed.\n\nThe SEV must now restart.',DEFAULTS.parameters_filename));
     sev_restart();
 end
-
-
-
-
-% --------------------------------------------------------------------
-function menu_help_restart_Callback(hObject, eventdata, handles)
-% hObject    handle to menu_help_restart (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-sev_restart();

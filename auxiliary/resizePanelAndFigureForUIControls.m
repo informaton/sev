@@ -130,7 +130,10 @@ if(new_panel_height~=original_panel_height)
                 set(handles.(tagStr),'visible','on');
             end
             
-            set(handles.(tagStr),'tag',tagStr,'position',tmp_pos,'string',tagStr);
+            set(handles.(tagStr),'tag',tagStr,'position',tmp_pos);
+            if(isempty(get(handles.(tagStr),'string')))
+                set(handles.(tagStr),'string',tagStr);
+            end
         end
     end
     

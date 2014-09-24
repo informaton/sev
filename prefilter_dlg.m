@@ -93,7 +93,7 @@ else
     handles.user.channel_label = {'No channels provided'};
 end
 %load the filter detection methods
-handles.user.filterInf=CLASS_events_container.loadDetectionMethodsInf(filter_inf_path,filter_inf_file);
+handles.user.filterInf=CLASS_settings.loadParametersInf(filter_inf_path,filter_inf_file);
 handles.user.filterInf.evt_label{end+1} = 'None';
 handles.user.filterInf.mfile{end+1} = '';
 handles.user.filterInf.num_reqd_indices(end+1) = 0;

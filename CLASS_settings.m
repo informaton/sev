@@ -188,7 +188,7 @@ classdef  CLASS_settings < handle
         end
         
         
-        %> @brief Parses the detection methods information file as a
+        %> @brief Parses the parameters information file as a
         %> struct.
         %> @note This had previously been part of the
         %> CLASS_events_container class.
@@ -206,7 +206,7 @@ classdef  CLASS_settings < handle
         %> methods parameters. (e.g. plist_editor_dlg)
         %> - @c batch_mode_label (This is going to be removed)
         %> - @c params Parameters for each detection method; place holder for use anon (i.e. [] initially)
-        function detectionStruct = loadDetectionMethodsInf(detectionPath,detectionInfFile)
+        function detectionStruct = loadParametersInf(detectionPath,detectionInfFile)
             %loads a struct from the detection.inf file which contains the
             %various detection methods and parameters that the sev has
             %preloaded - or from filter.inf
@@ -261,7 +261,7 @@ classdef  CLASS_settings < handle
             
         end %end loadDetectionMethodsInf   
         
-                % --------------------------------------------------------------------
+        % --------------------------------------------------------------------
         % @brief Initializes all .plist files in the +detection directory
         % to their algorithms' (.m file) default parameters as obtained by
         % calling the algorithm's method function (.m file) with zero
@@ -270,16 +270,15 @@ classdef  CLASS_settings < handle
         %> methods are stored on disk.
         %> @param detectionInfFilename String of the filename (located in
         %> detectionPath) with information describing each detection
-        %> method's parameters.
-        
-        function resetDetectionParameters(detectionPath, detectionInfFilename)
-            methods = CLASS_settings.loadDetectionMethodsInf(detectionPath,detectionInfFilename);
+        %> method's parameters.        
+        function resetPlistFiles(detectionPath, detectionInfFilename)
+            methods = CLASS_settings.loadParametersInf(detectionPath,detectionInfFilename);
 
             if(isstruct(methods)&& isfield(methods,'mfile'))
                 try
                     for m=1:numel(methods.mfile)
                         param_gui = methods.param_gui{m};
-                        if(~isempty(param_gui) && ~strcmpi(param_gui,'none'))
+                        if(~isempty(param_gui) && strcmpi(param_gui,'plist_editor_dlg'))
                             mfile = methods.mfile{m};
                             pfile = fullfile(detectionPath,[methods.mfile{m},'.plist']);
                             if(exist(fullfile(detectionPath,strcat(mfile,'.m')),'file'))
@@ -301,8 +300,7 @@ classdef  CLASS_settings < handle
                 catch me
                     showME(me);
                     fprintf('There was an error with loading defaults on file %u of %u.\n',m,numel(methods.mfile));
-                end
-                
+                end                
             else
                 fprintf('Unable to load detection method information file (%s)\n',fullfilename(detectionPath,detectionInfFilename));
             end
@@ -347,8 +345,7 @@ classdef  CLASS_settings < handle
         % =================================================================
         %> @brief Constructor helper function.  Initializes class
         %> either from parameters_filename if such a file exists, or
-        %> hardcoded default values (i.e. setDefaults).
-        %>
+        %> hardcoded default values (i.e. setDefaults).        %>
         %> @param obj instance of the CLASS_settings class.
         % =================================================================
         function initialize(obj)
@@ -419,7 +416,11 @@ classdef  CLASS_settings < handle
                 case 'MUSIC'
                     wasModified = obj.defaultsEditor('MUSIC');
                 case 'CLASSIFIER'
-                    plist_editor_dlg();
+                    path = fullfile(obj.rootpathname,obj.VIEW.detection_path);
+                    plist_editor_dlg([],path);
+                case 'FILTER'
+                    path = fullfile(obj.rootpathname,obj.VIEW.filter_path);
+                    plist_editor_dlg([],path);
                 case 'BATCH_PROCESS'
                 case 'DEFAULTS'
                     wasModified= obj.defaultsEditor();
@@ -465,8 +466,6 @@ classdef  CLASS_settings < handle
         % =================================================================
         %> @brief saves all of the fields in saveStruct to the file filename
         %> as a .txt file
-        %
-        %
         %> @param obj instance of CLASS_settings class.
         %> @param saveStruct (optional) structure of parameters and values
         %> to save to the text file identfied by obj property filename or
@@ -522,22 +521,25 @@ classdef  CLASS_settings < handle
         
         
         % --------------------------------------------------------------------
-        % @brief Initializes all .plist files in the +detection directory
-        % to their algorithms' (.m file) default parameters as obtained by
-        % calling the algorithm's method function (.m file) with zero
-        % arguments.
+        %> @brief Initializes all .plist files in the +detection directory
+        %> to their algorithms' (.m file) default parameters as obtained by
+        %> calling the algorithm's method (.m file) with zero arguments.
         %> @param obj instance of CLASS_settings class.
+        % --------------------------------------------------------------------
         function initializeDetectors(obj)
             detectionPath = fullfile(obj.rootpathname,obj.VIEW.detection_path);
-            obj.resetDetectionParameters(detectionPath,obj.VIEW.detection_inf_file);
+            obj.resetPlistFiles(detectionPath,obj.VIEW.detection_inf_file);
         end
         
-
-        
-        
+        % --------------------------------------------------------------------
+        %> @brief Initializes all .plist files in the +filter directory
+        %> to their algorithms' (.m file) default parameters as obtained by
+        %> calling the filter (.m file) with zero arguments.
+        %> @param obj instance of CLASS_settings class.        
+        % --------------------------------------------------------------------
         function initializeFilters(obj)
-            
-            
+            filterPath = fullfile(obj.rootpathname,obj.VIEW.filter_path);
+            obj.resetPlistFiles(filterPath,obj.VIEW.filter_inf_file);
         end
         
         % --------------------------------------------------------------------
@@ -549,6 +551,7 @@ classdef  CLASS_settings < handle
         %> cell structure to hold additional strings.  If no argument is provided or fieldNames is empty
         %> then object's <i>fieldNames</i> property is used and all
         %> parameter structs are reset to their default values.
+        % --------------------------------------------------------------------
         function setDefaults(obj,fieldNames)
             
             if(nargin<2)

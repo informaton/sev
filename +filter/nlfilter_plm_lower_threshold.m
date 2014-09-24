@@ -3,8 +3,8 @@
 %======================================================================
 %> @brief Returns the lower threshold derived using input signal to
 %> calculate noise floor.  Useful for debugging and generating plots.
-%> @param Vector of sample data to filter.
-%> @param Structure of field/value parameter pairs that to adjust filter's behavior.
+%> @param srcData Vector of sample data to filter.
+%> @param params Structure of field/value parameter pairs that to adjust filter's behavior.
 %> - average_power_window_sec = 20;
 %> - threshold_low_uV = 2;
 %> - threshold_high_uV = 8;
@@ -12,11 +12,14 @@
 %> - use_summer = 1;
 %> - summer_order = 2;
 %> - samplerate = 100;
-%> @retval The nonlinear filtered signal. 
+%> @retval filtsig The nonlinear filtered signal. 
 %> @note This is a wrapper for getNoisefloor().
-% written by Hyatt Moore IV, April 26, 2013
-% modified August, 21, 2014 - remove use of global references.
-% Modified 8/21/2014 - commenting
+%> written by Hyatt Moore IV, April 26, 2013
+%> modified August, 21, 2014 - remove use of global references.
+%> Modified 8/21/2014 - commenting
+%> @note modified 9/24/2014 - streamline default parameter behavior.
+%> Calling method with no parameters returns the default params struct for
+%> this method.
 function filtsig = nlfilter_plm_lower_threshold(srcData,params)
 
 % returns the lower threshold derived using input signal to calculate noise floor
@@ -24,27 +27,33 @@ function filtsig = nlfilter_plm_lower_threshold(srcData,params)
 % written by Hyatt Moore, IV
 % April 26, 2013
 
-% this allows direct input of parameters from outside function calls, which
-%can be particularly useful in the batch job mode
-if(nargin<2 || isempty(params))
-    
-    pfile = strcat(mfilename('fullpath'),'.plist');
-    if(exist(pfile,'file'))
-        %load it
-        params = plist.loadXMLPlist(pfile);
-    else
-        %make it and save it for the future
-        params.average_power_window_sec = 20;
-        params.threshold_low_uV = 2;
-        params.threshold_high_uV = 8;
-        params.samplerate = 100;
-        params.noisefloor_uV_to_turnoff_detection = 50;
-        params.summer_order = 2;
-        params.use_summer = 1;
-        plist.saveXMLPlist(pfile,params);
+
+% initialize default parameters
+defaultParams.average_power_window_sec = 20;
+defaultParams.threshold_low_uV = 2;
+defaultParams.threshold_high_uV = 8;
+defaultParams.noisefloor_uV_to_turnoff_detection = 50;
+defaultParams.use_summer = 1;
+defaultParams.summer_order = 2;
+defaultParams.samplerate = 100;
+% return default parameters if no input arguments are provided.
+if(nargin==0)
+    filtsig = defaultParams;
+else    
+    if(nargin<2 || isempty(params))
+        
+        pfile =  strcat(mfilename('fullpath'),'.plist');
+        
+        if(exist(pfile,'file'))
+            %load it
+            params = plist.loadXMLPlist(pfile);
+        else
+            %make it and save it for the future            
+            params = defaultParams;
+            plist.saveXMLPlist(pfile,params);
+        end
     end
     
+    [variable_threshold_low_uv, ~, ~] = getNoisefloor(srcData, params, params.samplerate);
+    filtsig = variable_threshold_low_uv;
 end
-
-[variable_threshold_low_uv, variable_threshold_high_uv, clean_data] = getNoisefloor(srcData, params, params.samplerate);
-filtsig = variable_threshold_low_uv;

@@ -2,33 +2,47 @@
 %> @brief Single element finite impulse response bandpass filter (i.e. multiplication by a scalar value).
 %======================================================================
 %> @brief Scale signal by a scalar value.
-%> @param Vector of sample data to filter.
+%> @param sigData Vector of sample data to filter.
 %> @param params Structure of field/value parameter pairs that to adjust filter's behavior.
-%> - scalar = 1
-%> - make_absolute = 0
-% written by Hyatt Moore IV, February 2, 2013
-% Modified 8/21/2014
+%> - @c scalar = 1
+%> - @c make_absolute = 0
+%> @retval filtsig The scaled signal.
+%> @note written by Hyatt Moore IV, February 2, 2013
+%> Modified 8/21/2014
+%> @note modified 9/24/2014 - streamline default parameter behavior.
+%> Calling method with no parameters returns the default params struct for
+%> this method.
 function filtsig = filter_scale(sigData, params)
 % scale signal by scalar value
 
-% this allows direct input of parameters from outside function calls, which
-%can be particularly useful in the batch job mode
-if(nargin<2 || isempty(params))
-    pfile =  strcat(mfilename('fullpath'),'.plist');
+% initialize default parameters
+defaultParams.scalar=1;
+defaultParams.make_absolute = 0;
+% return default parameters if no input arguments are provided.
+if(nargin==0)
+    filtsig = defaultParams;
+else
     
-    if(exist(pfile,'file'))
-        %load it
-        params = plist.loadXMLPlist(pfile);
-    else
-        %make it and save it for the future
-        params.scalar=1;
-        params.make_absolute = 0;
-        plist.saveXMLPlist(pfile,params);
+    if(nargin<2 || isempty(params))
+        
+        pfile =  strcat(mfilename('fullpath'),'.plist');
+        
+        if(exist(pfile,'file'))
+            %load it
+            params = plist.loadXMLPlist(pfile);
+        else
+            %make it and save it for the future            
+            params = defaultParams;
+            plist.saveXMLPlist(pfile,params);
+        end
     end
-end
+    
 
-filtsig = sigData*params.scalar;
-%get root mean square
-if(params.make_absolute)
-   filtsig = abs(filtsig); 
+    
+    
+    filtsig = sigData*params.scalar;
+    %get root mean square
+    if(params.make_absolute)
+        filtsig = abs(filtsig);
+    end
 end

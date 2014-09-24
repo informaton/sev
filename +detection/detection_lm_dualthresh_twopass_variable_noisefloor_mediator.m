@@ -88,7 +88,7 @@ function detectStruct = detection_lm_dualthresh_twopass_variable_noisefloor_medi
 % modified 9/15/2014 - streamline default parameter behavior.
 
 % set default parameters
-defaultParams.use_summer = 0;  %apply summer or not.
+defaultParams.use_summer = 1;  %apply summer or not.
 defaultParams.threshold_high_uV = 8; %8 uV above resting - presumably resting is 2uV
 defaultParams.threshold_low_uV = 2;
 defaultParams.min_duration_sec = 0.75;
@@ -254,7 +254,7 @@ function [variable_threshold_low_uv, variable_threshold_high_uv, clean_data] = g
     %1. turn off variable noise floor when below engagement threshold
 
     ma_params.order=samplerate*params.average_power_window_sec;
-    ma_params.rms = 1;
+    ma_params.abs = 1;
     
     noisefloor = filter.filter_ma(data,ma_params);
     
@@ -274,10 +274,10 @@ function [variable_threshold_low_uv, variable_threshold_high_uv, clean_data] = g
 
     %3 increase SNR using 2 point moving integrator
     if(params.use_summer)
-        integrator.params.rms = 1;
+        integrator.params.abs = 1;
         integrator.params.order = params.summer_order;
         
-        clean_data2 = filter.filter_sum(clean_data,integrator.params);
+        clean_data2 = filter.filter_movsum(clean_data,integrator.params);
         clean_data(summer_indices) = clean_data2(summer_indices); %original detection method;
         
         

@@ -759,7 +759,7 @@ classdef CLASS_channels_container < handle
                sourceStruct.channel_indices = channelIndex;
                sourceStruct.algorithm = [obj.sevDefaults.detection_path(2:end),'.',detection_mfile];
                
-               detection_struct = CLASS_events_container.loadDetectionMethodsInf(obj.sevDefaults.detection_path);
+               detection_struct = CLASS_settings.loadParametersInf(obj.sevDefaults.detection_path);
                %detection_struct has the fields that are contained/gridded in the
                %detection.inf file
                %
