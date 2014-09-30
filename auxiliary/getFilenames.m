@@ -6,8 +6,10 @@ function [filenames,fullfilenames] = getFilenames(pathname,ext)
 %      directory
 % copyright Hyatt Moore IV
 
-if(nargin<2)
+if(nargin<2 || isempty(ext))
     ext = '';
+elseif(ext(1)~='*')
+    ext = strcat('*',ext);
 end
 dirPull = dir(fullfile(pathname,ext));
 directory_flag = cells2mat(dirPull.isdir);

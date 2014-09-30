@@ -4,9 +4,15 @@ function [filenames,fullfilenames] = getFilenamesi(pathname,ext)
 %  OS are case sensitive so that dir('*.txt') would not catch the file
 %  help.TXT.  
 %  pathname is a string of the folder to search
-%  [filenames] = getFilenames(pwd,'*.m');
-%      filenames contains the filenames with .m extension in the current
+%  [filenames] = getFilenames(pwd,'m');
+%      filenames contains the filenames with 'm' extension in the current
 %      directory
+%> @note Leading '.' in ext will be removed.
+%> @note For example if ext = '.m', the method will correct it to 'm' for
+%> you.  Thus, the following commands are equivalent:
+%> - [filenames] = getFilenames(pwd,'m');
+%> - [filenames] = getFilenames(pwd,'.m');
+
 % copyright Hyatt Moore IV
 
 if(nargin<2)
@@ -16,6 +22,11 @@ dirPull = dir(pathname);
 directory_flag = cells2mat(dirPull.isdir);
 names = cells2cell(dirPull.name);
 filenames = names(~directory_flag);
+
+if(~isempty(ext) && ext(1)=='.')
+    ext(1)=[];
+end
+
 fileMatchesCell = regexpi(filenames,strcat('.*',ext,'$'));
 fileMatchesVec = false(size(fileMatchesCell));
 

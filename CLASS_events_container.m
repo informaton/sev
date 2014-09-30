@@ -558,13 +558,18 @@ classdef CLASS_events_container < handle
         
         
         % =================================================================
-        %> @brief
+        %> @brief Finds the number of events associated with the channel at
+        %> the index given
         %> @param obj instance of CLASS_events_container class.
-        %> @param
-        %> @retval 
+        %> @param class_channel_index The index of the channel as tracked
+        %> by obj.
+        %> @retval num_events_in_channel The number of different events
+        %> associated with the indexed channel 
         % =================================================================
         function num_events_in_channel = getNumEventsInChannel(obj,class_channel_index)
-            if(obj.num_events>0)
+            if(isempty(class_channel_index))
+                num_events_in_channel = 0;
+            elseif(obj.num_events>0)
                 num_events_in_channel = sum(class_channel_index(1)==obj.channel_vector);
             else
                 num_events_in_channel = 0;
@@ -804,6 +809,9 @@ classdef CLASS_events_container < handle
                     %external values (i.e. parent_index==0)
                     num_events_in_channel = obj.getNumEventsInChannel(parent_index); %used for graphical offset from the parent channel being plotted
                     
+                    if(isempty(parent_index))
+                        parent_index = 0;
+                    end
                     if(parent_index>0)
                         EDF_index = zeros(1,numel(parent_index));
                         for k=1:numel(parent_index)
@@ -854,6 +862,7 @@ classdef CLASS_events_container < handle
                 catch ME
                     disp(ME.message);
                     disp(ME.stack(1))
+                    showME(me);
                     obj.num_events = obj.num_events-1;
                 end
             else
@@ -1113,7 +1122,6 @@ classdef CLASS_events_container < handle
                obj.set_Channel_drawEvents(event_index);
            end
         end
-        
 
             
         % =================================================================
@@ -1125,6 +1133,8 @@ classdef CLASS_events_container < handle
         %> @param class_channel_index refers to the CHANNELS_CONTAINER index that
         %> is associated with this event event_index is the index at which
         %> the event was placed/added in the container's cell (i.e. this obj).  
+        %> Can be 0 or empty ([]) for external events that are being
+        %> imported.
         %> @param sourceStruct contains the fields
         %>  .indices = parent indices of the channels that the event was
         %>     derived from - as passed to the algorithm
@@ -1134,7 +1144,12 @@ classdef CLASS_events_container < handle
         %> @retval event_index The obj/container's index where the event is stored
         % =================================================================
         function event_index = updateEvent(obj,event_data,event_label,class_channel_index,sourceStruct,paramStruct)
+            if(isempty(class_channel_index))
+                class_channel_index = 0;
+            end
+            
             event_index = obj.eventExists(event_label,class_channel_index);
+            
             if(event_index)
                 obj.replaceEvent(event_data, event_index, paramStruct,sourceStruct);
             else
@@ -1473,7 +1488,7 @@ classdef CLASS_events_container < handle
         %> @retval embla_evt_Struct Result of internal parseEmblaEvent call
         % =================================================================
         function embla_evt_Struct = loadEmblaEvent(obj,evtFilename,embla_samplerate)
-            embla_evt_Struct = obj.parseEmblaEvent(evtFilename,embla_samplerate,obj.defaults.parent_channel_samplerate);
+            embla_evt_Struct = CLASS_codec.parseEmblaEvent(evtFilename,embla_samplerate,obj.defaults.parent_channel_samplerate);
             if(~isempty(embla_evt_Struct) && embla_evt_Struct.HDR.num_records>0)
                 paramStruct = [];
                 class_channel_index = 0;
@@ -1527,7 +1542,7 @@ classdef CLASS_events_container < handle
             % .epoch - the epoch that the scored event occured in
             % .start_stop_matrix - the sample point that the events begin and end on
             % .label - the string label used to describe the event
-            SCO = loadSCOfile(filename);
+            SCO = CLASS_codec.parseSCOfile(filename);
             if(~isempty(SCO) && ~isempty(SCO.epoch))
                 %indJ contains the indices corresponding to the unique
                 %labels in event_labels (i.e. SCO.labels = event_labels(indJ) 
@@ -2199,26 +2214,16 @@ classdef CLASS_events_container < handle
             end
         end
         
+        
+               
     end
     
     methods(Static)
         
         function [PatID,StudyNum] = getDB_PatientIdentifiers(patstudy)
-            %patstudy is the filename of the .edf, less the extention
-            %             if(numel(patstudy)>=7)
-            %                 pat = '(\w{5})_(\d+)'; %WSC format
-            %             else
-            %                 pat = '([A-Z]+)(\d+)';  %PTSD format
-            %             end
-            %                 pat = '(SSC_\d[4]'; %SSC format
-            %             x=regexp(patstudy,pat,'tokens');
-            
-            patstudy = strrep(patstudy,'SSC_','');
-            x=regexp(patstudy,'(\w+)_(\d+)||(\d+)_(\d+)||([^\d]+)(\d+)','tokens');
-            x = x{1};
-            PatID = x{1};
-            StudyNum = x{2};
+            [PatID,StudyNum] = CLASS_code.getDB_PatientIdentifiers(patstudykey);
         end
+        
         
         % =================================================================
         %> @brief Parse events from an Embla formatted events file (.evt/.nvt)
@@ -2239,214 +2244,8 @@ classdef CLASS_events_container < handle
         %> filename in .SCO format        
         % =================================================================
         function [embla_evt_Struct,embla_samplerate_out] = parseEmblaEvent(evtFilename,embla_samplerate,desired_samplerate)
-            %embla_samplerate_out may change if there is a difference found in
-            %the stage .evt file processing as determined by adjusting for
-            %a 30 second epoch.
-            
-            seconds_per_epoch = 30;
-            embla_samplerate_out = embla_samplerate;
-            
-            if(~exist(evtFilename,'file'))
-                embla_evt_Struct = [];
-                disp([nvt_filename,' not handled']);
-            else
-                [~,name,~] = fileparts(evtFilename);
-                
-                fid = fopen(evtFilename,'r');
-                HDR = CLASS_events_container.parseEmblaHDR(fid);
-                
-                start_sec = [];
-                stop_sec = [];
-                dur_sec = [];
-                epoch = [];
-                stage = [];
-                start_stop_matrix = [];
-                
-                eventType = name;
-                
-                if(HDR.num_records>0 && strncmpi(deblank(HDR.label),'event',5))
-                    fseek(fid,0,'eof');
-                    file_size = ftell(fid);
-                    fseek(fid,32,'bof');
-                    bytes_remaining = file_size-ftell(fid);
-                    bytes_per_record = bytes_remaining/HDR.num_records;
-                    start_sample = zeros(HDR.num_records,1);
-                    stop_sample = start_sample;
-                    
-                    %sometimes these have the extension .nvt
-                    if(strcmpi(eventType,'plm'))
-                        intro_size = 8;
-                        remainder = zeros(HDR.num_records,bytes_per_record-intro_size,'uint8');
-                        for r=1:HDR.num_records
-                            start_sample(r) = fread(fid,1,'uint32');
-                            stop_sample(r) = fread(fid,1,'uint32');
-                            remainder(r,:) = fread(fid,bytes_per_record-intro_size,'uint8');
-                        end
-                    elseif(strcmpi(eventType,'desat'))
-                        intro_size = 8;
-                        remainder_size = bytes_per_record-intro_size;
-                        remainder = zeros(HDR.num_records,remainder_size,'uint8');                        
-                        
-                        for r=1:HDR.num_records
-                            
-                            start_sample(r) = fread(fid,1,'uint32');
-                            stop_sample(r) = fread(fid,1,'uint32');
-%                             description = fread(fid,remainder_size/2,'uint16=>char')';
-%desats - (come in pairs?)
-% [8 1 2 0] [0/4 0 ? ?]  [255 255 255 255] [255 255 255 255] [84 16 13 164]
+            [embla_evt_Struct,embla_samplerate_out] = CLASS_codec.parseEmblaEvent(evtFilename,embla_samplerate,desired_samplerate);
 
-% [? ? 88/86/87 64] [? ? ? ?] [? ? 86/87/85 64] [8/10 ? ? ?] [? ? ? ?]
-%    
-%1 byte [224] = ?
-%4 bytes 224  106   99  104] [186  131   88   64]  [87   27   67  211]  [29 108   87   64]   [9  144   98    0  228  151    98  0]
-%4 bytes
-                            remainder(r,:) = fread(fid,remainder_size,'uint8');
-                        end
-                    elseif(strcmpi(eventType,'resp'))
-                        %80 byte blocks
-                        
-                        intro_size = 8;
-                        remainder = zeros(HDR.num_records,bytes_per_record-intro_size,'uint8');                        
-                        
-                        for r=1:HDR.num_records
-                            start_sample(r) = fread(fid,1,'uint32');
-                            stop_sample(r) = fread(fid,1,'uint32');
-                            remainder(r,:) = fread(fid,bytes_per_record-intro_size,'uint8');
-                        end
-                        
-                    elseif(strcmpi(eventType,'stage'))
-                        %         stage_mat = fread(fid,[12,HDR.num_records],'uint8');
-                        %         x=reshape(stage_mat,12,[])';
-                        %stage records are produced in 12 byte sections
-                        %1:4 [uint32] - elapsed_seconds*2^8 (sample_rate)
-                        %5:8 [uint32] - (stage*2^8)+1*2^0
-                        %9:10 [uint16] = ['9','2']  %34...
-                        %10:12 = ?
-                        %should be 12 bytes per record
-%                         1 = Wake
-%                         2 = Stage 1
-%                         3 = Stage 2
-%                         4 = Stage 3
-%                         5 = Stage 4
-%                         7 = REM
-                        intro_size = 6;
-                        stage = zeros(-1,HDR.num_records,1);
-                        for r=1:HDR.num_records
-                            start_sample(r) = fread(fid,1,'uint32');
-                            fseek(fid,1,'cof');
-                            stage(r) = fread(fid,1,'uint8');
-                            fseek(fid,bytes_per_record-intro_size,'cof');
-                        end
-                        stage = stage-1;
-                        stage(stage==6)=5;
-                        stage(stage==-1)=7;
-                        samples_per_epoch = median(diff(start_sample));
-                        embla_samplerate = samples_per_epoch/seconds_per_epoch;
-                        embla_samplerate_out = embla_samplerate;
-                        stop_sample = start_sample+samples_per_epoch;
-                        
-                        %                         stage_mat = fread(fid,[bytes_per_record/4,HDR.num_records],'uint32')';
-                        %                         start_sample = stage_mat(:,1);
-                        %                         stage = (stage_mat(:,2)-1)/256;  %bitshifting will also work readily;
-                        
-                    elseif(strcmpi(eventType,'biocals'))
-                        % first line:
-                        % [1][2] [3-4]...[23-24] [25-28]   [29-32]   || [33-36]                 [37-40]                     [41-42]
-                        % [1  0] [uint16=>char]  uint32    uint32    || uint32
-                        %        Title Text      checksum  # entries || elapsed sample start    [13 1 0 0]  - biocals
-                        %                                                                       [1 stage# 0 0] - stage...   [34 0]
-                        %
-                        % Elapsed Time Format:
-                        % byte ref =[0  1 2  3  4  5]
-                        % example = [34 0 0 164 31 0]
-                        %
-                        % example[5]*256*256*0.5+example[4]*256*0.5+example[3]*0.5+example[2]*0.5*1/256...
-                        % example(4)*2^15+example(3)*2^7+example(2)*2^-1+example(1)*2^-9
-                        description = cell(HDR.num_records,1); %24 bytes
-                        tag = zeros(1,6); %6 bytes
-                        intro_size = 34;
-                        remainder = zeros(HDR.num_records,bytes_per_record-intro_size,'uint8');
-                        for r=1:HDR.num_records
-                            start_sample(r) = fread(fid,1,'uint32');
-                            tag = fread(fid,6,'uint8')'; %[13 1 0 0 0 0]
-                            
-                            description{r} = fread(fid,12,'uint16=>char')';  %need to read until I get to a 34 essentially%now at 64 or %32 bytes read
-                            remainder(r,:) = fread(fid,bytes_per_record-intro_size,'uint8')';
-                        end
-                        stop_sample = start_sample;
-                        
-                    elseif(strcmpi(eventType,'numeric'))
-                        disp('numeric');
-                    elseif(strcmpi(eventType,'tag'))
-                        intro_size = 4;
-                        remainder = zeros(HDR.num_records,bytes_per_record-intro_size,'uint8');
-                        
-                        for r=1:HDR.num_records
-                            start_sample(r) = fread(fid,1,'uint32');
-                            remainder(r,:) = fread(fid,bytes_per_record-intro_size,'uint8');
-                        end
-                        stop_sample = start_sample;
-                        
-                    elseif(strcmpi(eventType,'user'))
-                        fseek(fid,32,'bof');
-                        tag = zeros(1,6);
-                        remainder = cell(HDR.num_records,1);
-                        description = cell(HDR.num_records,1);
-                        for r=1:HDR.num_records
-                            start_sample(r) = fread(fid,1,'uint32');
-                            tag = fread(fid,6,'uint8');
-                            %read until double 00 are encountered
-                            cur_loc = ftell(fid);
-                            curValue = 1;
-                            while(~feof(fid) && curValue~=0)
-                                curValue = fread(fid,1,'uint16');
-                            end
-                            description_size = ftell(fid)-cur_loc;
-                            intro_size = 4+6+description_size;
-                            fseek(fid,-description_size,'cof'); %or fseek(fid,cur_loc,'bof');
-                            description{r} = fread(fid,description_size/2,'uint16=>char')';
-                            remainder{r} = fread(fid,bytes_per_record-intro_size,'uint8=>char')';
-                            %remainder is divided into sections  with
-                            %tokens of  [0    17     0   153     0     3
-                            %1     9     0 ]
-                        end
-                        
-                    elseif(strcmpi(eventType,'snapshot'))
-                        
-                    elseif(strcmpi(eventType,'baddata'))
-                        
-                        start_sample = zeros(HDR.num_records,1);
-                        stop_sample = start_sample;
-                        intro_size = 8;
-                        remainder = zeros(HDR.num_records,bytes_per_record-intro_size,'uint8');
-                        
-                        for r=1:HDR.num_records
-                            start_sample(r) = fread(fid,1,'uint32');
-                            stop_sample(r) = fread(fid,1,'uint32');
-                            remainder(r,:) = fread(fid,bytes_per_record-intro_size,'uint8');
-                        end
-                    end
-                                        
-                    start_stop_matrix = [start_sample(:)+1,stop_sample(:)+1]; %add 1 because MATLAB is one based
-                    dur_sec = (start_stop_matrix(:,2)-start_stop_matrix(:,1))/embla_samplerate;
-                    epoch = ceil(start_stop_matrix(:,1)/embla_samplerate/seconds_per_epoch);
-                    
-                    if(nargin>2 && desired_samplerate>0)
-                        start_stop_matrix = ceil(start_stop_matrix*(desired_samplerate/embla_samplerate));
-                    end
-                    
-                end
-                
-                embla_evt_Struct.HDR = HDR;
-                embla_evt_Struct.type = eventType;
-                embla_evt_Struct.start_stop_matrix = start_stop_matrix;
-                embla_evt_Struct.start_sec = start_sec;
-                embla_evt_Struct.stop_sec = stop_sec;
-                embla_evt_Struct.dur_sec = dur_sec;
-                embla_evt_Struct.epoch = epoch;
-                embla_evt_Struct.stage = stage;
-                fclose(fid);
-            end
         end
 
         % =================================================================
@@ -2459,286 +2258,70 @@ classdef CLASS_events_container < handle
         %> @li num_records Number of records stored in the file stream.
         % =================================================================
         function HDR=parseEmblaHDR(fid)
-            %HDR is struct with the event file header information
-            fseek(fid,2,'bof'); %2
-            HDR.label = fread(fid,11,'uint16=>char')'; %24
-            HDR.checksum = fread(fid,1,'int32'); %28
-            HDR.num_records = fread(fid,1,'int32'); %32 bytes read
+            HDR=CLASS_codec.parseEmblaHDR(fid);            
         end
         
         function evtStruct = evtTxt2evtStruct(filenameIn)
-        %This function takes an event file of SEV's evt.* format and
-        %returns a struct whose field names are taken from the third header
-        %line, and the values come from the corresponding columns.
-        %Additional fields include channel_label and event_label
-            %3 header lines and then
-            % Start_time	Duration_sec	Epoch	Stage
-            % Start_time is (hh:mm:ss)
-            % evtStruct has the following fields
-            %   Duration_sec
-            %   Start_sample
-            %   Stop_sample
-            %   Epoch
-            %   Stage
-            %   {parameters...}
-            
-            % Example Header lines from evt file
-            % Event Label =	LM_ferri
-            % EDF Channel Label(number) = 	LAT/RAT (7)
-            % Start_time	Duration_sec Start_sample Stop_sample	Epoch	Stage	duration_sec	AUC	stage
-            
-            fid = fopen(filenameIn);
-            eventLabelLine = fgetl(fid);
-            s = regexp(eventLabelLine,'[^=]+=\s(?<event_label>\w+)\s*','names');
-            try
-                evtStruct.event_label = s.event_label;
-            catch ME
-                showME(ME);
-            end
-            channelLabelLine = fgetl(fid);
-            
-            %example header line:
-            % channelLabelLine2 = 'EDF Channel Label(number) = LOC-M2 (1  2)'
-            % channelLabelLine21 = 'EDF Channel Label(number) = LOC-M2 (1  2)'
-            % channelLabelLine1 = 'EDF Channel Label(number) = LOC-M2 (1  2)'
-            s = regexp(channelLabelLine,'[^=]+=\s+(?<channel_label>[^\s\(]+)\s*\((?<channel_number>(\d+\s*)+))','names');
-            try
-                evtStruct.channel_label = s.channel_label;
-            catch ME
-                showME(ME);
-            end
-            
-            headerFields=textscan(fgetl(fid),'%s');
-            headerFields = headerFields{1}(2:end); %skip the start time field for now...
-            numFields = numel(headerFields);
-                        
-            defaultFieldCount = 5; %continue to skip the start_time field
-            
-            %skip the start_time field
-            scanStr = ['%*f:%*f:%*f %f %n %n %n %n',repmat('%f',1,numFields-defaultFieldCount)];
-            scanCell = textscan(fid,scanStr);
-            
-            for k=1:numFields %skip the start time...
-                evtStruct.(headerFields{k}) = scanCell{k};
-            end;
-            
-            fclose(fid);
+            evtStruct = CLASS_codec.parseSEVevtFile(filenameIn);
+
         end
         
         function roc_struct = findOptimalConfigurations(roc_struct)
-           %searches through the roc_struct to find the best possible configurations in terms of sensitivity and specificity and K_0_0, and K_1_0
-           %the roc_struct fields are ordered first by study name and then
-           %by configuration
-           num_studies = numel(roc_struct.study_names);
-           num_configurations = numel(roc_struct.study)/num_studies;
-           
-           k_0_0 = reshape(roc_struct.K_0_0,num_configurations,num_studies);
-           k_1_0 = reshape(roc_struct.K_1_0,num_configurations,num_studies);
-           fpr = reshape(roc_struct.FPR,num_configurations,num_studies);
-           tpr = reshape(roc_struct.TPR,num_configurations,num_studies);
-           mean_k_0_0 = mean(k_0_0,2);  %a vector of size num_configurations
-           mean_k_1_0 = mean(k_1_0,2);
-           mean_fpr = mean(fpr,2);
-           mean_tpr = mean(tpr,2);
-           
-           optimum.K_0_0 = max(k_0_0);
-           optimum.K_1_0 = max(k_1_0);
-           optimum.FPR = min(fpr);
-           optimum.TPR = max(tpr);
-
-           optimum.mean.K_0_0 = max(mean_k_0_0);
-           optimum.mean.K_1_0 = max(mean_k_1_0);
-           optimum.mean.FPR = min(mean_fpr);
-           optimum.mean.TPR = max(mean_tpr);
-
-           optimum.mean.K_0_0_configID = find(optimum.mean.K_0_0==mean_k_0_0);
-           optimum.mean.K_1_0_configID = find(optimum.mean.K_1_0==mean_k_1_0);
-           optimum.mean.FPR_configID = find(optimum.mean.FPR==mean_fpr);
-           optimum.mean.TPR_configID = find(optimum.mean.TPR==mean_tpr);
-           
-           roc_struct.optimum = optimum;
-                     
+            roc_struct = CLASS_codec.findOptimalConfigurations(roc_struct);
         end
         
         function roc_struct = loadROCdata(filename)
-           %loads the roc data as generated by the batch job 
-           %The ROC file follows the naming convention
-           %roc_truthAlgorithm_VS_estimateAlgorithm.txt
-%            roc_struct.config - unique id for each parameter combination
-%            roc_struct.truth_algorithm = algorithm name for gold standard
-%            roc_struct.estimate_algorithm = algorithm name for the estimate 
-%            roc_struct.study - edf filename
-%            roc_struct.Q    - confusion matrix (2x2)
-%            roc_struct.FPR    - false positive rate (1-specificity)
-%            roc_struct.TPR   - true positive rate (sensitivity)
-%            roc_struct.ACC    - accuracy
-%            roc_struct.values   - parameter values
-%            roc_struct.key_names - key names for the associated values
-%            roc_struct.study_names - unique study names for this container
-%            roc_struct.K_0_0 - weighted Kappa value for QROC
-%            roc_struct.K_1_0 - weighted Kappa value for QROC
-
-           
-           pat = '.*ROC_(?<truth_algorithm>.+)_VS_(?<estimate_algorithm>.+)\.txt';
-           t = regexpi(filename,pat,'names');
-           if(isempty(t))
-               roc_struct.truth_algorithm = 'unknown truth_algorithm';
-               roc_struct.estimate_algorithm = 'unknown estimate_algorithm';
-           else
-               roc_struct.truth_algorithm = t.truth_algorithm;
-               roc_struct.estimate_algorithm = t.estimate_algorithm;
+            roc_struct = CLASS_codec.loadROCdata(filename);
+            
+        end
+        function roc_struct = loadROCdataOld(filename) 
+            roc_struct = CLASS_codec.loadROCdataOld(filename);
+        end
+        
+         
+        % =================================================================
+        %> @brief This function loads a Stanford Sleep Cohort's events
+        %> structure as parsed by CLASS_codec's parseSSCevtsFile method.        
+        %> @param SCOStruct A SCO struct containing the following fields
+        %> as parsed from filenameIn.
+        %> - @c startStopSamples
+        %> - @c durationSeconds Duration of the event in seconds
+        %> - @c startStopTimeStr Start time of the event as a string with
+        %> format HH:MM:SS.FFF
+        %> - @c category The category of the event (e.g. 'resp')
+        %> - @c description A description giving further information
+        %> on the event (e.g. Obs Hypopnea)
+        %> - @c samplerate The sampling rate used in the evts file (e.g.
+        %> 512)
+        %> @param stageVec Vector of scored sleep stages.
+        %> @retval obj Instance of CLASS_events_container
+        % =================================================================
+        function obj = importSSCevtsStruct(evtsStruct)
+            obj = CLASS_events_container();
+            obj.setDefaultSamplerate(evtsStruct.samplerate);
+            if(~isempty(evtsStruct) && ~isempty(evtsStruct.category))
+                %indJ contains the indices corresponding to the unique
+                %labels in event_labels (i.e. SCO.labels = event_labels(indJ) 
+               [event_labels,~,indJ] = unique(evtsStruct.category);
                
-           end
-           
-           fid = fopen(filename,'r');           
-           
-           header1 = fgetl(fid); %#True event suffix: h4_ocular
-           name1 = regexp(header1,'.+:\s+(?<algorithm>.+)','names');
-           if(~isempty(name1))
-               roc_struct.truth_algorithm = name1.algorithm;
-           end
-           header2 = fgetl(fid); %#Detection Algorithm: detection.detection_ocular_movement_v2           
-           name2 = regexp(header2,'.+:+\s+(?<algorithm>.+)','names');
-           if(~isempty(name2))
-               roc_struct.estimate_algorithm = name2.algorithm;
-           end
-           %                    TP      FN      FP      TN 
-           % #Config	Study	Q(TP)	Q(FN)	Q(FP)	Q(TN)	FPR	TPR	ACC	K_1_0 K_0_0	CohensKappa	PPV	NPV	precision	recall	lower_threshold_uV	upper_threshold_uV	min_duration_sec	max_duration_sec	filter_hp_freq_Hz
-           str = fgetl(fid);
-           if(strcmp(str(1),'#'))
-               str = str(2:end);
-           end;
-           
-           %pull out all of the column names now and convert to a cell
-           col_names = textscan(str,'%s');
-           col_names = col_names{1};
-           
-           %creating the read encode format to a float (configID), two strings (1. FileName and
-           %2. extension (.edf) and trailing space(?)), and remaining floats for parameter values
-           data = textscan(fid,['%f%s%s',repmat('%f',1,numel(col_names)-2)]);
-           study_name = [char(data{2}),repmat(' ',numel(data{2}),1),char(data{3})];
-
-           roc_struct.config = data{1};
-           roc_struct.study = mat2cell(study_name,ones(size(study_name,1),1),size(study_name,2));
-
-           data(3) = []; %did this to help eliminate confusion due to filenames taking up two fields ({2} and {3}) due to the ' '/space in them.
-          
-           Q = [data{3},data{4},data{5},data{6}]; %data has already been normalized by sample size...
-%            sample_size = sum(Q,2);
-%            quality = sum(Q(:,[1,2]),2)./sample_size; %(TP+FP)/sample_size
-            quality = sum(Q(:,[1,2]),2); %(TP+FP)
-
-%            Q = reshape(Q',2,[])';
-           
-%            Q_cell = mat2cell(Q,2*ones(size(Q,1)/2,1),2);
-%            roc_struct.Q = Q_cell;
-           roc_struct.Q = Q;
-           roc_struct.FPR = data{7};
-           roc_struct.TPR = data{8};
-           roc_struct.ACC = data{9};
-           roc_struct.K_1_0 = data{10};
-           roc_struct.K_0_0 = data{11};
-           roc_struct.CohensKappay = data{12};
-           roc_struct.PPV = data{13};
-           roc_struct.NPV = data{14};
-           roc_struct.precision = data{15};
-           roc_struct.recall = data{16};
-
-           roc_struct.values = data(17:end);
-           roc_struct.key_names = col_names(17:end);
-           
-
-           roc_struct.quality = quality;
-
-           roc_struct.study_names = unique(roc_struct.study);
-           fclose(fid);
-            
-        end
-        function roc_struct = loadROCdataOld(filename) %the method for older ROC data file format
-           %loads the roc data as generated by the batch job 
-           %The ROC file follows the naming convention
-           %roc_truthAlgorithm_VS_estimateAlgorithm.txt
-%            roc_struct.config - unique id for each parameter combination
-%            roc_struct.truth_algorithm = algorithm name for gold standard
-%            roc_struct.estimate_algorithm = algorithm name for the estimate 
-%            roc_struct.study - edf filename
-%            roc_struct.Q    - confusion matrix (2x2)
-%            roc_struct.FPR    - false positive rate (1-specificity)
-%            roc_struct.TPR   - true positive rate (sensitivity)
-%            roc_struct.ACC    - accuracy
-%            roc_struct.values   - parameter values
-%            roc_struct.key_names - key names for the associated values
-%            roc_struct.study_names - unique study names for this container
-%            roc_struct.K_0_0 - weighted Kappa value for QROC
-%            roc_struct.K_1_0 - weighted Kappa value for QROC
-           
-           pat = '.*ROC_(?<truth_algorithm>.+)_VS_(?<estimate_algorithm>.+)\.txt';
-           t = regexpi(filename,pat,'names');
-           if(isempty(t))
-               roc_struct.truth_algorithm = 'unknown truth_algorithm';
-               roc_struct.estimate_algorithm = 'unknown estimate_algorithm';
-           else
-               roc_struct.truth_algorithm = t.truth_algorithm;
-               roc_struct.estimate_algorithm = t.estimate_algorithm;
-           end
-           
-           fid = fopen(filename,'r');           
-           
-           header1 = fgetl(fid); %#True event suffix: h4_ocular
-           name1 = regexp(header1,'.+:\s+(?<algorithm>.+)','names');
-           if(~isempty(name1))
-               roc_struct.truth_algorithm = name1.algorithm;
-           end
-           header2 = fgetl(fid); %#Detection Algorithm: detection.detection_ocular_movement_v2           
-           name2 = regexp(header2,'.+:+\s+(?<algorithm>.+)','names');
-           if(~isempty(name2))
-               roc_struct.estimate_algorithm = name2.algorithm;
-           end
-           %                     TP      FN      FP      TN 
-%            #Config	Study	Q_1_1	Q_1_2	Q_2_1	Q_2_2	FPR	TPR	ACC	sum_threshold_scale_factor	diff_threshold_scale_factor	max_merge_time_sec
-           str = fgetl(fid);
-           if(strcmp(str(1),'#'))
-               str = str(2:end);
-           end;
-           col_names = textscan(str,'%s');
-           col_names = col_names{1};
-           data = textscan(fid,['%f%s%s',repmat('%f',1,numel(col_names)-2)]);
-           study_name = [char(data{2}),repmat(' ',numel(data{2}),1),char(data{3})];
-
-           roc_struct.config = data{1};
-           roc_struct.study = mat2cell(study_name,ones(size(study_name,1),1),size(study_name,2));
-
-           data(3) = []; %did this to help eliminate confusion due to filenames taking up two fields ({2} and {3}) due to the ' '/space in them.
-          
-           Q = [data{3},data{4},data{5},data{6}];
-           sample_size = sum(Q,2);
-           quality = sum(Q(:,[1,2]),2)./sample_size; %(TP+FP)/sample_size
-
-
-%            Q = reshape(Q',2,[])';
-           
-%            Q_cell = mat2cell(Q,2*ones(size(Q,1)/2,1),2);
-%            roc_struct.Q = Q_cell;
-           roc_struct.Q = Q;
-           roc_struct.FPR = data{7};
-           roc_struct.TPR = data{8};
-           roc_struct.ACC = data{9};
-           roc_struct.values = data(10:end);
-           roc_struct.key_names = col_names(10:end);
-           
-
-           roc_struct.K_0_0 = 1-roc_struct.FPR./quality;
-           roc_struct.K_1_0 = (roc_struct.TPR-quality)./(1-quality);
-           roc_struct.quality = quality;
-
-           roc_struct.study_names = unique(roc_struct.study);
-           fclose(fid);
-            
+               % event_indices = find(event_indices);
+               % go through each label and assign it to a channel
+               for e = 1:numel(event_labels)
+                   cur_evt_label = event_labels{e};
+                   evtInd = strcmpi(cur_evt_label,evtsStruct.category);
+                   
+                   paramStruct.description = evtsStruct.description(evtInd);
+                   class_channel_index = [];
+                   cur_event = evtsStruct.startStopSamples(evtInd,:);
+                   sourceStruct.algorithm = 'external file (.evts)';
+                   sourceStruct.channel_indices = [];
+                   sourceStruct.editor = 'none';
+                   obj.updateEvent(cur_event, cur_evt_label, class_channel_index,sourceStruct,paramStruct);
+               end
+            end 
         end
         
-
         
-
         
         function obj = importEmblaEvtDir(embla_path,embla_samplerate,desired_samplerate)
             obj = CLASS_events_container();
@@ -2746,7 +2329,7 @@ classdef CLASS_events_container < handle
             if(nargin<2 || isempty(embla_samplerate))
                 stage_evt_file = fullfile(embla_path,'stage.evt');
                 if(exist(stage_evt_file,'file'))
-                    [eventStruct,base_samplerate] = CLASS_events_container.parseEmblaEvent(stage_evt_file,studyStruct.samplerate,studyStruct.samplerate);
+                    [eventStruct,base_samplerate] = CLASS_codec.parseEmblaEvent(stage_evt_file,studyStruct.samplerate,studyStruct.samplerate);
                     embla_samplerate = base_samplerate;
                     if(num_epochs~=numel(eventStruct.epoch))
                         fprintf(1,'%s\texpected epochs: %u\tencountered epochs: %u to %u\n',srcFile,num_epochs,min(eventStruct.epoch),max(eventStruct.epoch));
@@ -2785,29 +2368,3 @@ classdef CLASS_events_container < handle
     end
     
 end
-
-
-
-%         % =================================================================
-%         %> @brief
-%         %> @param obj instance of CLASS_events_container class.
-%         %> @param
-%         %> @retval 
-%         % =================================================================
-%         function sourceStruct = getSourceStruct(obj,event_index)
-%             %this method is not referenced and may be dropped in the future
-%             %determine if there is a gui to use for this method to
-%             %adjust the parameters/properties of the detection
-%             %algorithm
-%             global MARKING;
-%             childobj = obj.getEventObj(event_index);
-%             detection_struct = MARKING.getDetectionMethodsStruct();
-%             gui_ind = find(strcmp(childobj.label,detection_struct.evt_label));
-%             if(~isempty(gui_ind))
-%                 sourceStruct.channel_indices = childobj.class_channel_index;
-%                 sourceStruct.algorithm = [MARKING.SETTINGS.VIEW.detection_path(2:end),'.',detection_struct.param_gui{gui_ind}.mfile];
-%                 sourceStruct.editor = detection_struct.param_gui{gui_ind};
-%             else
-%                 sourceStruct = [];
-%             end
-%         end
