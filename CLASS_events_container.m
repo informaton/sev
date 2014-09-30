@@ -980,7 +980,7 @@ classdef CLASS_events_container < handle
         function set_Channel_drawEvents(obj,event_index)
             %draw the events on the main psg axes            
             eventObj = obj.getEventObj(event_index);
-            if(~isempty(eventObj))
+            if(~isempty(eventObj) && ~isempty(obj.CHANNELS_CONTAINER))
                 obj.CHANNELS_CONTAINER.setDrawEvents(obj.channel_vector(event_index));
                 obj.event_indices_to_plot(event_index) = 1;
                 obj.summary_stats_axes_needs_update = true;
@@ -1093,7 +1093,7 @@ classdef CLASS_events_container < handle
             if(~isempty(event_indices)&&obj.num_events~=0)
                 for k=1:numel(event_indices)
                     
-                    if(strcmp(obj.cell_of_events{event_indices(k)}.label,event_label))
+                    if(strcmpi(obj.cell_of_events{event_indices(k)}.label,event_label))
                         event_index = event_indices(k);
                         break; %stop at the first match...
                     end
@@ -1934,15 +1934,18 @@ classdef CLASS_events_container < handle
                     
                     start_epochs = sample2epoch(starts,30,obj.defaults.parent_channel_samplerate);
                     
-                    SCO_samplerate = 200;
-                    conversion_factor = SCO_samplerate/obj.defaults.parent_channel_samplerate;                    
+                    %                     SCO_samplerate = 200;
+                    
+                    %                     conversion_factor = SCO_samplerate/obj.defaults.parent_channel_samplerate;
+                    conversion_factor = 1;
                     starts_sco_samples = starts*conversion_factor;
                     duration_sco_samples = (event_start_stop_matrix(:,2)-event_start_stop_matrix(:,1))*conversion_factor;
+                    duration_seconds = duration_sco_samples/obj.defaults.parent_channel_samplerate;
                     %                 fid = 1;
                     for r=1:numel(evt_indices);
                         e=evt_indices(r);
-                        fprintf(fid,'%u\t%u\t%u\t%u\t%s\t%u\t%s\n',start_epochs(r),starts_sco_samples(r),duration_sco_samples(r),e,...
-                            evt_labels{e},e,start_times(r,:));
+                        fprintf(fid,'%u\t%u\t%u\t%f\t%s\t%u\t%s\n',start_epochs(r),starts_sco_samples(r),duration_sco_samples(r),...
+                            duration_seconds(r),evt_labels{e},e,start_times(r,:));
                     end
                     
                     fclose(fid);
@@ -2096,6 +2099,17 @@ classdef CLASS_events_container < handle
             else
                 childobj = [];
             end
+        end
+        
+        % =================================================================
+        %> @brief
+        %> @param obj instance of CLASS_events_container class.
+        %> @param
+        %> @retval 
+        % =================================================================
+        function childobj = getEventObjFromLabel(obj,thisLabel)
+            allLabels = obj.get_event_labels();            
+            childobj = obj.cell_of_events{strcmpi(thisLabel,allLabels)};
         end
         
         % =================================================================
@@ -2295,30 +2309,32 @@ classdef CLASS_events_container < handle
         %> 512)
         %> @param stageVec Vector of scored sleep stages.
         %> @retval obj Instance of CLASS_events_container
+        %> @note In the implementation, description is used as the event
+        %> label and category is used as a parameter.
         % =================================================================
         function obj = importSSCevtsStruct(evtsStruct)
             obj = CLASS_events_container();
             obj.setDefaultSamplerate(evtsStruct.samplerate);
-            if(~isempty(evtsStruct) && ~isempty(evtsStruct.category))
+            if(~isempty(evtsStruct) && ~isempty(evtsStruct.description))
                 %indJ contains the indices corresponding to the unique
-                %labels in event_labels (i.e. SCO.labels = event_labels(indJ) 
-               [event_labels,~,indJ] = unique(evtsStruct.category);
-               
-               % event_indices = find(event_indices);
-               % go through each label and assign it to a channel
-               for e = 1:numel(event_labels)
-                   cur_evt_label = event_labels{e};
-                   evtInd = strcmpi(cur_evt_label,evtsStruct.category);
-                   
-                   paramStruct.description = evtsStruct.description(evtInd);
-                   class_channel_index = [];
-                   cur_event = evtsStruct.startStopSamples(evtInd,:);
-                   sourceStruct.algorithm = 'external file (.evts)';
-                   sourceStruct.channel_indices = [];
-                   sourceStruct.editor = 'none';
-                   obj.updateEvent(cur_event, cur_evt_label, class_channel_index,sourceStruct,paramStruct);
-               end
-            end 
+                %labels in event_labels (i.e. SCO.labels = event_labels(indJ)
+                event_labels = unique(lower(evtsStruct.description));
+                
+                % event_indices = find(event_indices);
+                % go through each label and assign it to a channel
+                for e = 1:numel(event_labels)
+                    cur_evt_label = event_labels{e};
+                    evtInd = strcmpi(cur_evt_label,evtsStruct.description);
+                    
+                    paramStruct.category = evtsStruct.category(evtInd);
+                    class_channel_index = [];
+                    cur_event = evtsStruct.startStopSamples(evtInd,:);
+                    sourceStruct.algorithm = 'external file (.evts)';
+                    sourceStruct.channel_indices = [];
+                    sourceStruct.editor = 'none';
+                    obj.updateEvent(cur_event, cur_evt_label, class_channel_index,sourceStruct,paramStruct);
+                end
+            end
         end
         
         

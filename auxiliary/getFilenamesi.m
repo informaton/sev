@@ -27,7 +27,13 @@ if(~isempty(ext) && ext(1)=='.')
     ext(1)=[];
 end
 
-fileMatchesCell = regexpi(filenames,strcat('.*',ext,'$'));
+% Mac OS does some extra things to keep track of files that have been
+% downloaded which interfere here.  
+if(ismac)
+    fileMatchesCell = regexpi(filenames,strcat('^[^\._].*',ext,'$'));
+else
+    fileMatchesCell = regexpi(filenames,strcat('.*',ext,'$'));    
+end
 fileMatchesVec = false(size(fileMatchesCell));
 
 %I really don't like MATLAB's regexp cell output format... ah well

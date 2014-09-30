@@ -146,142 +146,6 @@ classdef CLASS_codec < handle
             
         end
         
-        %> @brief loads/parses the .SCO file associated with an EDF.        
-        % ======================================================================
-        %> @param filename Full .SCO filename (i.e. with path) to load.
-        %> @param dest_samplerate Sample rate to use for SCO fields (return value)
-        %> @param sco_samplerate The SCO file's internal samplerate used internal =
-        %> this the sample rate used when generating the SCO file initially.
-        %> Typically the samplerate is twice the highest sampling rate used for the .EDF
-        %> channels as shown in the .EDF header.
-        %> @retval SCO is a struct with the fields
-        %> @li .epoch - the epoch that the scored event occured in
-        %> @li .start_stop_matrix - the sample point that the events begin and end on
-        %> @li .label - the string label used to describe the event
-        %> @li .duration_seconds = the duration of the event in seconds (default is 1
-        %> second)
-        %> @li .start_time - events start time as a string in hour:minute:second format
-        %> @param
-        %> @note [ul,ui,uj] = unique(SCO.label); lm_epochs = SCO.epoch(3==uj,:); lm_evts = SCO.start_stop_matrix(3==uj,:);
-        %> @note obtains the unique epochs for the third unique event
-        %> @note History 
-        %> Author: Hyatt Moore IV (< June, 2013)
-        %>
-        %> @note modified: 4/30/2014
-        %>  1.  Added additional input arguments, dest_samplerate and sco_samplerate
-        %>  to help with conversion.  Defaults are dest_samplerate = 100 and
-        %>  sco_samplerate = 200
-        %>  2.  Previously the duration_sec column was only divided by 100Hz and not
-        %>  200Hz, so durations could be 2x's as long if the sampling rate was not
-        %>  100 Hz.    
-        %> @note modified 12/15/12
-        %>  3. last argument to textscan has changed to a regular expression since new
-        %>  files had extra columns at the end which are causing problems with the
-        %>  imports.
-        %> @note modified: 2/6/12 -
-        %>  1.  Some .sco files had empty lines at the top, and we need to cruise
-        %>  through these until something hits - so I do a getl until the scan
-        %>  works, otherwise it will crash
-        %>  2.  Some sco files do not convert correctly due to the sample rate being
-        %>  done at 128.  The EDF is okay, but the SCO file needs to be converted
-        %>  correctly as well.  The mode sample rate from the EDF hdr is used for
-        %>  converting
-        function SCO = parseEvtsFile(filename,dest_samplerate, sco_samplerate)
-            %> filename = '/Users/hyatt4/Documents/Sleep Project/Data/Spindle_7Jun11/A0210_3 170424.SCO';
-            %> filename = '/Users/hyatt4/Documents/Sleep Project/Data/Spindle_7Jun11/A0097_4 174733.SCO';
-
-            
-            % Note:  EDF_filename = [filename(1:end-3),'EDF'];
-            
-            %     if(exist(EDF_filename,'file'))
-            %         HDR = loadHDR(EDF_filename);
-            %         samplerate = max(HDR.samplerate);
-            %         conversion_factor=100/samplerate;
-            %     else
-            %         samplerate = 100;
-            %         conversion_factor = 1;
-            %     end
-            %
-            %
-            %
-
-            
-            if(nargin<3 || isempty(sco_samplerate)|| sco_samplerate<0)
-                sco_samplerate= 200;
-            end
-            
-            if(nargin<2 || isempty(dest_samplerate)|| dest_samplerate<0)
-                dest_samplerate= 100;
-            end
-            
-            if(exist(filename,'file'))
-                fid = fopen(filename,'r');
-                %     x = textscan(fid,'%f %f %f %f %s %f %s %f %*f','delimiter','\t');
-                %     x = textscan(fid,'%f %f %f %f %s %f %s %f %*[.]','delimiter','\t');
-                x = textscan(fid,'%f %f %f %f %s %f %s %f %*[^\n]','delimiter','\t');
-                if(isempty(x{1}))
-                    file_size_bytes = fseek(fid,0,'eof');
-                    if(file_size_bytes==0)
-                        disp(['File size of ',filename,' is 0.  Going to crash now.']);
-                    end
-                    while(isempty(x{1}) && ftell(fid)<file_size_bytes)
-                        fgetl(fid);
-                        x = textscan(fid,'%f %f %f %f %s %f %s %f %*f','delimiter','\t');
-                        disp(filename);
-                    end
-                end
-                %remove potential problem of empty first line
-                try
-                    if(isnan(x{1}(1)))
-                        for k=1:numel(x)
-                            x{k} = x{k}(2:end);
-                        end
-                    end
-                catch me
-                    disp(me);
-                end
-                SCO.epoch = x{1};
-                
-                %handle the negative case, which pops up for the more recent sco files
-                %which were not converted correctly the first time...
-                % - adjusted on 4/30/2014 reference M.Stubbs email sent August 5, 2011
-                neg = x{2}<0;
-                
-                if(any(neg))
-                    x{2}(neg) = abs(floor(x{2}(neg)/100));
-                    x{3}(neg) = abs(floor(x{3}(neg)/100));
-                end
-                
-                x{3}(x{3}==0)=300; %make the default be 1.5 second duration.
-                x{3}(isnan(x{3}))=300; %make the default be 1.5 second duration - typical case for Leg Movement to not have a value listed...
-                
-                %     EDF_filename = [filename(1:end-3),'EDF'];
-                
-                %     if(exist(EDF_filename,'file'))
-                %         HDR = loadHDR(EDF_filename);
-                %         samplerate = max(HDR.samplerate);
-                %         conversion_factor=100/samplerate;
-                %     else
-                %         samplerate = 100;
-                %         conversion_factor = 1;
-                %     end
-                
-                conversion_factor = dest_samplerate/sco_samplerate;
-                SCO.start_stop_matrix = floor([x{2},x{2}+x{3}]*conversion_factor); %remove any problems with the 0.5 indexing that can occur here
-                
-                SCO.duration_seconds = x{3}/sco_samplerate;
-                SCO.start_time = x{7};
-                SCO.label = deblank(x{5});
-                fclose(fid);
-            else
-                SCO = [];
-                disp('filename does not exist');
-            end
-            
-            
-        end
-        
-
         
         
         function [PatID,StudyNum] = getDB_PatientIdentifiers(patstudy)
@@ -563,11 +427,13 @@ classdef CLASS_codec < handle
         %on the event (e.g. Obs Hypopnea)
         %> - @c samplerate The sampling rate used in the evts file (e.g.
         %> 512)
-        %> @retval stageVec A hynpogram of scored sleep stages as parsed from filenameIn.        
+        %> @retval stageVec A hynpogram of scored sleep stages as parsed from filenameIn.       
+        %> @note SSC .evts fils give time and samples as elapsed values
+        %> starting from 0 (for samples) and 00:00:00.000 (for time stamps)
         % =================================================================
         function [SCOStruct, stageVec] = parseSSCevtsFile(filenameIn)       
             if(exist(filenameIn,'file'))
-                fid = fopen(filenameIn);
+                fid = fopen(filenameIn,'r');
                 %%---/ Contents of an .evts file (first 3 lines): %-----------------------/
                 %#scoreDir=SCORED SS
                 %Start Sample,End Sample,Start Time (elapsed),End Time (elapsed),Event,File Name
@@ -576,45 +442,55 @@ classdef CLASS_codec < handle
                 scanCell = textscan(fid,'%f %f %s %s %s %s','delimiter',',','commentstyle','#','headerlines',2);
                 fclose(fid);
                 
-                % parse the stages first
-                stageInd = strcmp(scanCell{6},'stage.evt');
-                stageStartStopSamples = [scanCell{1}(stageInd),scanCell{2}(stageInd)];
-                stageStartStopDatenums =  [datenum(scanCell{3}(stageInd),'HH:MM:SS.FFF'),datenum(scanCell{4}(stageInd),'HH:MM:SS.FFF')];
-                epochDurSec = datevec(diff(stageStartStopDatenums(1,:)))*[0;0;24*60;60;1;1/60]*60;
-                epochDurSamples = diff(stageStartStopSamples(1,:));
-                SCOStruct.samplerate = epochDurSamples/epochDurSec;
-                lastStageSample  = stageStartStopSamples(end);
-                numEpochs = lastStageSample/epochDurSamples;  %or stageStartStopSamples(end,1)/epochDurSamples+1;
-                stageStr = strrep(strrep(strrep(strrep(scanCell{5}(stageInd),'"',''),'Stage ',''),'REM','5'),'Wake','0');
-                %fill in any missing stages with 7.
-                missingStageValue = 7;
-                stageVec = repmat(missingStageValue,numEpochs,1);
-                stageStartEpochs = stageStartStopSamples(:,1)/epochDurSamples+1;  %evts file's start samples begin at 0; 0-based nubmer, but MATLAB indexing starts at 1.
-                stageVec(stageStartEpochs) = str2double(stageStr);  % or, equivalently, str2num(cell2mat(stageStr));
-                %                 y = [eventStruct.epoch,eventStruct.stage];
-                %                 staFilename = fullfile(outPath,strcat(studyID,'STA'));
-                %                 save(staFilename,'y','-ascii');
-                                    
-
-                % Okay, now that we have taken care of the staging, let's
-                % remove it and everything else that is not going to be
-                % shown as a scored event.
-                eventNames = strrep(strrep(scanCell{end},'.evt',''),'.nvt','');                
-
-                removeFields = {'BadData';'user';'filesect';'stage'};
-                
-                removeInd = ismember(eventNames,removeFields);
-                for s=1:numel(scanCell)-1
-                    scanCell{s}(removeInd) = [];
+                if(isempty(scanCell{1}))
+                    fprintf('Warning!  The file ''%s'' could not be parsed!\nAn empty struct will be returned.',filenameIn);
+                    SCOStruct = [];
+                    stageVec = [];
+                else 
+                    
+                    % parse the stages first
+                    stageInd = strcmp(scanCell{6},'stage.evt');
+                    stageStartStopSamples = [scanCell{1}(stageInd),scanCell{2}(stageInd)];
+                    stageStartStopDatenums =  [datenum(scanCell{3}(stageInd),'HH:MM:SS.FFF'),datenum(scanCell{4}(stageInd),'HH:MM:SS.FFF')];
+                    epochDurSec = datevec(diff(stageStartStopDatenums(1,:)))*[0;0;24*60;60;1;1/60]*60;
+                    epochDurSamples = diff(stageStartStopSamples(1,:));
+                    SCOStruct.samplerate = epochDurSamples/epochDurSec;
+                    lastStageSample  = stageStartStopSamples(end);
+                    numEpochs = lastStageSample/epochDurSamples;  %or stageStartStopSamples(end,1)/epochDurSamples+1;
+                    stageStr = strrep(strrep(strrep(strrep(scanCell{5}(stageInd),'"',''),'Stage ',''),'REM','5'),'Wake','0');
+                    %fill in any missing stages with 7.
+                    missingStageValue = 7;
+                    stageVec = repmat(missingStageValue,numEpochs,1);
+                    stageStartEpochs = stageStartStopSamples(:,1)/epochDurSamples+1;  %evts file's start samples begin at 0; 0-based nubmer, but MATLAB indexing starts at 1.
+                    stageVec(stageStartEpochs) = str2double(stageStr);  % or, equivalently, str2num(cell2mat(stageStr));
+                    %                 y = [eventStruct.epoch,eventStruct.stage];
+                    %                 staFilename = fullfile(outPath,strcat(studyID,'STA'));
+                    %                 save(staFilename,'y','-ascii');
+                    
+                    
+                    % Okay, now that we have taken care of the staging, let's
+                    % remove it and everything else that is not going to be
+                    % shown as a scored event.
+                    eventNames = strrep(strrep(scanCell{end},'.evt',''),'.nvt','');
+                    
+                    removeFields = {'BadData';'user';'filesect';'stage'};
+                    
+                    removeInd = ismember(eventNames,removeFields);
+                    for s=1:numel(scanCell)-1
+                        scanCell{s}(removeInd) = [];
+                    end
+                    eventNames(removeInd) = [];
+                    SCOStruct.category = eventNames;
+                    SCOStruct.description = strrep(scanCell{5},'"','');
+                    
+                    SCOStruct.startStopSamples = [scanCell{1},scanCell{2}]+1;
+                    
+                    % MATLAB starts indices at 1, while the rest of the
+                    % programming world starts at 0.
+                    SCOStruct.startStopDatenums =  [datenum(scanCell{3},'HH:MM:SS.FFF'),datenum(scanCell{4},'HH:MM:SS.FFF')];
+                    SCOStruct.durationSeconds = datevec(diff(SCOStruct.startStopDatenums,1,2))*[0;0;24*60;60;1;1/60]*60;
+                    
                 end
-                eventNames(removeInd) = [];
-                SCOStruct.category = eventNames;
-                SCOStruct.description = strrep(scanCell{5},'"','');
-                SCOStruct.startStopSamples = [scanCell{1},scanCell{2}];
-                
-                SCOStruct.startStopDatenums =  [datenum(scanCell{3},'HH:MM:SS.FFF'),datenum(scanCell{4},'HH:MM:SS.FFF')];
-                SCOStruct.durationSeconds = datevec(diff(SCOStruct.startStopDatenums,1,2))*[0;0;24*60;60;1;1/60]*60;
-                
             else
                 fprintf('Warning!  The file ''%s'' does not exist and was not parsed!\nAn empty struct will be returned.',filenameIn);
                 SCOStruct = [];
