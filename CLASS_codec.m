@@ -428,7 +428,7 @@ classdef CLASS_codec < handle
         %> - @c samplerate The sampling rate used in the evts file (e.g.
         %> 512)
         %> @retval stageVec A hynpogram of scored sleep stages as parsed from filenameIn.       
-        %> @note SSC .evts fils give time and samples as elapsed values
+        %> @note SSC .evts files give time and samples as elapsed values
         %> starting from 0 (for samples) and 00:00:00.000 (for time stamps)
         % =================================================================
         function [SCOStruct, stageVec] = parseSSCevtsFile(filenameIn)       

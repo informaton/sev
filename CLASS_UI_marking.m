@@ -388,6 +388,8 @@ classdef CLASS_UI_marking < handle
                %import section
             set(handles.menu_file_load_sco,'callback',@obj.menu_file_load_sco_callback);
             set(handles.menu_file_load_Evt_File,'callback',@obj.menu_file_load_evt_file_callback);
+            set(handles.menu_file_import_evtsFile,'callback',@obj.menu_file_import_evtsFile_callback);
+                        
             set(handles.menu_file_load_text_channel,'callback',@obj.menu_file_load_text_channel_callback);
             set(handles.menu_file_load_events_container,'callback',@obj.menu_file_load_events_container_callback);
             set(handles.menu_file_import_Evt_database,'callback',@obj.menu_file_import_evt_database_callback);
@@ -562,18 +564,24 @@ classdef CLASS_UI_marking < handle
             global EVENT_CONTAINER;
             
             suggested_filename = fullfile([obj.SETTINGS.VIEW.src_edf_filename(1:end-4),'.SCO']);
-            suggested_pathname = obj.SETTINGS.VIEW.src_event_pathname;
-            
+            if(obj.SETTINGS.VIEW.src_event_pathname_is_edf_pathname)
+                suggested_pathname = obj.SETTINGS.VIEW.src_edf_pathname;                
+            else
+                suggested_pathname = obj.SETTINGS.VIEW.src_event_pathname;                
+            end
+                        
             if(exist(fullfile(suggested_pathname,suggested_filename),'file'))
                 sco_suggestion = fullfile(suggested_pathname,suggested_filename);
             else
                 sco_suggestion = suggested_pathname;
             end
-            [filename,pathname]=uigetfile({suggested_filename,'Study Events saved as .SCO';...
+            [filename,pathname]=uigetfile({sco_suggestion,'Study Events saved as .SCO';...
                 '*.SCO','All .SCO files';'*.*','All Files (*.*)'},'Event File Finder',...
                 sco_suggestion);
             if(filename~=0)
-                obj.SETTINGS.VIEW.src_event_pathname = pathname;
+                if(~obj.SETTINGS.VIEW.src_event_pathname_is_edf_pathname)
+                    obj.SETTINGS.VIEW.src_event_pathname = pathname;
+                end
                 EVENT_CONTAINER.loadEventsFromSCOFile(fullfile(pathname,filename));
 %                 EVENT_CONTAINER.draw_events(); %events_to_plot(event_index) = 1;                
                 obj.refreshAxes();
@@ -628,19 +636,65 @@ classdef CLASS_UI_marking < handle
         function menu_file_load_evt_file_callback(obj,hObject, eventdata)
             global EVENT_CONTAINER;            
             suggested_filename = fullfile(['evt.',obj.SETTINGS.VIEW.src_edf_filename(1:end-4),'.*']);
-            suggested_pathname = obj.SETTINGS.VIEW.src_event_pathname;
+            if(obj.SETTINGS.VIEW.src_event_pathname_is_edf_pathname)
+                suggested_pathname = obj.SETTINGS.VIEW.src_edf_pathname;                
+            else
+                suggested_pathname = obj.SETTINGS.VIEW.src_event_pathname;                
+            end
+            
             suggested_file = getFilenames(suggested_pathname,suggested_filename);
             if(~isempty(suggested_file))
                 suggestion = fullfile(suggested_pathname,suggested_file{1});
             else
                 suggestion = suggested_pathname;
             end
-            [filename,pathname]=uigetfile({suggested_filename,'Study Events (Evt.) -mat or .txt';...
+            [filename,pathname]=uigetfile({suggestion,'Study Events (Evt.) -mat or .txt';...
                 '*.*','All Files (*.*)'},'Event File Finder',...
                 suggestion);
             if(filename~=0)
-                obj.SETTINGS.VIEW.src_event_pathname = pathname;
+                if(~obj.SETTINGS.VIEW.src_event_pathname_is_edf_pathname)
+                    obj.SETTINGS.VIEW.src_event_pathname = pathname;
+                end
                 EVENT_CONTAINER.loadEvtFile(fullfile(pathname,filename));
+                EVENT_CONTAINER.draw_events(obj.event_index); %events_to_plot(event_index) = 1;
+                obj.refreshAxes();
+            end;
+        end
+        
+        
+        % =================================================================
+        %> @brief update the SEV with a range of events that were previously saved
+        %> using the save to evt menu item (.txt or .mat).
+        %> @param obj instance of CLASS_events class.
+        %> @param hObject handle to menu_file_load_evt_file_callback (see GCBO)
+        %> @param eventdata  reserved - to be defined in a future version
+        %> of MATLAB
+        %> @retval obj instance of CLASS_events class.
+        % =================================================================
+        function menu_file_importEvts_file_callback(obj,hObject, eventdata)
+            
+            suggested_filename = strcat(obj.SETTINGS.VIEW.src_edf_filename(1:end-4),'.evts');
+            if(obj.SETTINGS.VIEW.src_event_pathname_is_edf_pathname)
+                suggested_pathname = obj.SETTINGS.VIEW.src_edf_pathname;                
+            else
+                suggested_pathname = obj.SETTINGS.VIEW.src_event_pathname;                
+            end
+                
+            suggested_file = getFilenamesi(suggested_pathname,suggested_filename);
+            if(~isempty(suggested_file))
+                suggestion = fullfile(suggested_pathname,suggested_file{1});
+            else
+                suggestion = suggested_pathname;
+            end
+            [filename,pathname]=uigetfile({suggestion,'SSC Events (.evts)';...
+                '*.*','All Files (*.*)'},'Event File Finder',...
+                suggestion);
+            
+            if(filename~=0)
+                if(~obj.SETTINGS.VIEW.src_event_pathname_is_edf_pathname)
+                    obj.SETTINGS.VIEW.src_event_pathname = pathname;
+                end
+                EVENT_CONTAINER.loadSSCEvtsFile(fullfile(pathname,filename));
                 EVENT_CONTAINER.draw_events(obj.event_index); %events_to_plot(event_index) = 1;
                 obj.refreshAxes();
             end;

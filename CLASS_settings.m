@@ -567,6 +567,7 @@ classdef  CLASS_settings < handle
                     case 'VIEW'
                         obj.VIEW.src_edf_pathname = '.'; %initial directory to look in for EDF files to load
                         obj.VIEW.src_edf_filename = ''; %initial filename to suggest when trying to load an .EDF
+                        obj.VIEW.src_event_pathname_is_edf_pathname = 1; %Use edf pathname for src event pathname when true, otherwise use .src_event_pathname;
                         obj.VIEW.src_event_pathname = '.'; %initial directory to look in for EDF files to load
                         obj.VIEW.batch_folder = '.'; %'/Users/hyatt4/Documents/Sleep Project/EE Training Set/';
                         obj.VIEW.yDir = 'normal';  %or can be 'reverse'

@@ -1528,7 +1528,61 @@ classdef CLASS_events_container < handle
                 obj.updateEvent(start_stop_matrix, evt_label, class_channel_index,sourceStruct,paramStruct);
             end
         end
-                
+           
+        % =================================================================
+        %> @brief loadEventsFromSCOFile loads events contained in a WSC
+        %> formatted .SCO file        
+        %> @param obj instance of CLASS_events_container class.
+        %> @param filename The name of the .SCO file
+        %> @retval obj instance of CLASS_events_container class
+        % =================================================================
+        function loadEventsFromSSCEvts(obj,filename)
+            % SCO is struct containing the following fields
+            % as parsed from filenameIn.
+            % - @c startStopSamples
+            % - @c durationSeconds Duration of the event in seconds
+            % - @c startStopTimeStr Start time of the event as a string with
+            % format HH:MM:SS.FFF
+            % - @c category The category of the event (e.g. 'resp')
+            % - @c description A description giving further information
+            %n the event (e.g. Obs Hypopnea)
+            % - @c samplerate The sampling rate used in the evts file (e.g.
+            % 512)
+            SCO = CLASS_codec.parseSSCevtsFile(filename);
+            if(~isempty(SCO) && ~isempty(SCO.epoch))
+                %indJ contains the indices corresponding to the unique
+                %labels in event_labels (i.e. SCO.labels = event_labels(indJ)
+                [event_labels,indI,indJ] = unique(SCO.label);
+                event_indices = listdlg('PromptString','Select Event(s) to Import',...
+                    'ListString',event_labels,'name','Event Selector');
+                channel_names = obj.CHANNELS_CONTAINER.get_labels();
+                event_labels = event_labels(event_indices);
+                %                event_indices = find(event_indices);
+                %go through each label and assign it to a channel
+                for k = 1:numel(event_indices)
+                    class_channel_index = listdlg('PromptString',[event_labels{k},' channel'],...
+                        'ListString',channel_names,'name','Channel Selector',...
+                        'SelectionMode','single');
+                    if(~isempty(class_channel_index))
+                        
+                        paramStruct = [];
+                        
+                        sourceStruct.algorithm = 'external file (.SCO)';
+                        sourceStruct.channel_indices = class_channel_index;
+                        sourceStruct.editor = 'none';
+                        
+                        cur_event = SCO.start_stop_matrix(event_indices(k)==indJ,:);
+                        cur_evt_label = event_labels{k};
+                        obj.updateEvent(cur_event, cur_evt_label, class_channel_index,sourceStruct,paramStruct);
+                        %                        obj.set_Channel_drawEvents(obj.cur_event_index);
+                    end
+                end
+            end
+            
+        
+        end
+        
+        
         % =================================================================
         %> @brief loadEventsFromSCOFile loads events contained in a WSC
         %> formatted .SCO file        
