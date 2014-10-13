@@ -491,12 +491,12 @@ classdef CLASS_events < handle
             %referenced/offset from (it is where the parent object is
             %drawing its data at).
             if(~obj.hidden && ~isempty(obj.evt_patch_h))
-                obj.show();
+                obj.show();                
                 if(~isempty(obj.start_stop_matrix))
                     r = size(obj.start_stop_matrix,1);                    
                     xdata = [obj.start_stop_matrix,fliplr(obj.start_stop_matrix)]';
                     ydata = [repmat(obj.evt_patch_y,r,2), repmat(obj.evt_patch_height+obj.evt_patch_y,r,2)]'; %not important until it is time to draw these...
-                    set(obj.evt_patch_h,'xdata',xdata,'ydata',ydata);
+                    set(obj.evt_patch_h,'xdata',xdata,'ydata',ydata);                    
                 end
             end
         end;

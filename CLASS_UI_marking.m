@@ -582,8 +582,8 @@ classdef CLASS_UI_marking < handle
                 if(~obj.SETTINGS.VIEW.src_event_pathname_is_edf_pathname)
                     obj.SETTINGS.VIEW.src_event_pathname = pathname;
                 end
-                EVENT_CONTAINER.loadEventsFromSCOFile(fullfile(pathname,filename));
-%                 EVENT_CONTAINER.draw_events(); %events_to_plot(event_index) = 1;                
+                EVENT_CONTAINER.loadEventsFromWSCscoFile(fullfile(pathname,filename));
+                EVENT_CONTAINER.draw_events(); %events_to_plot(event_index) = 1;                
                 obj.refreshAxes();
             end;
             
@@ -657,7 +657,7 @@ classdef CLASS_UI_marking < handle
                     obj.SETTINGS.VIEW.src_event_pathname = pathname;
                 end
                 EVENT_CONTAINER.loadEvtFile(fullfile(pathname,filename));
-                EVENT_CONTAINER.draw_events(obj.event_index); %events_to_plot(event_index) = 1;
+                EVENT_CONTAINER.draw_events(); %events_to_plot(event_index) = 1;
                 obj.refreshAxes();
             end;
         end
@@ -704,7 +704,8 @@ classdef CLASS_UI_marking < handle
                 
                 % also want to show the parameter struct when done with
                 % this one.
-                EVENT_CONTAINER.draw_events(obj.event_index); %events_to_plot(event_index) = 1;
+                
+                EVENT_CONTAINER.draw_events(); %events_to_plot(event_index) = 1;
                 
                 
                 obj.refreshAxes();
@@ -727,7 +728,7 @@ classdef CLASS_UI_marking < handle
             if(filename~=0)
                 EVENT_CONTAINER.loadEventsContainerFromFile(fullfile(pathname,filename));
                 obj.SETTINGS.VIEW.src_event_pathname = pathname;
-                EVENT_CONTAINER.draw_events(obj.event_index); %events_to_plot(event_index) = 1;
+                EVENT_CONTAINER.draw_events(); %events_to_plot(event_index) = 1;
                 obj.refreshAxes();
                 obj.refreshAxes();
             end;

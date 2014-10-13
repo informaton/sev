@@ -583,7 +583,7 @@ classdef CLASS_events_container < handle
         %> @param
         %> @retval
         % =================================================================
-%return the number of events and their total duration in seconds
+        %return the number of events and their total duration in seconds
         %in the cell at event_index
         function [count, time_in_sec] = events_count(obj,event_index)
              if(event_index>0 && event_index<=obj.num_events)
@@ -1530,7 +1530,7 @@ classdef CLASS_events_container < handle
         end
            
         % =================================================================
-        %> @brief loadEventsFromWSCscoFile loads events contained in a WSC
+        %> @brief loadEventsFromSSCevtsFile loads events contained in a WSC
         %> formatted .SCO file        
         %> @param obj instance of CLASS_events_container class.
         %> @param filename The name of the .SCO file
