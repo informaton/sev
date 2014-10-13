@@ -533,7 +533,8 @@ classdef CLASS_events < handle
                 event_indices = obj.getEventIndicesInEpoch();
                 if(~isempty(event_indices))
 %                     fn = fieldnames(obj.paramStruct);
-                    values= obj.paramStruct.(obj.paramFieldNames{obj.paramFieldIndex})(event_indices);
+                    curParamName = obj.paramFieldNames{obj.paramFieldIndex};
+                    values= obj.paramStruct.(curParamName)(event_indices);
                     obj.paramtexthandle = -ones(numel(values),1); %-1 so we don't get mixed up with 0, the root handle
                     xposDelta = diff(obj.start_stop_matrix(event_indices,:)')';
                     xpos = obj.start_stop_matrix(event_indices,1)+xposDelta/3; %have the parameters start 1/3 of the way through the patch
@@ -541,14 +542,18 @@ classdef CLASS_events < handle
                     zpos = zeros(size(xpos));
                     pos = [xpos,ypos,zpos];
                     if(numel(values)>20)
-                        for k=1:numel(values)
-                            obj.paramtexthandle(k) = text('parent',obj.parent_axes,'position',pos(k,:),'string',num2str(values(k),'%0.0f'));
-                        end
+                        numFmt = '%0.0f';
                     else
-                        for k=1:numel(values)
-%                             obj.paramtexthandle(k) = text('parent',obj.parent_axes,'position',pos(k,:),'string',num2str(values(k),'%0.1f'));
-                            obj.paramtexthandle(k) = text('parent',obj.parent_axes,'position',pos(k,:),'string',num2str(values(k),'%0.1f'));
+                        numFmt = '%0.1f';
+                    end
+                    for k=1:numel(values)
+                        if(strcmpi(curParamName,'description'))
+                            strValue = values{k};
+                        else
+                            strValue = num2str(values(k),numFmt);
                         end
+                        obj.paramtexthandle(k) = text('parent',obj.parent_axes,'position',pos(k,:),'string',strValue);
+                        
                     end
                 end
             end

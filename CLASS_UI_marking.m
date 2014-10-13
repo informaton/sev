@@ -642,6 +642,7 @@ classdef CLASS_UI_marking < handle
                 suggested_pathname = obj.SETTINGS.VIEW.src_event_pathname;                
             end
             
+            
             suggested_file = getFilenames(suggested_pathname,suggested_filename);
             if(~isempty(suggested_file))
                 suggestion = fullfile(suggested_pathname,suggested_file{1});
@@ -671,20 +672,25 @@ classdef CLASS_UI_marking < handle
         %> of MATLAB
         %> @retval obj instance of CLASS_events class.
         % =================================================================
-        function menu_file_importEvts_file_callback(obj,hObject, eventdata)
+        function menu_file_import_evtsFile_callback(obj,hObject, eventdata)
+            global EVENT_CONTAINER;
             
-            suggested_filename = strcat(obj.SETTINGS.VIEW.src_edf_filename(1:end-4),'.evts');
+            suggested_filename = strcat(obj.SETTINGS.VIEW.src_edf_filename(1:end-4),'.EVTS');
             if(obj.SETTINGS.VIEW.src_event_pathname_is_edf_pathname)
                 suggested_pathname = obj.SETTINGS.VIEW.src_edf_pathname;                
             else
                 suggested_pathname = obj.SETTINGS.VIEW.src_event_pathname;                
             end
+            
+            suggestion = fullfile(suggested_pathname,suggested_filename);
+            if(~exist(suggestion,'file'))
                 
-            suggested_file = getFilenamesi(suggested_pathname,suggested_filename);
-            if(~isempty(suggested_file))
-                suggestion = fullfile(suggested_pathname,suggested_file{1});
-            else
-                suggestion = suggested_pathname;
+                suggested_file = getFilenamesi(suggested_pathname,'.EVTS');
+                if(~isempty(suggested_file))
+                    suggestion = fullfile(suggested_pathname,suggested_file{1});
+                else
+                    suggestion = suggested_pathname;
+                end
             end
             [filename,pathname]=uigetfile({suggestion,'SSC Events (.evts)';...
                 '*.*','All Files (*.*)'},'Event File Finder',...
@@ -694,7 +700,7 @@ classdef CLASS_UI_marking < handle
                 if(~obj.SETTINGS.VIEW.src_event_pathname_is_edf_pathname)
                     obj.SETTINGS.VIEW.src_event_pathname = pathname;
                 end
-                EVENT_CONTAINER.loadSSCEvtsFile(fullfile(pathname,filename));
+                EVENT_CONTAINER.loadEventsFromSSCevtsFile(fullfile(pathname,filename));
                 EVENT_CONTAINER.draw_events(obj.event_index); %events_to_plot(event_index) = 1;
                 obj.refreshAxes();
             end;
@@ -1566,8 +1572,8 @@ classdef CLASS_UI_marking < handle
         end
         
         function loadSTAGES(obj,stages_filename,num_epochs)
-            global EVENT_CONTAINER;
-            obj.sev_STAGES = loadSTAGES(stages_filename,num_epochs,obj.SETTINGS.VIEW.unknown_stage);
+            global EVENT_CONTAINER;            
+            obj.sev_STAGES = CLASS_codec.loadSTAGES(stages_filename,num_epochs,obj.SETTINGS.VIEW.unknown_stage);
             obj.sev_STAGES.startDateTime = obj.startDateTime;
             obj.sev_adjusted_STAGES = obj.sev_STAGES;            
             EVENT_CONTAINER.setStageStruct(obj.sev_STAGES);
@@ -1584,15 +1590,32 @@ classdef CLASS_UI_marking < handle
             
             new_channels_loaded = obj.load_EDFchannels_callback();
             if(new_channels_loaded)
-                [~,name,~]= fileparts(obj.SETTINGS.VIEW.src_edf_filename);
-                stages_filename = fullfile(obj.SETTINGS.VIEW.src_edf_pathname,strcat(name,'.STA'));
                 obj.setDateTimeFromHDR();
                 
-                if(~exist(stages_filename,'file'))
-                    fprintf(1,'Staging File %s not found!  Fictitious staging will be used.\r\n',stages_filename);
+                
+                [~,name,~]= fileparts(obj.SETTINGS.VIEW.src_edf_filename);
+                if(obj.SETTINGS.VIEW.hypnogram_pathname_is_edf_pathname) %Use edf pathname for src event pathname when true, otherwise use .src_event_pathname;
+                    hypnogram_path = obj.SETTINGS.VIEW.src_edf_pathname;
+                else                    
+                    hypnogram_path = obj.SETTINGS.VIEW.hypnogram_pathname; 
+                end
+                        
+                stages_filename = fullfile(hypnogram_path,strcat(name,'.STA'));
+                
+                if(exist(stages_filename,'file'))
+                    obj.loadSTAGES(stages_filename,obj.num_epochs);
+                else
+                    fprintf(1,'Staging File %s not found!  Will attempt to find alternative staging file.\r\n',stages_filename);
+
+                    stages_filename = fullfile(obj.SETTINGS.VIEW.src_edf_pathname,strcat(name,'.evts'));
+                    if(exist(stages_filename,'file'))
+                        obj.loadSTAGES(stages_filename,obj.num_epochs);
+                        
+                    else
+                        fprintf(1,'Alternate staging file %s not found!  Fictitious staging will be used.\r\n',stages_filename); 
+                    end
                 end
                 
-                obj.loadSTAGES(stages_filename,obj.num_epochs);
                 
                 obj.display_samples = 1:obj.getSamplesPerEpoch(); 
                 obj.setAxesResolution(); %calls refreshAxes()  %calls set epoch;

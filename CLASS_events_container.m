@@ -1530,13 +1530,13 @@ classdef CLASS_events_container < handle
         end
            
         % =================================================================
-        %> @brief loadEventsFromSCOFile loads events contained in a WSC
+        %> @brief loadEventsFromWSCscoFile loads events contained in a WSC
         %> formatted .SCO file        
         %> @param obj instance of CLASS_events_container class.
         %> @param filename The name of the .SCO file
         %> @retval obj instance of CLASS_events_container class
         % =================================================================
-        function loadEventsFromSSCEvts(obj,filename)
+        function loadEventsFromSSCevtsFile(obj,filename)
             % SCO is struct containing the following fields
             % as parsed from filenameIn.
             % - @c startStopSamples
@@ -1548,11 +1548,11 @@ classdef CLASS_events_container < handle
             %n the event (e.g. Obs Hypopnea)
             % - @c samplerate The sampling rate used in the evts file (e.g.
             % 512)
-            SCO = CLASS_codec.parseSSCevtsFile(filename);
-            if(~isempty(SCO) && ~isempty(SCO.epoch))
+            SSC_evts = CLASS_codec.parseSSCevtsFile(filename);
+            if(~isempty(SSC_evts) && ~isempty(SSC_evts.category))
                 %indJ contains the indices corresponding to the unique
                 %labels in event_labels (i.e. SCO.labels = event_labels(indJ)
-                [event_labels,indI,indJ] = unique(SCO.label);
+                [event_labels,indI,indJ] = unique(SSC_evts.category);
                 event_indices = listdlg('PromptString','Select Event(s) to Import',...
                     'ListString',event_labels,'name','Event Selector');
                 channel_names = obj.CHANNELS_CONTAINER.get_labels();
@@ -1566,12 +1566,19 @@ classdef CLASS_events_container < handle
                     if(~isempty(class_channel_index))
                         
                         paramStruct = [];
+                        paramStruct.description = SSC_evts.description(event_indices(k)==indJ);
                         
-                        sourceStruct.algorithm = 'external file (.SCO)';
+                        sourceStruct.algorithm = 'external file (.EVTS)';
                         sourceStruct.channel_indices = class_channel_index;
                         sourceStruct.editor = 'none';
                         
-                        cur_event = SCO.start_stop_matrix(event_indices(k)==indJ,:);
+                        channel_samplerate = obj.CHANNELS_CONTAINER.cell_of_channels{class_channel_index}.samplerate;
+                        conversion_factor = channel_samplerate/SSC_evts.samplerate;
+
+                        
+                        cur_event = round(SSC_evts.startStopSamples(event_indices(k)==indJ,:)*conversion_factor);
+                        
+                        
                         cur_evt_label = event_labels{k};
                         obj.updateEvent(cur_event, cur_evt_label, class_channel_index,sourceStruct,paramStruct);
                         %                        obj.set_Channel_drawEvents(obj.cur_event_index);
@@ -1584,13 +1591,13 @@ classdef CLASS_events_container < handle
         
         
         % =================================================================
-        %> @brief loadEventsFromSCOFile loads events contained in a WSC
+        %> @brief loadEventsFromWSCscoFile loads events contained in a WSC
         %> formatted .SCO file        
         %> @param obj instance of CLASS_events_container class.
         %> @param filename The name of the .SCO file
         %> @retval obj instance of CLASS_events_container class
         % =================================================================
-        function obj = loadEventsFromSCOFile(obj,filename)
+        function obj = loadEventsFromWSCscoFile(obj,filename)
             
             %SCO is a struct with the fields
             % .epoch - the epoch that the scored event occured in
