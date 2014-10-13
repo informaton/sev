@@ -701,7 +701,12 @@ classdef CLASS_UI_marking < handle
                     obj.SETTINGS.VIEW.src_event_pathname = pathname;
                 end
                 EVENT_CONTAINER.loadEventsFromSSCevtsFile(fullfile(pathname,filename));
+                
+                % also want to show the parameter struct when done with
+                % this one.
                 EVENT_CONTAINER.draw_events(obj.event_index); %events_to_plot(event_index) = 1;
+                
+                
                 obj.refreshAxes();
             end;
         end

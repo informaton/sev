@@ -552,8 +552,7 @@ classdef CLASS_events < handle
                         else
                             strValue = num2str(values(k),numFmt);
                         end
-                        obj.paramtexthandle(k) = text('parent',obj.parent_axes,'position',pos(k,:),'string',strValue);
-                        
+                        obj.paramtexthandle(k) = text('parent',obj.parent_axes,'position',pos(k,:),'string',strValue);                        
                     end
                 end
             end

@@ -82,7 +82,7 @@ classdef CLASS_events_toolbox_dialog < handle
                 units = 'points';
                 
                 
-                methods = CLASS_settings.loadDetectionMethodsInf(obj.detection_path,obj.detection_inf_file);
+                methods = CLASS_settings.loadParametersInf(obj.detection_path,obj.detection_inf_file);
                 
                 methods.mfile{end+1} = '';
                 methods.evt_label{end+1} = 'Create New';
