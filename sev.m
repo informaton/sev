@@ -203,7 +203,7 @@ if(epoch>0)
                 epoch = epoch-10;
             end
         else
-            if(strcmpi(MARKING.marking_state,'stage_sleep'))
+            if(strcmpi(MARKING.marking_state,'stage_sleep') && isempty(eventdata.Modifier))
                 if(strcmpi(key,'w')) %Wake
                     sleepStage = 0;
                 elseif(strcmpi(key,'r')) %REM
