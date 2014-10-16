@@ -169,9 +169,21 @@ classdef CLASS_UI_marking < handle
         
         %> Destructor
         function close(obj)
+            global CHANNELS_CONTAINER;
+            global EVENTS_CONTAINER;
             obj.toolbarhandle.jCombo = [];
             obj.saveParameters(); %requires SETTINGS variable
-            obj.SETTINGS = [];
+            delete(obj.SETTINGS);
+            if(~isempty(CHANNELS_CONTAINER))
+                delete(CHANNELS_CONTAINER);
+                CHANNELS_CONTAINER = [];
+            end
+            if(~isempty(EVENTS_CONTAINER))
+                delete(EVENTS_CONTAINER);
+                EVENTS_CONTAINER = [];
+            end
+            
+            delete(obj);
         end        
         
         function paramStruct = getSaveParametersStruct(obj)
@@ -399,6 +411,8 @@ classdef CLASS_UI_marking < handle
             set(handles.menu_file_export_events_container,'callback',@obj.menu_file_export_events_container_callback);
             set(handles.menu_file_export_events2mat,'callback',@obj.menu_file_export_events2mat_callback);
             set(handles.menu_file_export_fft2txt,'callback',@obj.menu_file_export_fft2txt_callback);
+            set(handles.menu_file_export_hypnogram2sta,'callback',@obj.menu_file_export_hypnogram2sta_callback);
+           
             
             set(handles.menu_file_createEDF,'callback',@obj.menu_file_createEDF_callback)
             set(handles.menu_file_load_channels,'callback',@obj.load_EDFchannels_callback);%
@@ -692,7 +706,7 @@ classdef CLASS_UI_marking < handle
                     suggestion = suggested_pathname;
                 end
             end
-            [filename,pathname]=uigetfile({suggestion,'SSC Events (.evts)';...
+            [filename,pathname]=uigetfile({suggestion,'SSC Events (.EVTS)';...
                 '*.*','All Files (*.*)'},'Event File Finder',...
                 suggestion);
             
@@ -779,7 +793,7 @@ classdef CLASS_UI_marking < handle
         function menu_file_export_psd2txt_callback(obj,hObject, eventdata, handles)
             global CHANNELS_CONTAINER;            
             CHANNELS_CONTAINER.savePSD2txt(obj.SETTINGS.VIEW.src_edf_filename);
-        end        
+        end
         
         % --------------------------------------------------------------------
         function menu_file_export_events_container_callback(obj,hObject, eventdata)
@@ -811,11 +825,34 @@ classdef CLASS_UI_marking < handle
             EVENT_CONTAINER.save2mat();
             
         end
+        
+        %> @brief Export the current hypnogram to a .STA text file.
+        %> @note Hypnograms are scored at the default interval set in the
+        %> SEV parameters (e.g. 30 seconds)
+        %> @param hObject    handle to menu_file_export_hypnogram2sta (see GCBO)
+        %> @param eventdata  reserved - to be defined in a future version of MATLAB
+        % --------------------------------------------------------------------
+        function menu_file_export_hypnogram2sta_callback(obj,hObject, eventdata)
+                 
+            %.STA file = obj.current_file
+            % get a filename
+            
+            % get hypnogram
+            hypnogramVec = obj.sev_STAGES.line;
+            filterspec = {'STA','STA'};
+            [~,fname,~] = fileparts(obj.SETTINGS.VIEW.src_edf_filename);
+            staFilename = fullfile(obj.SETTINGS.VIEW.src_edf_pathname,[fname,'.STA']);
+            [staFilename, pathname, ~] = uiputfile(filterspec,'Hypnogram filename',staFilename);
+            if(isequal(staFilename,0) || isequal(pathname,0))
+                disp('User pressed cancel')
+            else
+                CLASS_codec.saveHypnogram2STA(hypnogramVec, fullfile(pathname,staFilename));
+           end
+           
+        end
+        
         % --------------------------------------------------------------------
         function menu_file_export_fft2txt_callback(obj,hObject, eventdata)
-            % hObject    handle to menu_file_export_fft2txt (see GCBO)
-            % eventdata  reserved - to be defined in a future version of MATLAB
-            % handles    structure with handles and user data (see GUIDATA)            
             disp 'This function was moved to another file';
         end
         
@@ -1400,8 +1437,7 @@ classdef CLASS_UI_marking < handle
          %% -- Toolbar configuration section
 
         function addToolbar(obj)
-            handles = guidata(obj.figurehandle.sev);
-            
+            handles = guidata(obj.figurehandle.sev);            
             
             %remove the default toolbar
             default_toolbar = findobj(allchild(obj.figurehandle.sev),'type','uitoolbar');
@@ -1490,7 +1526,8 @@ classdef CLASS_UI_marking < handle
             userdata.off_img = general_edit_off_img;
             obj.toolbarhandle.general_edit_toggle = uitoggletool(th,'CData',general_edit_off_img,'Separator','off',...
                 'TooltipString','General Editing State On/Off','userdata',userdata,'tag','general_edit',...
-                'HandleVisibility','off','clickedcallback',@obj.toggle_general_edit_toolbar);
+                'HandleVisibility','off');
+            
             
             %% Marking toolbar icon
             %this icon has a black background by default
@@ -1514,7 +1551,7 @@ classdef CLASS_UI_marking < handle
             
             obj.toolbarhandle.marking_toggle = uitoggletool(th,'CData',marking_off_img,'Separator','off',...
                 'TooltipString','Marking State Off','userdata',userdata,...
-                'HandleVisibility','off','clickedcallback',@obj.toggle_marking_toolbar,'tag','marking');
+                'HandleVisibility','off','tag','marking');
             
             
             % Add undo dropdown list to the toolbar
@@ -1547,6 +1584,44 @@ classdef CLASS_UI_marking < handle
                 warning('on',msgid);
                 
             end
+            
+            %% Score sleep stage
+            
+            stage_sleep_on_img = imread(fullfile(obj.SETTINGS.rootpathname,'icons/tent-24x24.png'),'backgroundcolor',backgroundColor/255);
+            stage_sleep_off_img = stage_sleep_on_img;
+            
+            resolution = size(stage_sleep_on_img);
+            backgroundImg = ones(resolution);
+            whitebackgroundImg = repmat(255,resolution);
+            graybackgroundImg = repmat(127,resolution);
+            
+            blackbackgroundImg = zeros(resolution);
+            for k=1:resolution(3)
+                backgroundImg(:,:,k) = repmat(backgroundColor(k),resolution(1),resolution(2));
+            end
+            
+            blank_ind = stage_sleep_on_img==backgroundImg;
+%             stage_sleep_off_img = double(stage_sleep_off_img)/255;
+%             stage_sleep_off_img(blank_ind) = backgroundImg(blank_ind);
+            
+            stage_sleep_on_img(blank_ind) = blackbackgroundImg(blank_ind);
+            stage_sleep_on_img(~blank_ind) = graybackgroundImg(~blank_ind);
+            
+            
+            userdata.on_img = stage_sleep_on_img;
+            userdata.off_img = stage_sleep_off_img;
+            obj.toolbarhandle.stage_sleep_toggle = uitoggletool(th,'CData',stage_sleep_off_img,'Separator','on',...
+                'TooltipString','Score file for sleep stage','userdata',userdata,'tag','stage_sleep',...
+                'HandleVisibility','off');
+            
+            toggleHandles = [obj.toolbarhandle.marking_toggle;
+                obj.toolbarhandle.general_edit_toggle;
+                obj.toolbarhandle.stage_sleep_toggle;];
+            for t=1:numel(toggleHandles)
+                curHandle = toggleHandles(t);
+                set(curHandle,'clickedcallback',{@obj.toggle_toolbar_callback,setdiff(toggleHandles,curHandle)});
+            end            
+            
             guidata(obj.figurehandle.sev,handles);
         end
         
@@ -1619,6 +1694,7 @@ classdef CLASS_UI_marking < handle
                         
                     else
                         fprintf(1,'Alternate staging file %s not found!  Fictitious staging will be used.\r\n',stages_filename); 
+                        obj.loadSTAGES([],obj.num_epochs);
                     end
                 end
                 
@@ -1897,6 +1973,8 @@ classdef CLASS_UI_marking < handle
                 obj.setEpoch(epoch);
             end;
         end
+        
+        
         function setEpochResolutionHandle(obj,time_scale_menu_h_in)
             %time_scale_menu_h_in is popup menu for epoch scales
             if(ishandle(time_scale_menu_h_in))
@@ -2297,47 +2375,72 @@ classdef CLASS_UI_marking < handle
             obj.event_label = get(hObject,'SelectedItem'); %hObject.getSelectedItem();            
         end
         
-        function toggle_toolbar(obj,tag,state)
-            if(strcmpi(tag,'marking'))
-                toolbar_h = obj.toolbarhandle.marking_toggle;
-                set(toolbar_h,'state',state);
-                obj.toggle_marking_toolbar(toolbar_h,[]);
-            elseif(strcmpi(tag,'general'))
-                
-            end
-        end
-        function toggle_marking_toolbar(obj,hObject,eventdata)
-            onoff_state = get(hObject,'state');
-            
-            toolbar_data = get(hObject,'userdata');
-            if(strcmpi(onoff_state,'on'))                
-                obj.marking_state = 'marking';                
-                obj.toolbarhandle.jCombo.setEnabled(true);
-                
-                set(obj.toolbarhandle.general_edit_toggle,'state','off');
-                general_edit_data = get(obj.toolbarhandle.general_edit_toggle,'userdata');
-                set(obj.toolbarhandle.general_edit_toggle,'cdata',general_edit_data.off_img,'state','off','tooltipstring','General Editing: Off');
-            else
-                obj.toolbarhandle.jCombo.setEnabled(false);
-                obj.marking_state = 'off';
-            end
-            set(obj.toolbarhandle.marking_toggle,'cdata',toolbar_data.([onoff_state,'_img']),'state',onoff_state,'tooltipstring',sprintf('%s: %s',strrep(get(hObject,'tag'),'_',''),onoff_state));
-        end
-       
-        function toggle_general_edit_toolbar(obj,hObject,eventdata)
-            onoff_state = get(hObject,'state');
-            toolbar_data = get(hObject,'userdata');
-            if(strcmpi(onoff_state,'on'))                
-                obj.marking_state = 'general';                
-                obj.toolbarhandle.jCombo.setEnabled(false);
-                set(obj.toolbarhandle.marking_toggle,'state','off');
-                marking_data = get(obj.toolbarhandle.marking_toggle,'userdata');
-                set(obj.toolbarhandle.marking_toggle,'cdata',marking_data.off_img,'state','off','tooltipstring','Marking: Off');
+        function toggle_toolbar_callback(obj,hObject,eventdata,inactiveToggleHandles)
+            tag = get(hObject,'tag');
+            obj.marking_state = tag;
+            set(obj.epoch_resolution.menu_h,'enable','on');  %turn this off under one circumstance given below.
+            if(strcmpi(get(hObject,'state'),'on'))
+                % turn off the other toggles
+                set(inactiveToggleHandles,'state','off');                
+                obj.marking_state = get(hObject,'tag'); 
+                if(strcmpi(obj.marking_state,'marking'))    
+                    obj.toolbarhandle.jCombo.setEnabled(true);
+                else
+                    obj.toolbarhandle.jCombo.setEnabled(false);
+                end
+                if(strcmpi(obj.marking_state,'stage_sleep'))
+                    % disable resolution menu
+                    standard_epoch_selection_index = find(obj.epoch_resolution.sec==obj.SETTINGS.VIEW.standard_epoch_sec);
+                    set(obj.epoch_resolution.menu_h,'value',standard_epoch_selection_index);
+                    obj.epoch_resolution_callback(obj.epoch_resolution.menu_h,[]);
+                    set(obj.epoch_resolution.menu_h,'enable','off');
+                end  
             else
                 obj.marking_state = 'off';
+                obj.toolbarhandle.jCombo.setEnabled(false);
             end
-            set(obj.toolbarhandle.general_edit_toggle,'cdata',toolbar_data.([onoff_state,'_img']),'state',onoff_state,'tooltipstring',sprintf('General Edit: %s',onoff_state));
+            allToggleHandles = [hObject;inactiveToggleHandles];
+            for t=1:numel(allToggleHandles)
+                curH = allToggleHandles(t);
+                curData = get(curH,'userdata');
+                curState = get(curH,'state');
+                curTag = get(curH,'tag');
+                set(curH,'cdata',curData.(strcat(curState,'_img')),'state',curState,'tooltipstring',sprintf('%s: %s',curTag,curState));
+            end            
         end
+        
+%         function toggle_marking_toolbar(obj,hObject,eventdata)
+%             onoff_state = get(hObject,'state');
+%             
+%             toolbar_data = get(hObject,'userdata');
+%             if(strcmpi(onoff_state,'on'))                
+%                 obj.marking_state = 'marking';                
+%                 obj.toolbarhandle.jCombo.setEnabled(true);
+%                 
+%                 set(obj.toolbarhandle.general_edit_toggle,'state','off');
+%                 general_edit_data = get(obj.toolbarhandle.general_edit_toggle,'userdata');
+%                 set(obj.toolbarhandle.general_edit_toggle,'cdata',general_edit_data.off_img,'state','off','tooltipstring','General Editing: Off');
+%             else
+%                 obj.toolbarhandle.jCombo.setEnabled(false);
+%                 obj.marking_state = 'off';
+%             end
+%             set(obj.toolbarhandle.marking_toggle,'cdata',toolbar_data.([onoff_state,'_img']),'state',onoff_state,'tooltipstring',sprintf('%s: %s',strrep(get(hObject,'tag'),'_',''),onoff_state));
+%         end
+%        
+%         function toggle_general_edit_toolbar(obj,hObject,eventdata)
+%             onoff_state = get(hObject,'state');
+%             toolbar_data = get(hObject,'userdata');
+%             if(strcmpi(onoff_state,'on'))                
+%                 obj.marking_state = 'general';                
+%                 obj.toolbarhandle.jCombo.setEnabled(false);
+%                 set(obj.toolbarhandle.marking_toggle,'state','off');
+%                 marking_data = get(obj.toolbarhandle.marking_toggle,'userdata');
+%                 set(obj.toolbarhandle.marking_toggle,'cdata',marking_data.off_img,'state','off','tooltipstring','Marking: Off');
+%             else
+%                 obj.marking_state = 'off';
+%             end
+%             set(obj.toolbarhandle.general_edit_toggle,'cdata',toolbar_data.([onoff_state,'_img']),'state',onoff_state,'tooltipstring',sprintf('General Edit: %s',onoff_state));
+%         end
         
         function obj = restore_state(obj)
             obj.clear_handles();
@@ -2494,7 +2597,12 @@ classdef CLASS_UI_marking < handle
             
             min_y = max(min(y),obj.sev_mainaxes_ylim(1));
             max_y = min(max(y),obj.sev_mainaxes_ylim(2));
-            h = max_y-min_y; %height
+            if(min_y==max_y) %height - sometimes min_y == max_y 
+                min_y = -10;
+                max_y = 10;
+            end
+            h = max_y-min_y; 
+                
             y_mid = CHANNELS_CONTAINER.cell_of_channels{obj.class_channel_index}.line_offset; %min_y+h/2;
             
             obj.clear_handles();

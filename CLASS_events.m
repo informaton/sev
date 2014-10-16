@@ -1046,9 +1046,13 @@ classdef CLASS_events < handle
                 MARKING.current_linehandle = CHANNELS_CONTAINER.cell_of_channels{obj.class_channel_index}.line_handle;
                 
                 %turn the editor icon and states on                
-                MARKING.toggle_toolbar('marking','on');
-                editing = true;
-                MARKING.startMarking(editing); 
+                
+                if(strcmpi(MARKING.marking_state,'general_edit')||strcmpi(MARKING.marking_state,'marking'));
+                    editing = true;
+                    MARKING.startMarking(editing); 
+                end
+                
+                
             else
                 %a context menu should pop-up otherwise
             end;

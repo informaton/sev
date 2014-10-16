@@ -40,7 +40,9 @@ classdef CLASS_codec < handle
                 default_unknown_stage = unknown_stage_label;
             end
             
-            [~,~,ext] = fileparts(stages_filename);
+            if(~isempty(stages_filename))
+                [~,~,ext] = fileparts(stages_filename);
+            end
             %load stages information if the file exists and we know its
             %extension.
             if(exist(stages_filename,'file') && (strcmpi(ext,'.sta')||strcmpi(ext,'.evts')))
@@ -239,7 +241,37 @@ classdef CLASS_codec < handle
             
         end
         
-        
+        %> @brief Export the current hypnogram to a .STA text file.
+        %> @note Hypnograms are scored at the default interval set in the
+        %> SEV parameters (e.g. 30 seconds)
+        %> @param hypnogramVec A vector of consecutively scored sleep
+        %> stages with numeric values interpreted as
+        %> - c 0    Wake
+        %> - c 1    Stage 1
+        %> - c 2    Stage 2
+        %> - c 3    Stage 3
+        %> - c 4    Stage 4
+        %> - c 5    REM sleep
+        %> - c 7    Uknown                
+        %> @param staFilename Optional filename to save hypnogram to.  If
+        %> not included, the user is prompted for a filename.
+        %> @note The .STA file format is two column, tab-delimited, ascii
+        %> with the first column being a consecutive list of epochs and the
+        %> second column containing the sleep scores that correspond to
+        %> the first column epochs.        
+        function saveHypnogram2STA(hypnogramVec, staFilename)
+            epoch = (1:numel(hypnogramVec))';
+            hypnogramVec = hypnogramVec(:);
+            y = [epoch,hypnogramVec];
+            
+            if(nargin<2 ||isempty(staFilename))
+                staFilename = [];
+            end
+            
+            %double check that we have .STA extension
+            save(staFilename,'y','-ascii');
+            
+        end
         
         function [PatID,StudyNum] = getDB_PatientIdentifiers(patstudy)
             %patstudy is the filename of the .edf, less the extention

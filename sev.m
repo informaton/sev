@@ -202,7 +202,25 @@ if(epoch>0)
             if(epoch>10)
                 epoch = epoch-10;
             end
-        end
+        else
+            if(strcmpi(MARKING.marking_state,'stage_sleep'))
+                if(strcmpi(key,'w')) %Wake
+                    sleepStage = 0;
+                elseif(strcmpi(key,'r')) %REM
+                    sleepStage = 5;
+                elseif(strcmpi(key,'u')||strcmpi(key,'?')) % unknown
+                    sleepStage = 7;
+                else
+                    sleepStage = str2double(strrep(key,'numpad',''));
+                end
+                if(~isnan(sleepStage) && sleepStage>=0 && sleepStage<=7)
+                    fprintf('Stage %u\n',sleepStage);
+                    MARKING.sev_adjusted_STAGES.line(epoch) = sleepStage;  %This is done for current view.
+                    MARKING.sev_STAGES.line(epoch) = sleepStage; % This is done for future views.
+                    MARKING.setEpoch(epoch);                    
+                end
+            end
+         end
         if(epoch_in~=epoch)
             MARKING.setEpoch(epoch);
         end
@@ -263,11 +281,12 @@ global MARKING;
  
 try
 
-    MARKING.close();
+    MARKING.close(); %deletes itself on exit.
     MARKING = []; %remove the global reference count...
     delete(hObject);
 catch ME
     showME(ME);
+    MARKING = [];
     killall;
 end
 
