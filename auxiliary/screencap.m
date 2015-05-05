@@ -40,7 +40,7 @@ if(ishandle(graphic_h))
         for f=1:numel(descr)
             ext = extension{f};
             
-            if(strcmpi(ext,'jet')||strcmpi(ext,'ep')||strcmpi(ext,'ibm')||strcmpi(ext,'jet'))
+            if(strcmpi(ext,'jet')||strcmpi(ext,'ep')||strcmpi(ext,'ibm')||strcmpi(ext,'jet')||strcmpi(ext,'bmp'))
                 toss(f) = true;
             end
             if(isempty(extension{f}))

@@ -42,10 +42,13 @@ if(isempty(varargin))
         fields = fieldnames(root);
         for k=1:numel(fields)
             saveStruct(fid,root,deblank(fields{k}));
+            fprintf(fid,'\r');  %this adds extra line between root groups.
         end;
+
     else
         fprintf(fid,'root %s\r',num2str(root));
     end;
+
 else
     field = getfield(root,varargin{:});
     if(isstruct(field))
@@ -53,12 +56,11 @@ else
         for k=1:numel(fields)
             saveStruct(fid,root,varargin{:},fields{k});
         end;
-        fprintf(fid,'\r');
     else
         fprintf(fid,'%s\t%s\r',strcat_with_dot(varargin{:}),num2str(field));
     end;
-
 end;
+
 
     
 function out_str = strcat_with_dot(root,varargin)

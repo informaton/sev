@@ -460,6 +460,11 @@ classdef CLASS_UI_marking < handle
         end
         
         % --------------------------------------------------------------------
+        %> @brief SEV's screenshot callback.
+        %> @param obj Instnce of PAController
+        %> @param hObject    handle to menu_file_screenshot (see GCBO)
+        %> @param eventdata  reserved - to be defined in a future version of MATLAB        
+        % --------------------------------------------------------------------
         function menu_file_screenshot_callback(obj,hObject, eventdata)
             % hObject    handle to menu_file_screenshot (see GCBO)
             % eventdata  reserved - to be defined in a future version of MATLAB

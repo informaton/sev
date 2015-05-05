@@ -323,7 +323,7 @@ classdef CLASS_codec < handle
                 [~,name,~] = fileparts(evtFilename);
                 
                 fid = fopen(evtFilename,'r');
-                HDR = CLASS_events_container.parseEmblaHDR(fid);
+                HDR = CLASS_codec.parseEmblaHDR(fid);
                 
                 start_sec = [];
                 stop_sec = [];
@@ -331,6 +331,7 @@ classdef CLASS_codec < handle
                 epoch = [];
                 stage = [];
                 start_stop_matrix = [];
+                description = [];
                 
                 eventType = name;
                 
@@ -361,15 +362,15 @@ classdef CLASS_codec < handle
                             
                             start_sample(r) = fread(fid,1,'uint32');
                             stop_sample(r) = fread(fid,1,'uint32');
-%                             description = fread(fid,remainder_size/2,'uint16=>char')';
-%desats - (come in pairs?)
-% [8 1 2 0] [0/4 0 ? ?]  [255 255 255 255] [255 255 255 255] [84 16 13 164]
-
-% [? ? 88/86/87 64] [? ? ? ?] [? ? 86/87/85 64] [8/10 ? ? ?] [? ? ? ?]
-%    
-%1 byte [224] = ?
-%4 bytes 224  106   99  104] [186  131   88   64]  [87   27   67  211]  [29 108   87   64]   [9  144   98    0  228  151    98  0]
-%4 bytes
+                            %                             description = fread(fid,remainder_size/2,'uint16=>char')';
+                            %desats - (come in pairs?)
+                            % [8 1 2 0] [0/4 0 ? ?]  [255 255 255 255] [255 255 255 255] [84 16 13 164]
+                            
+                            % [? ? 88/86/87 64] [? ? ? ?] [? ? 86/87/85 64] [8/10 ? ? ?] [? ? ? ?]
+                            %
+                            %1 byte [224] = ?
+                            %4 bytes 224  106   99  104] [186  131   88   64]  [87   27   67  211]  [29 108   87   64]   [9  144   98    0  228  151    98  0]
+                            %4 bytes
                             remainder(r,:) = fread(fid,remainder_size,'uint8');
                         end
                     elseif(strcmpi(eventType,'resp'))
@@ -385,20 +386,20 @@ classdef CLASS_codec < handle
                         end
                         
                     elseif(strcmpi(eventType,'stage'))
-                        %         stage_mat = fread(fid,[12,HDR.num_records],'uint8');
-                        %         x=reshape(stage_mat,12,[])';
-                        %stage records are produced in 12 byte sections
-                        %1:4 [uint32] - elapsed_seconds*2^8 (sample_rate)
-                        %5:8 [uint32] - (stage*2^8)+1*2^0
-                        %9:10 [uint16] = ['9','2']  %34...
-                        %10:12 = ?
-                        %should be 12 bytes per record
-%                         1 = Wake
-%                         2 = Stage 1
-%                         3 = Stage 2
-%                         4 = Stage 3
-%                         5 = Stage 4
-%                         7 = REM
+                        %   stage_mat = fread(fid,[12,HDR.num_records],'uint8');
+                        %   x=reshape(stage_mat,12,[])';
+                        %  stage records are produced in 12 byte sections
+                        %    1:4 [uint32] - elapsed_seconds*2^8 (sample_rate)
+                        %    5:8 [uint32] - (stage*2^8)+1*2^0
+                        %    9:10 [uint16] = ['9','2']  %34...
+                        %    10:12 = ?
+                        % Should be 12 bytes per record
+                        %  1 = Wake
+                        %  2 = Stage 1
+                        %  3 = Stage 2
+                        %  4 = Stage 3
+                        %  5 = Stage 4
+                        %  7 = REM
                         intro_size = 6;
                         stage = zeros(-1,HDR.num_records,1);
                         for r=1:HDR.num_records
@@ -415,9 +416,9 @@ classdef CLASS_codec < handle
                         embla_samplerate_out = embla_samplerate;
                         stop_sample = start_sample+samples_per_epoch;
                         
-                        %                         stage_mat = fread(fid,[bytes_per_record/4,HDR.num_records],'uint32')';
-                        %                         start_sample = stage_mat(:,1);
-                        %                         stage = (stage_mat(:,2)-1)/256;  %bitshifting will also work readily;
+                        % stage_mat = fread(fid,[bytes_per_record/4,HDR.num_records],'uint32')';
+                        % start_sample = stage_mat(:,1);
+                        % stage = (stage_mat(:,2)-1)/256;  %bitshifting will also work readily;
                         
                     elseif(strcmpi(eventType,'biocals'))
                         % first line:
@@ -432,16 +433,27 @@ classdef CLASS_codec < handle
                         %
                         % example[5]*256*256*0.5+example[4]*256*0.5+example[3]*0.5+example[2]*0.5*1/256...
                         % example(4)*2^15+example(3)*2^7+example(2)*2^-1+example(1)*2^-9
-                        description = cell(HDR.num_records,1); %24 bytes
-                        tag = zeros(1,6); %6 bytes
-                        intro_size = 34;
-                        remainder = zeros(HDR.num_records,bytes_per_record-intro_size,'uint8');
+                        description = cell(HDR.num_records,1); %24 bytes  --> varies in size; some descriptions are longer, some are shorter
+                        remainder = cell(HDR.num_records,1); % --> varies in size because description is not always the same length.
+                        tag = zeros(1,6); %6 bytes                        
+                        intro_size = 10; % 6 + 4
+                        bytes_per_uint16 = 2;
+%                         intro_size = 34;
+%                         remainder = zeros(HDR.num_records,bytes_per_record-intro_size,'uint8');
+                        
                         for r=1:HDR.num_records
-                            start_sample(r) = fread(fid,1,'uint32');
-                            tag = fread(fid,6,'uint8')'; %[13 1 0 0 0 0]
+                            start_sample(r) = fread(fid,1,'uint32');  % 4 bytes
+                            tag = fread(fid,6,'uint8')'; %[13 1 0 0 0 0]  % 6 bytes
                             
-                            description{r} = fread(fid,12,'uint16=>char')';  %need to read until I get to a 34 essentially%now at 64 or %32 bytes read
-                            remainder(r,:) = fread(fid,bytes_per_record-intro_size,'uint8')';
+                            curRecord = fread(fid,(bytes_per_record-intro_size)/bytes_per_uint16,'uint16')';
+                            descriptionStop = find(curRecord==0,1,'first');
+                            description{r} = char(curRecord(1:descriptionStop-1));
+                            remainder{r}=curRecord(descriptionStop:end);
+                            
+                            
+                            
+                            %                             description{r} = fread(fid,12,'uint16=>char')';  %24 bytes %need to read until I get to a 34 essentially%now at 64 or %32 bytes read
+                            %                             remainder(r,:) = fread(fid,bytes_per_record-intro_size,'uint8')';
                         end
                         stop_sample = start_sample;
                         
@@ -515,6 +527,11 @@ classdef CLASS_codec < handle
                 embla_evt_Struct.dur_sec = dur_sec;
                 embla_evt_Struct.epoch = epoch;
                 embla_evt_Struct.stage = stage;
+                
+                if(~isempty(description))
+                    embla_evt_Struct.description = description;
+                end
+
                 fclose(fid);
             end
         end

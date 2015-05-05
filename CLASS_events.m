@@ -1159,14 +1159,19 @@ classdef CLASS_events < handle
         end
         
         % =================================================================
-        %> @brief
-        %> @param
-        %> @retval 
+        %> @brief Similar to merge_nearby_events, but allows additional buffer before and after each event 
+        %> before applying the merge_nearby_events method.
+        %> @param event_mat_in See merge_nearby_events
+        %> @param min_samples See merge_nearby_events
+        %> @param additional_buffer_samples Number of samples to extend
+        %> each event in event_mat_in by (both before and following)
+        %> @param max_samples Maximum number of samples allowed (important
+        %> because the additional buffer could create an event that ends
+        %> outside of the true inputs range.
+        %> @retval merged_events See merge_nearby_events
+        %> @retval merged_indices See merge_nearby_events
         % =================================================================
         function [merged_events, merged_indices] = buffer_then_merge_nearby_events(event_mat_in,min_samples,additional_buffer_samples,max_samples)
-            %add additional buffer before and after each event and then
-            %merge if within min_samples of each other using
-            %merge_nerarby_events function below
             event_mat_in = [event_mat_in(:,1)-additional_buffer_samples,event_mat_in(:,2)+additional_buffer_samples];
             event_mat_in(:,1) = max(event_mat_in(:,1),1);
             event_mat_in(:,2) = min(event_mat_in(:,2),max_samples);
@@ -1174,24 +1179,21 @@ classdef CLASS_events < handle
         end
 
         % ======================================================================
-        %> @brief Brief description of the merge_nearby_events method
-        %>
-        %> This method is static
-        %> @param event_mat_in Description of event_mat_in
-        %> @param min_samples Description of min_samples
-        %> @retval merged_events first return value of this method
-        %> @retval merged_indices second return value of this method
+        %> @brief Merges events, that are separated by less than some minimum number
+        %> of samples, into a single event that stretches from the start of the first event
+        %> and spans until the last event of each minimally separated event
+        %> pairings.  Events that are not minimally separated by another
+        %> event are retained with the output.
+        %> @param event_mat_in is a two column matrix
+        %> @param min_samples is a scalar value
+        %> @retval merged_events The output of merging event_mat's events 
+        %> that are separated by less than min_samples.
+        %> @retval merged_indices is a logical vector of the row indices that
+        %> were merged from event_mat_in. - these are the indices of the
+        %> in event_mat_in that are removed/replaced
         % =================================================================
         function [merged_events, merged_indices] = merge_nearby_events(event_mat_in,min_samples)
-            %merge events that are within min_samples of each other, into a
-            %single event that stretches from the start of the first event
-            %and spans until the last event
-            %event_mat_in is a two column matrix
-            %min_samples is a scalar value
-            %merged_indices is a logical vector of the row indices that
-            %were merged from event_mat_in. - these are the indices of the
-            %in event_mat_in that are removed/replaced
-            
+         
             if(nargin==1)
                 min_samples = 100;
             end
@@ -1219,7 +1221,7 @@ classdef CLASS_events < handle
         end
         
         % =================================================================
-        %> @brief
+        %> @brief Removes events that do not meet minimum duration.
         %> @param
         %> @retval 
         % =================================================================

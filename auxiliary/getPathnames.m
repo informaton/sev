@@ -1,9 +1,14 @@
-%filenames = getPathnames(path)
+% [pathnames, fullpathnames]  = getPathnames(srcPathname)
 % 
 % directory wrapper to get names of any subdirectories contained in pathname (i.e. a directory)
+% [pathnames]   Cell of children directories sans srcPathname prefix.
+% [fullpathnames Cell of srcPathname's children directories with
+% srcPathname included.
+%
+% Written by Hyatt Moore, IV (< June, 2013)
+%
 function [pathnames, fullpathnames] = getPathnames(srcPathname)
 
-%Hyatt Moore, IV (< June, 2013)
     dirPull = dir(fullfile(srcPathname));
     directory_flag = cells2mat(dirPull.isdir);
     names = cells2cell(dirPull.name);
