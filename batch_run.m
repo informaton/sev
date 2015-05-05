@@ -96,8 +96,7 @@ else
 %             handles.text_artifact_export_img;
 %             handles.check_artifact_export_images],'enable','off');
     
-    checkPathForEDFs(handles);
-    
+    checkPathForEDFs(handles); %Internally, this calls getPlayList since no argument is given.
     
     
     set([handles.menu_artifact_channel1
@@ -109,7 +108,6 @@ else
     handles.user.BATCH_PROCESS = MARKING.SETTINGS.BATCH_PROCESS;
     handles.user.PSD = MARKING.SETTINGS.PSD;
     handles.user.PSD = MARKING.SETTINGS.PSD;
-    updateSave2ImageOptions(handles);
     
     % Choose default command line output for batch_run
     handles.output = hObject;
@@ -300,7 +298,7 @@ function checkPathForEDFs(handles,playlist)
 global GUI_TEMPLATE;
 
 if(nargin<2)
-    playlist = [];
+    playlist = getPlaylist(handles);
 end
     
     path = get(handles.edit_edf_directory,'string');
@@ -332,6 +330,7 @@ end
         end
     end;
     
+    
     if(num_edfs==0)
         
         if(num_edfs_all==0)
@@ -348,6 +347,8 @@ end
         set(get(handles.panel_events,'children'),'enable','off');
         set(get(handles.panel_psd,'children'),'enable','off');
         set(get(handles.panel_artifact,'children'),'enable','off');
+        updateSave2ImageOptions(handles);
+    
         
     else
         set(get(handles.panel_synth_CHANNEL,'children'),'enable','on');
@@ -736,7 +737,7 @@ end
 BATCH_PROCESS.artifact_settings = artifact_settings;
 
 pathname = get(handles.edit_edf_directory,'string');
-playlist = getPlaylist(handles);  %this used to call checkPathForEDFs();
+playlist = getPlaylist(handles); 
 batch_process(pathname,BATCH_PROCESS,playlist);
 % warndlg({'you are starting the batch mode with the following channels',BATCH_PROCESS.PSD_settings});
 
@@ -1921,6 +1922,11 @@ if(~isempty(settings))
 end
 end
 
+% returns whether the batch mode is ready for running.
+function isReady = canRun(handles)
+    isReady = strcmpi(get(handles.push_run,'enable'),'on');
+end
+
 function updateSave2ImageOptions(handles)
 %update whether the image option is available for selection or not based on
 %batch_process settings which can be changed and update
@@ -1930,7 +1936,7 @@ image_checkboxes = [findobj(handles.panel_events,'-regexp','tag','images');findo
 
 img_h = [handles.text_artifact_export_img;handles.text_event_export_img;image_checkboxes];
 
-if(handles.user.BATCH_PROCESS.images.save2img)
+if(canRun(handles) && handles.user.BATCH_PROCESS.images.save2img)
     set(img_h,'enable','on');
     GUI_TEMPLATE.check_save_image.enable = 'on';
 else
@@ -2011,7 +2017,7 @@ if(eventdata.NewValue==handles.radio_processList)
         playlist = getPlaylist(handles,'-gui');
     end
     handles.user.playlist = playlist;
-    checkPathForEDFs(handles,playlist);
+    checkPathForEDFs(handles,handles.user.playlist);
     guidata(hObject,handles);
     
 end
@@ -2027,6 +2033,6 @@ function edit_selectPlaylist_ButtonDownFcn(hObject, eventdata, handles)
 [playlist,ply_filename] = getPlaylist(handles,'-gui');
 
 handles.user.playlist = playlist;
-checkPathForEDFs(handles,playlist);
+checkPathForEDFs(handles,handles.user.playlist);
 guidata(hObject,handles);
 end
