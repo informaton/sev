@@ -10,7 +10,7 @@ function varargout = batch_run(varargin)
 
 % Edit the above text to modify the response to help batch_run
 
-% Last Modified by GUIDE v2.5 18-Mar-2014 14:14:18
+% Last Modified by GUIDE v2.5 05-May-2015 11:12:09
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -90,7 +90,15 @@ else
         set(handles.edit_edf_directory,'string',pwd);
     end
     
+%         set( [
+%             handles.text_event_export_img;
+%             handles.check_event_export_images;
+%             handles.text_artifact_export_img;
+%             handles.check_artifact_export_images],'enable','off');
+    
     checkPathForEDFs(handles);
+    
+    
     
     set([handles.menu_artifact_channel1
         handles.menu_event_channel1],'enable','off','string','Channel 1');
@@ -101,7 +109,7 @@ else
     handles.user.BATCH_PROCESS = MARKING.SETTINGS.BATCH_PROCESS;
     handles.user.PSD = MARKING.SETTINGS.PSD;
     handles.user.PSD = MARKING.SETTINGS.PSD;
-    update_view(handles);
+    updateSave2ImageOptions(handles);
     
     % Choose default command line output for batch_run
     handles.output = hObject;
@@ -271,8 +279,7 @@ function playlist = getPlaylist(handles,ply_filename)
         set(handles.radio_processList,'value',1);
         set(handles.edit_selectPlaylist,'string',ply_filename);
     end
-    
-    checkPathForEDFs(handles,playlist);
+
 end
 
 function filtered_file_struct = filterPlaylist(file_struct,file_filter_list)
@@ -286,14 +293,15 @@ else
    filtered_file_struct = file_struct;  %i.e. nothing to filter 
 end
 end
+
+
 function checkPathForEDFs(handles,playlist)
 %looks in the path for EDFs
 global GUI_TEMPLATE;
 
 if(nargin<2)
-    getPlaylist(handles); 
-else
-    
+    playlist = [];
+end
     
     path = get(handles.edit_edf_directory,'string');
     if(~exist(path,'file'))
@@ -309,8 +317,6 @@ else
         end
         
         num_edfs_all = numel(edf_file_list);
-        
-
         
         if(~isempty(playlist))  
             edf_file_list = filterPlaylist(edf_file_list,playlist);
@@ -370,8 +376,10 @@ else
     set(...
         findobj(handles.figure1,'-regexp','tag','.*channel.*'),...
         'string',EDF_labels);
+
 end
-end
+
+
 function edit_edf_directory_Callback(hObject, eventdata, handles)
 % hObject    handle to edit_edf_directory (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -728,7 +736,7 @@ end
 BATCH_PROCESS.artifact_settings = artifact_settings;
 
 pathname = get(handles.edit_edf_directory,'string');
-playlist = getPlaylist(handles);
+playlist = getPlaylist(handles);  %this used to call checkPathForEDFs();
 batch_process(pathname,BATCH_PROCESS,playlist);
 % warndlg({'you are starting the batch mode with the following channels',BATCH_PROCESS.PSD_settings});
 
@@ -1813,7 +1821,7 @@ if(~isempty(settings))
     BATCH_PROCESS.database = settings.database;
     BATCH_PROCESS.images = settings.images; 
     handles.user.BATCH_PROCESS = BATCH_PROCESS;
-    update_view(handles);
+    updateSave2ImageOptions(handles);
 end;
 
 guidata(hObject,handles);
@@ -1856,24 +1864,6 @@ switch(lower(selection))
 end
 end
 
-% --- Executes on button press in check_event_export_images.
-function check_event_export_images_Callback(hObject, eventdata, handles)
-% hObject    handle to check_event_export_images (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hint: get(hObject,'Value') returns toggle state of check_event_export_images
-
-end
-
-% --- Executes on button press in check_artifact_export_images.
-function check_artifact_export_images_Callback(hObject, eventdata, handles)
-% hObject    handle to check_artifact_export_images (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hint: get(hObject,'Value') returns toggle state of check_artifact_export_images
-end
 
 % --- Executes on button press in push_add_CHANNEL.
 function push_add_CHANNEL_Callback(hObject, eventdata, handles)
@@ -1883,24 +1873,6 @@ function push_add_CHANNEL_Callback(hObject, eventdata, handles)
 addCHANNELRow(handles);
 end
 
-% --- Executes on selection change in menu_synth_CHANNEL_channel1.
-function menu_synth_CHANNEL_channel1_Callback(hObject, eventdata, handles)
-% hObject    handle to menu_synth_CHANNEL_channel1 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: contents = cellstr(get(hObject,'String')) returns menu_synth_CHANNEL_channel1 contents as cell array
-%        contents{get(hObject,'Value')} returns selected item from menu_synth_CHANNEL_channel1
-end
-
-% --- Executes on button press in push_synth_CHANNEL_settings.
-function push_synth_CHANNEL_settings_Callback(hObject, eventdata, handles)
-% hObject    handle to push_synth_CHANNEL_settings (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-
-end
 
 % --- Executes on selection change in edit_synth_CHANNEL_name.
 function edit_synth_CHANNEL_name_Callback(hObject, eventdata, handles)
@@ -1949,7 +1921,7 @@ if(~isempty(settings))
 end
 end
 
-function update_view(handles)
+function updateSave2ImageOptions(handles)
 %update whether the image option is available for selection or not based on
 %batch_process settings which can be changed and update
 
@@ -1976,9 +1948,10 @@ function figure1_CloseRequestFcn(hObject, eventdata, handles)
 
 % Hint: delete(hObject) closes the figure
 global MARKING;
-MARKING.SETTINGS.BATCH_PROCESS = handles.user.BATCH_PROCESS; %need to return this to the global for now 
 % in order to save settings between use.
 try
+    MARKING.SETTINGS.BATCH_PROCESS = handles.user.BATCH_PROCESS; %need to return this to the global for now 
+
     if(ishandle(MARKING.figurehandle.sev))
         MARKING.initializeSEV(); %this currently deletes any other MATLAB figures that are up.
     else
@@ -1994,15 +1967,7 @@ end
     
 end
 
-% --- Executes on selection change in menu_playlist.
-function menu_playlist_Callback(hObject, eventdata, handles)
-% hObject    handle to menu_playlist (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 
-% Hints: contents = cellstr(get(hObject,'String')) returns menu_playlist contents as cell array
-%        contents{get(hObject,'Value')} returns selected item from menu_playlist
-end
 
 % --- Executes during object creation, after setting all properties.
 function menu_playlist_CreateFcn(hObject, eventdata, handles)
@@ -2046,6 +2011,7 @@ if(eventdata.NewValue==handles.radio_processList)
         playlist = getPlaylist(handles,'-gui');
     end
     handles.user.playlist = playlist;
+    checkPathForEDFs(handles,playlist);
     guidata(hObject,handles);
     
 end
@@ -2061,12 +2027,6 @@ function edit_selectPlaylist_ButtonDownFcn(hObject, eventdata, handles)
 [playlist,ply_filename] = getPlaylist(handles,'-gui');
 
 handles.user.playlist = playlist;
+checkPathForEDFs(handles,playlist);
 guidata(hObject,handles);
-end
-
-% --- Executes on button press in buttonArtifactSelectSources.
-function buttonArtifactSelectSources_Callback(hObject, eventdata, handles)
-% hObject    handle to buttonArtifactSelectSources (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 end
