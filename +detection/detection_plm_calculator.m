@@ -1,7 +1,10 @@
 %> @file
 %> @brief Detects periodic leg movements (PLM) using Stanford's validated method.
 %======================================================================
-%> @brief Detects PLM using two pass detection method designed at Stanford.
+%> @brief Detects PLM using two pass detection method designed at Stanford
+%> University and published in PloS One, 2014
+%> - @c Citation: Design and Validation of a Periodic Leg Movement Detector. Moore H, Leary E, Seo-Young L, Carrillo O, Stubbs R, Peppard P, Young T, Widrow B, Mignot E; Plos One 2014
+%> - @c Link: http://www.plosone.org/article/info%3Adoi%2F10.1371%2Fjournal.pone.0114565
 %> @param data_cell Two element cell of equal lengthed psg 
 %> vectors representing the channels to compare.
 %> @param params A structure for variable parameters passed in

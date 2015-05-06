@@ -1421,8 +1421,13 @@ end
 %                 BATCH_PROCESS.cur_filename = cur_filename;
                 stages_filename = fullfile(pathname,[cur_filename(1:end-3) 'STA']);
                 
-                %require stages filename to exist.
                 if(~exist(stages_filename,'file'))
+                    stages_filename = fullfile(pathname,[cur_filename(1:end-3) 'evts']);
+                end
+                
+                %require stages filename to exist.                
+                if(~exist(stages_filename,'file'))
+                
                     skip_file = true;
                     
                     %%%%%%%%%%%%%%%%%%%%%REVIEW%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1452,7 +1457,10 @@ end
                     %handle the stage data, which is a requirement for
                     %batch processing - that is, it must exist for batch
                     %processing to continue/work
-                    batch_STAGES = loadSTAGES(stages_filename,studyInfo.num_epochs);
+                    %                     batch_STAGES = loadSTAGES(stages_filename,studyInfo.num_epochs);
+                    %                     unknown_stage=7; %can add this as
+                    %                     a third parameter below.
+                    batch_STAGES = CLASS_codec.loadSTAGES(stages_filename,studyInfo.num_epochs);
                     batch_STAGES.startDateTime = studyInfo.startDateTime;
                     
                     %PROCESS ARTIFACTS
