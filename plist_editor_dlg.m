@@ -135,6 +135,7 @@ else
 end
 
 handles.output = get_params(handles);
+set(hObject,'name','Detector Settings (single study mode)');
 set(hObject,'visible','on');
 % resizePanelForAddedControls(handles.pan_properties,2,20);
 % resizePanelAndParentForAddedControls(handles.pan_properties,2);

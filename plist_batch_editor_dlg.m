@@ -22,9 +22,7 @@ function varargout = plist_batch_editor_dlg(varargin)
 
 % Edit the above text to modify the response to help plist_batch_editor_dlg
 
-% Hyatt Moore IV (Last Modified by GUIDE v2.5 21-Jul-2011 15:50:03)
-
-% Last Modified by GUIDE v2.5 21-Jul-2011 15:50:03
+% Hyatt Moore IV (Last Modified by GUIDE v2.5 07-May-2015 16:36:32
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -65,6 +63,8 @@ function plist_batch_editor_dlg_OpeningFcn(hObject, ~, handles, varargin)
 % previous entry
 
 handles.output = []; %default to null output, in which case the user cancels this decision..
+
+set(hObject,'name','Detector Settings (batch mode)','tag','plist_batch_editor_figure');
 
 if(numel(varargin)>0)
     selected_method_label = varargin{1};
@@ -118,15 +118,12 @@ selected_method_ind = find(strcmp(selected_method_label,handles.user.methods.evt
 if(isempty(selected_method_ind))
     selected_method_ind = 1;
 else
-    set(handles.menu_methods,'enable','inactive');
+    set(handles.text_detectorName,'enable','inactive');
 end;
 
-
-set(handles.menu_methods,'string',handles.user.methods.evt_label,'value',selected_method_ind);
-handles.user.selected_method_ind = selected_method_ind;
+set(handles.text_detectorName,'string',handles.user.methods.evt_label{selected_method_ind});
 handles.user.MAX_NUM_PROPERTIES = 7;
 
-handles.user.selected_method_ind = selected_method_ind;
 
 if(isempty(batchSettingsStruct))
     selected_plist_filename = fullfile(handles.user.parametersInfPathname,[handles.user.methods.mfile{selected_method_ind},'.plist']);
@@ -145,19 +142,20 @@ if(isempty(batchSettingsStruct))
         batchSettingsStruct{k}.stop = plist_settings.(names{k});
         batchSettingsStruct{k}.num_steps = 1;
     end
-    
 end
 
-handles = menu_methods_Callback(handles.menu_methods,[],handles,batchSettingsStruct);
+handles = initialize_settings(handles,batchSettingsStruct);
+
+handles = resizeBatchPanelAndFigureForUIControls(handles.pan_properties,handles.user.cur_num_properties,handles);
 
 if(~isempty(rocStruct))
     check_roc_Callback(handles.check_roc, [], handles, rocStruct);
 end
 
-set(hObject,'name','Detector settings (batch mode)');
 % Update handles structure
 guidata(hObject, handles);
 
+set(hObject,'visible','on');
 % UIWAIT makes plist_batch_editor_dlg wait for user response (see UIRESUME)
 uiwait(handles.figure1);
 
@@ -219,14 +217,14 @@ end
 delete(gcf);
 
 
-% --- Executes on selection change in menu_methods.
-function handles = menu_methods_Callback(hObject, eventdata, handles, settings)
-% hObject    handle to menu_methods (see GCBO)
+% --- Executes on selection change in text_detectorName.
+function handles = initialize_settings(handles, settings)
+% hObject    handle to text_detectorName (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-% Hints: contents = cellstr(get(hObject,'String')) returns menu_methods contents as cell array
-%        contents{get(hObject,'Value')} returns selected item from menu_methods
+% Hints: contents = cellstr(get(hObject,'String')) returns text_detectorName contents as cell array
+%        contents{get(hObject,'Value')} returns selected item from text_detectorName
 
 % selection_ind = get(hObject,'value');
 
@@ -251,11 +249,10 @@ for k=handles.user.cur_num_properties+1:handles.user.MAX_NUM_PROPERTIES
     set(eval(handles_stop_value_name),'string',['value ',num2str(k)],'enable','off');
     set(eval(handles_num_steps_name),'string',['value ',num2str(k)],'enable','off');
 end
-guidata(hObject,handles);
 
 % --- Executes during object creation, after setting all properties.
-function menu_methods_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to menu_methods (see GCBO)
+function text_detectorName_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to text_detectorName (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
 
