@@ -198,6 +198,8 @@ classdef CLASS_events_container < handle
         %> @param params A struct containing detector specific parameters
         %> which refine the detector's behavior.  These are specific to the
         %> detector and are optional.
+        %> @varargin Cell of additional arguments that is passed through to
+        %> the detector function when not empty (i.e. when numel(varargin)>0)
         %> @retval obj instance of CLASS_events_container class.
         %> @retval detectStruct Structure containing the detection result
         %> output.
@@ -210,7 +212,7 @@ classdef CLASS_events_container < handle
         %> which can then be subsequently loaded and then run a second time
         %> (for real, yo).  
         % =================================================================
-        function [detectStruct, source_pStruct] = evaluateDetectFcn(obj,shortDetectorFcn,source_indices,params)
+        function [detectStruct, source_pStruct] = evaluateDetectFcn(obj,shortDetectorFcn,source_indices,params, varargin)
             localDetectorFcn = strcat(strrep(obj.detection_path,'+',''),'.',shortDetectorFcn);
 
             if(iscell(source_indices))
@@ -245,7 +247,12 @@ classdef CLASS_events_container < handle
             else
                 data = obj.CHANNELS_CONTAINER.getData(source_indices);
             end
-            detectStruct = feval(localDetectorFcn,data,params,obj.stageStruct);
+            
+            if(numel(varargin)==0)
+                detectStruct = feval(localDetectorFcn,data,params,obj.stageStruct);
+            else
+                detectStruct = feval(localDetectorFcn,data,params,obj.stageStruct, varargin);                
+            end
         end
         
         % =================================================================

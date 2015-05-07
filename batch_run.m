@@ -642,9 +642,9 @@ for k = 1:num_selected_events
     eventStruct.rocStruct = settings_userdata.rocStruct;
     params = [];
     
-    %may not work on windows platform....
-    %if there is a change to the settings in the batch mode, then make sure
-    %that the change occurs here as well
+    % may not work on windows platform....
+    % if there is a change to the settings in the batch mode, then make sure
+    % that the change occurs here as well
     if(~isempty(eventStruct.pBatchStruct))
         for p=1:numel(eventStruct.pBatchStruct)
            params.(eventStruct.pBatchStruct{p}.key) =  eventStruct.pBatchStruct{p}.start;
@@ -1070,7 +1070,7 @@ if(pathname)
 
     % waitHandle = waitbar(0,'Initializing batch processing job','name','Batch Processing Statistics','resize','on','createcancelbtn',{@cancel_batch_Callback});
     user_cancelled = false;
-    waitHandle = waitbar(0,'Initializing batch processing job','name','Batch Processing Statistics','resize','on','createcancelbtn',@cancel_batch_Callback,'userdata',user_cancelled,'tag','waitbarHTag');
+    waitHandle = waitbar(0,'Initializing job','name','Batch Processing','resize','on','createcancelbtn',@cancel_batch_Callback,'userdata',user_cancelled,'tag','waitbarHTag');
     
     
     BATCH_PROCESS.waitHandle = waitHandle;

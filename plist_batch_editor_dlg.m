@@ -154,6 +154,7 @@ if(~isempty(rocStruct))
     check_roc_Callback(handles.check_roc, [], handles, rocStruct);
 end
 
+set(hObject,'name','Detector settings (batch mode)');
 % Update handles structure
 guidata(hObject, handles);
 
