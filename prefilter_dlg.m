@@ -186,6 +186,8 @@ for k=1:nFilters
     end
 end
 
+set(hObject,'name','Filter Toolbox');
+
 % store handles structure
 guidata(hObject, handles);
 

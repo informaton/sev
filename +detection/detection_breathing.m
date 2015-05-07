@@ -38,7 +38,6 @@ defaultParams.peak_inter_sec = 1.4; % sec. between peaks, used to be 1.25
 if(nargin==0)
     detectStruct = defaultParams;
 else
-    
     if(nargin<2 || isempty(params))
         
         pfile =  strcat(mfilename('fullpath'),'.plist');
