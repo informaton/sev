@@ -300,94 +300,9 @@ classdef CLASS_UI_marking < handle
             obj.updateUtilityAxes();
         end
         
-        function updatePreferencesROC_callback(obj,varargin)
-            global EVENT_CONTAINER;
-            if(EVENT_CONTAINER.num_events>1)
-                roc_settings = settings_roc_dlg();
-                if(~isempty(roc_settings))
-                    EVENT_CONTAINER.roc_truth_ind = roc_settings.truth;
-                    EVENT_CONTAINER.roc_estimate_ind = roc_settings.estimate;
-                    EVENT_CONTAINER.roc_artifact_ind = roc_settings.artifact;
-                    EVENT_CONTAINER.roc_stage_selection = roc_settings.stage;
-                    
-                    %calculate the range in - the valid comparison range over whic
-                    %comparisons can be made
-                    
-                    if(isfield(obj.sev_STAGES,'line'))
-                        comparison_epoch_ind = zeros(size(obj.sev_STAGES.line));
-                        stage_selection = roc_settings.stage;
-                        for k=1:numel(stage_selection)
-                            cur_stage = stage_selection(k)-1; %-1 b/c 1 based and first stage is 0
-                            comparison_epoch_ind = comparison_epoch_ind|obj.sev_STAGES.line==cur_stage;
-                        end
-                        samples_per_epoch = obj.SETTINGS.VIEW.standard_epoch_sec*obj.SETTINGS.VIEW.samplerate;
-                        epoch_ind=[(0:numel(obj.sev_STAGES.line)-1)'*samples_per_epoch+1,(1:numel(obj.sev_STAGES.line))'*samples_per_epoch];
-                        comparison_range = epoch_ind(comparison_epoch_ind,:);
-                        merge_within_num_samples = 2;
-                        merged_events = CLASS_events.merge_nearby_events(comparison_range,merge_within_num_samples);
-                        EVENT_CONTAINER.roc_comparison_range = merged_events;
-                    else
-                        EVENT_CONTAINER.roc_comparison_range = [];
-                    end
-                    %they selected noe - thought this is taken care of earlier in the
-                    %settings_roc_dlg component now
-                    if(EVENT_CONTAINER.roc_artifact_ind>EVENT_CONTAINER.num_events)
-                        EVENT_CONTAINER.roc_artifact_ind = [];
-                    end
-                    EVENT_CONTAINER.roc_axes_needs_update = true;
-                    obj.updateUtilityAxes();
-                end
-            else
-                warndlg('Not enough events available yet [2]');
-            end
-        end
         
-        function updateSettings_PSD_callback(obj,varargin)
-            global CHANNELS_CONTAINER;
-            wasModified = obj.SETTINGS.update_callback('PSD');
-            if(~isempty(CHANNELS_CONTAINER) && wasModified && isfield(obj.SETTINGS.PSD,'channel_ind') && ~isempty(obj.SETTINGS.PSD.channel_ind)) 
-                    CHANNELS_CONTAINER.current_spectrum_channel_index = obj.SETTINGS.PSD.channel_ind;
-                    CHANNELS_CONTAINER.showPSD(obj.SETTINGS.PSD);
-            end
-                
-        end
-        function updateSettings_MUSIC_callback(obj,varargin)
-            global CHANNELS_CONTAINER;
-            wasModified = obj.SETTINGS.update_callback('MUSIC');
-            if(~isempty(CHANNELS_CONTAINER) && wasModified && isfield(obj.SETTINGS.MUSIC,'channel_ind') && ~isempty(obj.SETTINGS.MUSIC.channel_ind))
-                CHANNELS_CONTAINER.current_spectrum_channel_index = obj.SETTINGS.MUSIC.channel_ind;
-                CHANNELS_CONTAINER.showMUSIC(obj.SETTINGS.MUSIC);
-            end
-        end
-        
-        
-        function resetSettings_callback(obj,hObject,eventdata,settingsName)
-            %settingsName is a string specifying the settings to update:
-            %   'CLASSIFIER','FILTER
-            if(strcmpi(settingsName,'filter'))
-                obj.SETTINGS.initializeFilters();
-            elseif(strcmpi(settingsName,'classifier'))
-                obj.SETTINGS.initializeDetectors();
-            else
-                fprintf('Unrecognized settings name (%s)\n',settingsName);                
-            end
-        end
 
-        
-        function updateSettings_callback(obj,hObject,eventdata,settingsName)
-            %settingsName is a string specifying the settings to update:
-            %   'PSD','MUSIC','CLASSIFIER','BATCH_PROCESS','VIEW'
-            wasModified = obj.SETTINGS.update_callback(settingsName);
-            if(wasModified)
-                set(obj.axeshandle.main,...
-                    'ydir',obj.SETTINGS.VIEW.yDir);
 
-                if(obj.STATE.single_study_running)
-                    obj.setAxesResolution()
-                    obj.refreshAxes();
-                end
-            end
-        end
 
 
         %% -- Menubar configuration --
@@ -427,23 +342,19 @@ classdef CLASS_UI_marking < handle
             set(handles.menu_tools_filter_toolbox,'callback',@obj.filter_channel_callback);%             filter_channel_Callback
             set(handles.menu_tools_compare_events,'callback',@obj.compare_events_callback);
             set(handles.menu_tools_quad,'callback',@obj.menu_tools_quad_callback);            
-            set(handles.menu_tools_roc,'callback',@obj.roc_directory_callback);
-            
-            
+            set(handles.menu_tools_roc,'callback',@obj.menu_tools_roc_directory_callback);
             set(handles.menu_tools_timelineEventsSelection,'callback',@obj.menu_tools_timelineEventsSelection_callback);
             
             
-            %preferences
+            %preferences and settings
             set(handles.menu_settings_power_psd,'callback',@obj.updateSettings_PSD_callback);
             set(handles.menu_settings_power_music,'callback',@obj.updateSettings_MUSIC_callback);
             set(handles.menu_settings_roc,'callback',@obj.updatePreferencesROC_callback);
             set(handles.menu_settings_classifiers,'callback',{@obj.updateSettings_callback,'CLASSIFIER'});
             set(handles.menu_settings_filters,'callback',{@obj.updateSettings_callback,'FILTER'});
-            set(handles.menu_settings_defaults,'callback',{@obj.updateSettings_callback,'DEFAULTS'});
-            
+            set(handles.menu_settings_defaults,'callback',{@obj.updateSettings_callback,'DEFAULTS'});            
             set(handles.menu_settings_reset_classifiers,'callback',{@obj.resetSettings_callback,'CLASSIFIER'});
-            set(handles.menu_settings_reset_filters,'callback',{@obj.resetSettings_callback,'FILTER'});
-            
+            set(handles.menu_settings_reset_filters,'callback',{@obj.resetSettings_callback,'FILTER'});            
             set(handles.menu_settings_saveChannelConfig,'callback',@obj.menu_settings_saveChannelConfig_callback);
 
             %batch mode
@@ -457,6 +368,7 @@ classdef CLASS_UI_marking < handle
             set(handles.menu_help_stage2workspace,'callback',@obj.menu_help_stage2workspace_callback);
         end
         
+        % help callbacks
         
         % --------------------------------------------------------------------
         %> @brief Callback to export stage struct (.sev_STAGES) to MATLAB's
@@ -890,8 +802,114 @@ classdef CLASS_UI_marking < handle
             createEDF();
         end
         
+        
+        % --------------------------------------------------------------------        
+        %  Preferences and Settings Callbacks
+        %       Menubar --> Settings callbacks        
+        % --------------------------------------------------------------------        
+        function updatePreferencesROC_callback(obj,varargin)
+            global EVENT_CONTAINER;
+            if(EVENT_CONTAINER.num_events>1)
+                roc_settings = settings_roc_dlg();
+                if(~isempty(roc_settings))
+                    EVENT_CONTAINER.roc_truth_ind = roc_settings.truth;
+                    EVENT_CONTAINER.roc_estimate_ind = roc_settings.estimate;
+                    EVENT_CONTAINER.roc_artifact_ind = roc_settings.artifact;
+                    EVENT_CONTAINER.roc_stage_selection = roc_settings.stage;
+                    
+                    %calculate the range in - the valid comparison range over whic
+                    %comparisons can be made
+                    
+                    if(isfield(obj.sev_STAGES,'line'))
+                        comparison_epoch_ind = zeros(size(obj.sev_STAGES.line));
+                        stage_selection = roc_settings.stage;
+                        for k=1:numel(stage_selection)
+                            cur_stage = stage_selection(k)-1; %-1 b/c 1 based and first stage is 0
+                            comparison_epoch_ind = comparison_epoch_ind|obj.sev_STAGES.line==cur_stage;
+                        end
+                        samples_per_epoch = obj.SETTINGS.VIEW.standard_epoch_sec*obj.SETTINGS.VIEW.samplerate;
+                        epoch_ind=[(0:numel(obj.sev_STAGES.line)-1)'*samples_per_epoch+1,(1:numel(obj.sev_STAGES.line))'*samples_per_epoch];
+                        comparison_range = epoch_ind(comparison_epoch_ind,:);
+                        merge_within_num_samples = 2;
+                        merged_events = CLASS_events.merge_nearby_events(comparison_range,merge_within_num_samples);
+                        EVENT_CONTAINER.roc_comparison_range = merged_events;
+                    else
+                        EVENT_CONTAINER.roc_comparison_range = [];
+                    end
+                    %they selected noe - thought this is taken care of earlier in the
+                    %settings_roc_dlg component now
+                    if(EVENT_CONTAINER.roc_artifact_ind>EVENT_CONTAINER.num_events)
+                        EVENT_CONTAINER.roc_artifact_ind = [];
+                    end
+                    EVENT_CONTAINER.roc_axes_needs_update = true;
+                    obj.updateUtilityAxes();
+                end
+            else
+                warndlg('Not enough events available yet [2]');
+            end
+        end
+        
+        function updateSettings_PSD_callback(obj,varargin)
+            global CHANNELS_CONTAINER;
+            wasModified = obj.SETTINGS.update_callback('PSD');
+            if(~isempty(CHANNELS_CONTAINER) && wasModified && isfield(obj.SETTINGS.PSD,'channel_ind') && ~isempty(obj.SETTINGS.PSD.channel_ind)) 
+                    CHANNELS_CONTAINER.current_spectrum_channel_index = obj.SETTINGS.PSD.channel_ind;
+                    CHANNELS_CONTAINER.showPSD(obj.SETTINGS.PSD);
+            end
+                
+        end
+        function updateSettings_MUSIC_callback(obj,varargin)
+            global CHANNELS_CONTAINER;
+            wasModified = obj.SETTINGS.update_callback('MUSIC');
+            if(~isempty(CHANNELS_CONTAINER) && wasModified && isfield(obj.SETTINGS.MUSIC,'channel_ind') && ~isempty(obj.SETTINGS.MUSIC.channel_ind))
+                CHANNELS_CONTAINER.current_spectrum_channel_index = obj.SETTINGS.MUSIC.channel_ind;
+                CHANNELS_CONTAINER.showMUSIC(obj.SETTINGS.MUSIC);
+            end
+        end
+        
+        
+        function resetSettings_callback(obj,hObject,eventdata,settingsName)
+            %settingsName is a string specifying the settings to update:
+            %   'CLASSIFIER','FILTER
+            if(strcmpi(settingsName,'filter'))
+                obj.SETTINGS.initializeFilters();
+            elseif(strcmpi(settingsName,'classifier'))
+                obj.SETTINGS.initializeDetectors();
+            else
+                fprintf('Unrecognized settings name (%s)\n',settingsName);                
+            end
+        end
+
+        
+        function updateSettings_callback(obj,hObject,eventdata,settingsName)
+            %settingsName is a string specifying the settings to update:
+            %   'PSD','MUSIC','CLASSIFIER','BATCH_PROCESS','VIEW'
+            wasModified = obj.SETTINGS.update_callback(settingsName);
+            if(wasModified)
+                set(obj.axeshandle.main,...
+                    'ydir',obj.SETTINGS.VIEW.yDir);
+
+                if(obj.STATE.single_study_running)
+                    obj.setAxesResolution()
+                    obj.refreshAxes();
+                end
+            end
+        end        
+        
+        function menu_settings_saveChannelConfig_callback(obj,hObject, eventdata, handles)
+            % hObject    handle to menu_settings_saveChannelConfig (see GCBO)
+            % eventdata  reserved - to be defined in a future version of MATLAB
+            % handles    structure with handles and user data (see GUIDATA)
+            global CHANNELS_CONTAINER;
+            
+            if(~isempty(CHANNELS_CONTAINER))
+                CHANNELS_CONTAINER.saveSettings(obj.SETTINGS.VIEW.channelsettings_file);
+            end
+        end
+                
         %--------------------------------%
-        %      Analyzer Callbacks        %
+        %      Analyzer Callbacks  
+        %    (menubar-->Tools-->         %
         %--------------------------------%        
         % --------------------------------------------------------------------
         function filter_channel_callback(obj,hObject, eventdata)
@@ -963,6 +981,29 @@ classdef CLASS_UI_marking < handle
         end
         
         % --------------------------------------------------------------------
+        %  Tool menubar callbacks       
+        % --------------------------------------------------------------------
+        
+        
+        % --------------------------------------------------------------------
+        %> @brief Callback to start single study region of convergence toolbox (see roc_dlg.m)
+        %> It is accessed from the menubar (Tools-> ROC toolbox)
+        %> @param obj Instance of CLASS_UI_marking
+        %> @param hObject    Unused (see GCBO)
+        %> @param eventdata  Unused reserved - to be defined in a future version of MATLAB
+        % --------------------------------------------------------------------
+        function menu_tools_roc_directory_callback(obj,hObject, eventdata)
+            roc_dlg();
+        end
+        
+        
+        % --------------------------------------------------------------------
+        %> @brief Callback to start the event comparison toolbox (see CLASS_compareEvents_dialog).
+        %> It is accessed from the menubar (Tools-> Quad analyzer)
+        %> @param obj Instance of CLASS_UI_marking
+        %> @param hObject    Unused (see GCBO)
+        %> @param eventdata  Unused reserved - to be defined in a future version of MATLAB
+        % --------------------------------------------------------------------        
         function menu_tools_quad_callback(obj,hObject, eventdata)
             % hObject    handle to menu_tools_quad (see GCBO)
             % eventdata  reserved - to be defined in a future version of MATLAB
@@ -985,14 +1026,15 @@ classdef CLASS_UI_marking < handle
         end
         
         
-        
         % --------------------------------------------------------------------
-        function menu_tools_timelineEventsSelection_callback(obj,hObject, eventdata)
-            % hObject    handle to menu_tools_viewAllEvents (see GCBO)
-            % eventdata  reserved - to be defined in a future version of MATLAB
-            % handles    structure with handles and user data (see GUIDATA)
-            %called from the menu bar, and is used to determine how the lower axes
-            %should display events
+        %> @brief Menubar callback that is used to determine how the lower axes
+        %> should display events.  It is accessed from the menubar (Tools-> time line)
+        %> @param obj Instance of CLASS_UI_marking
+        %> @param hObject    Unused (see GCBO)
+        %> @param eventdata  Unused reserved - to be defined in a future version of MATLAB
+        % --------------------------------------------------------------------      
+        function menu_tools_timelineEventsSelection_callback(obj,hObject, eventdata)            
+            
             global EVENT_CONTAINER;
             % global CHANNELS_CONTAINER;
             
@@ -1124,42 +1166,46 @@ classdef CLASS_UI_marking < handle
         end
 
 
-        
-        
-        % --------------------------------------------------------------------
-        function menu_settings_saveChannelConfig_callback(obj,hObject, eventdata, handles)
-            % hObject    handle to menu_settings_saveChannelConfig (see GCBO)
-            % eventdata  reserved - to be defined in a future version of MATLAB
-            % handles    structure with handles and user data (see GUIDATA)
-            global CHANNELS_CONTAINER;
-            
-            if(~isempty(CHANNELS_CONTAINER))
-                CHANNELS_CONTAINER.saveSettings(obj.SETTINGS.VIEW.channelsettings_file);
-            end
-        end
-        
-
         %--------------------------------%
         %      Batch mode Callbacks      %
         %--------------------------------%
         % --------------------------------------------------------------------
-        function menu_batch_run_callback(obj,hObject, eventdata, handles)
-            % hObject    handle to menu_batch_run (see GCBO)
-            % eventdata  reserved - to be defined in a future version of MATLAB
-            % handles    structure with handles and user data (see GUIDATA)
-            
+        %> @brief Callback to start batch processing toolbox (i.e.
+        %> batch_run.m)
+        %> It is accessed from the menubar (batch-> toolbox)
+        %> @param obj Instance of CLASS_UI_marking
+        %> @param hObject    Unused (see GCBO)
+        %> @param eventdata  Unused reserved - to be defined in a future version of MATLAB
+        % --------------------------------------------------------------------
+        function menu_batch_run_callback(obj,hObject, eventdata)
             batch_run();
         end
 
-                % --------------------------------------------------------------------
+        
+        % --------------------------------------------------------------------
+        %> @brief Callback to start batch .EDF export
+        %> It is accessed from the menubar (batch-> EDF export.
+        %> @param obj Instance of CLASS_UI_marking
+        %> @param hObject    Unused (see GCBO)
+        %> @param eventdata  Unused reserved - to be defined in a future version of MATLAB
+        % --------------------------------------------------------------------
+        function menu_batch_edfExport_callback(obj,~, ~)
+            batch_export('edf');
+        end
+             
+        
+        % --------------------------------------------------------------------
+        %> @brief Callback to start batch region of convergence toolbox (see batch_roc_viewer.m)
+        %> It is accessed from the menubar (batch-> ROC toolbox)
+        %> @param obj Instance of CLASS_UI_marking
+        %> @param hObject    Unused (see GCBO)
+        %> @param eventdata  Unused reserved - to be defined in a future version of MATLAB
+        % --------------------------------------------------------------------
         function menu_batch_roc_database_callback(obj,hObject, eventdata)
             batch_roc_viewer();
         end
         
-        % --------------------------------------------------------------------
-        function roc_directory_callback(obj,hObject, eventdata)
-            roc_dlg();
-        end
+
         
    
         %% -- Contextmenu configuration section --
