@@ -391,6 +391,10 @@ classdef CLASS_UI_marking < handle
 
 
         %% -- Menubar configuration --
+        % =================================================================
+        %> @brief Initialize's SEV's menubar callbacks.
+        %> @param obj instance of CLASS_UI_marking.
+        % =================================================================
         function configureMenubar(obj)
             handles = guidata(obj.figurehandle.sev);
             
@@ -451,6 +455,14 @@ classdef CLASS_UI_marking < handle
             set(handles.menu_help_stage2workspace,'callback',@obj.menu_help_stage2workspace_callback);
         end
         
+        
+        % --------------------------------------------------------------------
+        %> @brief Callback to export stage struct (.sev_STAGES) to MATLAB's
+        %> workspace.  It accessed from the menubar (help->stage two workspace)
+        %> @param obj Instance of CLASS_UI_marking
+        %> @param hObject    handle to menu_file_screenshot (see GCBO)
+        %> @param eventdata  reserved - to be defined in a future version of MATLAB
+        % --------------------------------------------------------------------
         function menu_help_stage2workspace_callback(obj,hObject, eventdata)
             %send the staging data for the current file to the workspace
             varName = 'sev_STAGES';
@@ -460,8 +472,9 @@ classdef CLASS_UI_marking < handle
         end
         
         % --------------------------------------------------------------------
-        %> @brief SEV's screenshot callback.
-        %> @param obj Instnce of PAController
+        %> @brief SEV's screenshot callback, accessed from the menubar
+        %> (file)
+        %> @param obj Instance of CLASS_UI_marking
         %> @param hObject    handle to menu_file_screenshot (see GCBO)
         %> @param eventdata  reserved - to be defined in a future version of MATLAB        
         % --------------------------------------------------------------------
@@ -549,6 +562,12 @@ classdef CLASS_UI_marking < handle
             end
         end
         
+        % --------------------------------------------------------------------
+        %> @brief Callback to output the current .EDF's header information to the MATLAB consolde window.
+        %> It accessed from the menubar (help->Output header)
+        %> @param obj Instance of CLASS_UI_marking
+        %> @param hObject    handle to menu_file_screenshot (see GCBO)
+        %> @param eventdata  reserved - to be defined in a future version of MATLAB
         % --------------------------------------------------------------------
         function menu_help_outputHDR_callback(obj,hObject, eventdata)
             % hObject    handle to menu_tools_printHDR (see GCBO)

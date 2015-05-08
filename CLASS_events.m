@@ -248,9 +248,8 @@ classdef CLASS_events < handle
         
         % =================================================================
         %> @brief
-        %> @param obj instance of CLASS_channel class.
+        %> @param obj instance of CLASS_events.
         %> @param
-        %> @retval obj instance of CLASS_channel class.
         % =================================================================
         function obj = setContextmenus(obj,contextmenu_patch_h, contextmenu_label_h,updateEvent_callback)
             %the contextmenu here is for the patches that represent the
@@ -293,9 +292,9 @@ classdef CLASS_events < handle
         
         % =================================================================
         %> @brief
-        %> @param obj instance of CLASS_channel class.
+        %> @param obj instance of CLASS_events.
         %> @param
-        %> @retval obj instance of CLASS_channel class.
+        %> @retval obj instance of CLASS_events.
         % =================================================================
         function obj = updateColor(obj,newColor)
             obj.cur_color = newColor;
@@ -306,9 +305,9 @@ classdef CLASS_events < handle
         
         % =================================================================
         %> @brief
-        %> @param obj instance of CLASS_channel class.
+        %> @param obj instance of CLASS_events.
         %> @param
-        %> @retval obj instance of CLASS_channel class.
+        %> @retval obj instance of CLASS_events.
         % =================================================================
         function summary_stats = get_summary_stats(obj,stageStruct)
             if(isempty(obj.summary_stats_Struct) || obj.summary_stats_needs_updating_Bool)
@@ -320,9 +319,9 @@ classdef CLASS_events < handle
         
         % =================================================================
         %> @brief
-        %> @param obj instance of CLASS_channel class.
+        %> @param obj instance of CLASS_events.
         %> @param
-        %> @retval obj instance of CLASS_channel class.
+        %> @retval obj instance of CLASS_events.
         % =================================================================
         function obj = delete(obj)
             %deconstructor for this class
@@ -345,9 +344,9 @@ classdef CLASS_events < handle
         
         % =================================================================
         %> @brief
-        %> @param obj instance of CLASS_channel class.
+        %> @param obj instance of CLASS_events.
         %> @param
-        %> @retval obj instance of CLASS_channel class.
+        %> @retval obj instance of CLASS_events.
         % =================================================================
         function obj = hide(obj)
             obj.hidden = true;
@@ -361,9 +360,9 @@ classdef CLASS_events < handle
         
         % =================================================================
         %> @brief
-        %> @param obj instance of CLASS_channel class.
+        %> @param obj instance of CLASS_events.
         %> @param
-        %> @retval obj instance of CLASS_channel class.
+        %> @retval obj instance of CLASS_events.
         % =================================================================
         function obj = show(obj)
             obj.hidden = false;
@@ -373,14 +372,13 @@ classdef CLASS_events < handle
         end
         
         % =================================================================
-        %> @brief
-        %> @param obj instance of CLASS_channel class.
-        %> @param
-        %> @retval obj instance of CLASS_channel class.
+        %> @brief Reruns the detectionStruct for the current method, likely called when the channel
+        %> changes due to filtering
+        %> @param obj instance of CLASS_events.
+        %> @param detection_path  Now unused
+        %> @retval detectStruct
         % =================================================================
-        function detectStruct = rerun(obj,detection_path)
-            %rerun the detectionStruct for the current method, likely called when the channel
-            %changes due to filtering
+        function detectStruct = rerun(obj,~)
 
 %             function_call = fullfile(detection_path,strrep(obj.source.algorithm,'detection.',''));
 %             detectStruct = feval(function_call,obj.source.channel_indices,obj.source.pStruct);
@@ -389,21 +387,24 @@ classdef CLASS_events < handle
         end
         
         % =================================================================
-        %> @brief
+        %> @brief %plots on the overall lower axes, the artifacts listed in art, which is a vector containing 1's where
+        %> an artifact should be drawn and 0 otherwise.
         %> @param obj instance of CLASS_events class.
-        %> @param
+        %> @param parentH is the handle to the figure axis the line will be plotted too. 
+        %> @param y_offset
+        %> @param max_height
+        %> @param stagesStruct
         %> @retval obj instance of CLASS_events class.
         % =================================================================
         function obj = draw_all(obj,parentH,y_offset,max_height,stagesStruct)
-            %plots on the overall lower axes, the artifacts listed in art, which is a vector containing 1's where
-            %an artifact should be drawn and 0 otherwise.
-            %parentH is the handle to
-            %the figure axis the line will be plotted too.  color is the color of the
-            %line as a string, and style is the style.  x_offset is a sample offset
-            %which a subset of a bigger range is sent as input and the starting point
-            %does not accurately represent the starting index desired given the limits
-            %of the plot
             
+            %>     color is the color of the
+            %> line as a string, and style is the style.
+            %> x_offset is a sample offset
+            %> which a subset of a bigger range is sent as input and the starting point
+            %> does not accurately represent the starting index desired given the limits
+            %> of the plot
+        
             standard_epoch_count = numel(stagesStruct.line);
             
             %can adjust this to go through each patchhandle line... instead
@@ -451,7 +452,7 @@ classdef CLASS_events < handle
         % =================================================================
         %> @brief
         %> @param obj instance of CLASS_events class.
-        %> @param
+        %> @param start_x
         %> @retval obj instance of CLASS_events class.
         % =================================================================
         function setCurrentEpochStartX(obj,start_x)

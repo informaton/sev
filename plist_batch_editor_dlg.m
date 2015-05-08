@@ -146,7 +146,7 @@ end
 
 handles = initialize_settings(handles,batchSettingsStruct);
 
-handles = resizeBatchPanelAndFigureForUIControls(handles.pan_properties,handles.user.cur_num_properties,handles);
+% handles = resizeBatchPanelAndFigureForUIControls(handles.pan_properties,handles.user.cur_num_properties,handles);
 
 if(~isempty(rocStruct))
     check_roc_Callback(handles.check_roc, [], handles, rocStruct);

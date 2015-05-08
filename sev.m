@@ -159,7 +159,12 @@ function varargout = sev_OutputFcn(hObject, eventdata, handles)
 
 % Get default command line output from handles structure
 varargout{1} = handles.output;
-   
+
+
+% Removed this from a menubar callback I had in guide.
+% But have not deleted it because I still like the reference.
+%    sev('menu_batch_run_Callback',hObject,eventdata,guidata(hObject))
+
 % --- Executes on key press with focus on sev_main_fig and no controls selected.
 function sev_main_fig_KeyPressFcn(hObject, eventdata, handles)
 % function figure1_KeyPressFcn(hObject, eventdata)
