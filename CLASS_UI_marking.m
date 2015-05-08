@@ -359,7 +359,7 @@ classdef CLASS_UI_marking < handle
 
             %batch mode
             set(handles.menu_batch_run,'callback',@obj.menu_batch_run_callback);
-            set(handles.menu_batch_edfExport,'callback',@obj.menu_batch_edfExport);
+            set(handles.menu_batch_edfExport,'callback',@obj.menu_batch_edfExport_callback);
             set(handles.menu_batch_roc_database,'callback',@obj.menu_batch_roc_database_callback);
             
 
@@ -1977,8 +1977,9 @@ classdef CLASS_UI_marking < handle
             set(handles.menu_settings_filters,'enable','on');
             set(handles.menu_settings_defaults,'enable','on');            
             
-            set(handles.menu_batch_run,'enable','on');
             set(handles.menu_batch,'enable','on');
+            set(handles.menu_batch_run,'enable','on');
+            set(handles.menu_batch_edfExport,'enable','on');
             
             set(handles.menu_help,'enable','on');
             set(handles.menu_help_restart,'enable','on');
