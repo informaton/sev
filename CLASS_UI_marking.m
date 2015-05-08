@@ -422,12 +422,14 @@ classdef CLASS_UI_marking < handle
             set(handles.menu_file_load_channels,'callback',@obj.load_EDFchannels_callback);%
             set(handles.menu_file_load_EDF,'callback',@obj.load_EDF_callback);%
             
-            
+            % Tools
             set(handles.menu_tools_event_toolbox,'callback',@obj.eventtoolbox_callback);
             set(handles.menu_tools_filter_toolbox,'callback',@obj.filter_channel_callback);%             filter_channel_Callback
             set(handles.menu_tools_compare_events,'callback',@obj.compare_events_callback);
             set(handles.menu_tools_quad,'callback',@obj.menu_tools_quad_callback);            
             set(handles.menu_tools_roc,'callback',@obj.roc_directory_callback);
+            
+            
             set(handles.menu_tools_timelineEventsSelection,'callback',@obj.menu_tools_timelineEventsSelection_callback);
             
             
@@ -446,7 +448,7 @@ classdef CLASS_UI_marking < handle
 
             %batch mode
             set(handles.menu_batch_run,'callback',@obj.menu_batch_run_callback);
-            set(handles.menu_tools_roc_directory,'callback',@obj.roc_directory_callback);
+            set(handles.menu_batch_edfExport,'callback',@obj.menu_batch_edfExport);
             set(handles.menu_batch_roc_database,'callback',@obj.menu_batch_roc_database_callback);
             
 
@@ -1917,7 +1919,7 @@ classdef CLASS_UI_marking < handle
             set(handles.menu_file_load_text_channel,'enable','on');
             
             set(handles.menu_tools,'enable','on');
-            set(handles.menu_tools_roc_directory,'enable','on');
+            set(handles.menu_tools_roc,'enable','on');
             
             set(handles.menu_settings,'enable','on');
             set(handles.menu_settings_power,'enable','on');
