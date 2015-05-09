@@ -115,8 +115,14 @@ catch me
     menu_settings_reset_defaults_Callback([],[],handles);   
 end
     
-if(numel(varargin)==1 &&  strcmpi(varargin{1},'batch'))
-    MARKING.menu_batch_run_callback();
+if(numel(varargin)==1)
+    if(strcmpi(varargin{1},'batch'))
+        MARKING.menu_batch_run_callback();
+    elseif((strcmpi(varargin{1},'batch_export'))
+        MARKING.menu_batch_export_callback();        
+    else
+        MARKING.initializeView(); %don't want to do this if running through batch mode?
+    end
 elseif(numel(varargin)>1)
         
     [path, name, ext] = fileparts(varargin{2});

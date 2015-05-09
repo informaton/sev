@@ -82,7 +82,7 @@ else
     % %original method used smoothing filter on the order of seven taps
     % smooth
     smooth_params.order=params.smoothing_filter_order;
-    smooth_params.rms = 0;
+    smooth_params.abs = 0;
     smooth_data = filter.filter_ma(data,smooth_params);
     
     % num_taps = params.smoothing_filter_order;

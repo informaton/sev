@@ -3,6 +3,6 @@
 <plist version="1.0">
 <dict>
 	<key>radius_threshold_uv</key>
-	<real>30.000000</real>
+	<real>120.000000</real>
 </dict>
 </plist>

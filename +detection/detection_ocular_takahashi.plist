@@ -3,9 +3,9 @@
 <plist version="1.0">
 <dict>
 	<key>smoothing_filter_order</key>
-	<real>10.000000</real>
+	<real>20.000000</real>
 	<key>thresh_ampl_uv</key>
-	<real>30.000000</real>
+	<real>60.000000</real>
 	<key>thresh_dur_sec</key>
 	<real>5.000000</real>
 	<key>thresh_slope</key>
