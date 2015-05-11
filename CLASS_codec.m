@@ -11,7 +11,9 @@ classdef CLASS_codec < handle
     methods(Static)
         
         % ======================================================================
-        %> @brief
+        %> @brief Loads staging data from hypnogram file, applies unknown
+        %> staging label (Default = 7) as applicable, determines sleep
+        %> cycle period, and extract first non wake epoch.
         % ======================================================================
         %> @param stages_filename is the filename of an ASCII tab-delimited file whose
         %> second column contains a vector of scored sleep stages for each epoch of
@@ -105,8 +107,36 @@ classdef CLASS_codec < handle
             STAGES.standard_epoch_sec = 30;
             STAGES.study_duration_in_seconds = STAGES.standard_epoch_sec*numel(STAGES.line);
         end
+        
+        
+        %------------------------------------------------------------------%
+        %> @brief Parses an export information file (.inf) and returns 
+        %> each rows values as a struct entry.
+        %------------------------------------------------------------------%        
+        %> @param Full filename (path and name) of the export information
+        %> file to parse.
+        %> @retval Struct with the following fields:
+        %> - @c mfilename Nx1 cell of filenames of the export method
+        %> - @c description Nx1 cell of descriptions for each export method.
+        %> - @c settingsEditor Nx1 cell of the settings editor to use for each method.     
+        %> @note One entry per non-header row parsed of .inf file
+        %------------------------------------------------------------------%
+        function exportMethodsStruct = parseExportInfFile(exportInfFullFilename)
+            exportMethodsStruct = [];
+        
+            if(exist(exportInfFullFilename,'file'))
+                fid = fopen(exportInfFullFilename,'r');
+                scanCell = textscan(fid,'%s %s %s','headerlines',1,'delimiter',',');
+                fclose(fid);
+                exportMethodsStruct.mfilename = scanCell{1};
+                exportMethodsStruct.description = scanCell{2};
+                exportMethodsStruct.settingsEditor = scanCell{3};
+            end;
+            
+        end
 
-        %> @brief loads/parses the .SCO file associated with an EDF.        
+        % ======================================================================
+                %> @brief loads/parses the .SCO file associated with an EDF.        
         % ======================================================================
         %> @param filename Full .SCO filename (i.e. with path) to load.
         %> @param dest_samplerate Sample rate to use for SCO fields (return value)
@@ -273,6 +303,14 @@ classdef CLASS_codec < handle
             
         end
         
+        % =================================================================
+        %> @brief Returns the patid and study number related to the
+        %> patstudy key provided.  This requires patstudy input string to
+        %> follow a particular template (see source code).
+        %> @param patstudy is the filename of the .edf, less the extention
+        %> @retval PatID
+        %> @retval StudyNum
+        % =================================================================        
         function [PatID,StudyNum] = getDB_PatientIdentifiers(patstudy)
             %patstudy is the filename of the .edf, less the extention
             %             if(numel(patstudy)>=7)
@@ -553,6 +591,8 @@ classdef CLASS_codec < handle
             HDR.num_records = fread(fid,1,'int32'); %32 bytes read
         end
         
+        
+        
         % =================================================================
         %> @brief This function takes an event file of Stanford Sleep Cohort's .evts
         %> format and returns a SEV event struct and a SEV hynpgram.
@@ -716,6 +756,26 @@ classdef CLASS_codec < handle
             fclose(fid);
         end
         
+
+        %> @brief searches through the roc_struct to find the best possible configurations in terms of sensitivity and specificity and K_0_0, and K_1_0
+        %> the roc_struct fields are ordered first by study name and then
+        %> by configuration
+        %> @param
+        %> @retval Struct with same fields as input roc_struct and also
+        %> additional field @c optimum which is a struct contaning the
+        %> following fields:
+        %> - @c K_0_0
+        %> - @c K_1_0
+        %> - @c FPR
+        %> - @c TPR
+        %> - @c mean.K_0_0
+        %> - @c mean.K_1_0
+        %> - @c mean.FPR
+        %> - @c mean.TPR
+        %> - @c mean.K_0_0_configID  Index of maximum mean.K_0_0 value.
+        %> - @c mean.K_1_0_configID  Index of maximum mean.K_1_0 value.
+        %> - @c mean.FPR_configID  Index of minimum mean FPR value.
+        %> - @c mean.TPR_configID  Index of maximum mean TPR value.
         function roc_struct = findOptimalConfigurations(roc_struct)
            %searches through the roc_struct to find the best possible configurations in terms of sensitivity and specificity and K_0_0, and K_1_0
            %the roc_struct fields are ordered first by study name and then
@@ -751,24 +811,29 @@ classdef CLASS_codec < handle
                      
         end
         
+        %> @brief Loads older ROC data file format output as generated by
+        %> SEV's batch job.
+        %> @param filename Name of the ROC output file produced by SEV's batch mode.  
+        %> It has the following naming convention @c roc_truthAlgorithm_VS_estimateAlgorithm.txt
+        %> where Algorithm is the algorithm name that produced the .txt output file from batch
+        %> mode.
+        %> @retval roc_struct Struct with the following fields
+        %> loads the roc data as generated by the batch job
+        %> - @c roc_struct.config - unique id for each parameter combination
+        %> - @c roc_struct.truth_algorithm = algorithm name for gold standard
+        %> - @c roc_struct.estimate_algorithm = algorithm name for the estimate
+        %> - @c roc_struct.study - edf filename
+        %> - @c roc_struct.Q    - confusion matrix (2x2)
+        %> - @c roc_struct.FPR    - false positive rate (1-specificity)
+        %> - @c roc_struct.TPR   - true positive rate (sensitivity)
+        %> - @c roc_struct.ACC    - accuracy
+        %> - @c roc_struct.values   - parameter values
+        %> - @c roc_struct.key_names - key names for the associated values
+        %> - @c roc_struct.study_names - unique study names for this container
+        %> - @c roc_struct.K_0_0 - weighted Kappa value for QROC
+        %> - @c roc_struct.K_1_0 - weighted Kappa value for QROC
         function roc_struct = loadROCdata(filename)
-           %loads the roc data as generated by the batch job 
-           %The ROC file follows the naming convention
-           %roc_truthAlgorithm_VS_estimateAlgorithm.txt
-           %            roc_struct.config - unique id for each parameter combination
-           %            roc_struct.truth_algorithm = algorithm name for gold standard
-           %            roc_struct.estimate_algorithm = algorithm name for the estimate
-           %            roc_struct.study - edf filename
-           %            roc_struct.Q    - confusion matrix (2x2)
-           %            roc_struct.FPR    - false positive rate (1-specificity)
-           %            roc_struct.TPR   - true positive rate (sensitivity)
-           %            roc_struct.ACC    - accuracy
-           %            roc_struct.values   - parameter values
-           %            roc_struct.key_names - key names for the associated values
-           %            roc_struct.study_names - unique study names for this container
-           %            roc_struct.K_0_0 - weighted Kappa value for QROC
-           %            roc_struct.K_1_0 - weighted Kappa value for QROC
-           
+
            pat = '.*ROC_(?<truth_algorithm>.+)_VS_(?<estimate_algorithm>.+)\.txt';
            t = regexpi(filename,pat,'names');
            if(isempty(t))
@@ -844,23 +909,29 @@ classdef CLASS_codec < handle
            fclose(fid);
             
         end
-        function roc_struct = loadROCdataOld(filename) %the method for older ROC data file format
-           %loads the roc data as generated by the batch job 
-           %The ROC file follows the naming convention
-           %roc_truthAlgorithm_VS_estimateAlgorithm.txt
-%            roc_struct.config - unique id for each parameter combination
-%            roc_struct.truth_algorithm = algorithm name for gold standard
-%            roc_struct.estimate_algorithm = algorithm name for the estimate 
-%            roc_struct.study - edf filename
-%            roc_struct.Q    - confusion matrix (2x2)
-%            roc_struct.FPR    - false positive rate (1-specificity)
-%            roc_struct.TPR   - true positive rate (sensitivity)
-%            roc_struct.ACC    - accuracy
-%            roc_struct.values   - parameter values
-%            roc_struct.key_names - key names for the associated values
-%            roc_struct.study_names - unique study names for this container
-%            roc_struct.K_0_0 - weighted Kappa value for QROC
-%            roc_struct.K_1_0 - weighted Kappa value for QROC
+        
+        
+        %> @brief Loads older ROC data file format output as generated by
+        %> SEV's batch job.
+        %> @param filename Filename with following file name template
+        %> roc_truthAlgorithm_VS_estimateAlgorithm.txt Where Algorithm is
+        %> the algorithm name that produced the .txt output file from batch
+        %> mode.
+        %> @retval roc_struct Struct with the following fields
+        %> - @c roc_struct.config - unique id for each parameter combination
+        %> - @c roc_struct.truth_algorithm = algorithm name for gold standard
+        %> - @c roc_struct.estimate_algorithm = algorithm name for the estimate
+        %> - @c roc_struct.study - edf filename
+        %> - @c roc_struct.Q    - confusion matrix (2x2)
+        %> - @c roc_struct.FPR    - false positive rate (1-specificity)
+        %> - @c roc_struct.TPR   - true positive rate (sensitivity)
+        %> - @c roc_struct.ACC    - accuracy
+        %> - @c roc_struct.values   - parameter values
+        %> - @c roc_struct.key_names - key names for the associated values
+        %> - @c roc_struct.study_names - unique study names for this container
+        %> - @c roc_struct.K_0_0 - weighted Kappa value for QROC
+        %> - @c roc_struct.K_1_0 - weighted Kappa value for QROC
+        function roc_struct = loadROCdataOld(filename) 
            
            pat = '.*ROC_(?<truth_algorithm>.+)_VS_(?<estimate_algorithm>.+)\.txt';
            t = regexpi(filename,pat,'names');
@@ -925,17 +996,18 @@ classdef CLASS_codec < handle
            fclose(fid);
             
         end
-
+        
+        %> @brief This function borrows heavily from sev../import_sco_events.m and requires
+        %> the use of loadSCOfile.m
+        %> @note Usage:
+        %> - @c exportSCOtoEvt() prompts user for .SCO directory and evt output directory
+        %> - @c exportSCOtoEvt(sco_pathname) sco_pathname is the .SCO file containing
+        %> directory.  User is prompted for evt output directory
+        %> - @c exportSCOtoEvt(sco_pathname, evt_pathname) evt_pathname is the directory
+        %> where evt files are exported to.
+        %> @param sco_pathname is the .SCO file containing directory. 
+        %> @param evt_pathname The directory where evt files are exported to.
         function exportSCOtoEvt(sco_pathname, evt_pathname)
-            %this function borrows heavily from sev../import_sco_events.m and requires
-            %the use of loadSCOfile.m
-            % Usage:
-            % exportSCOtoEvt() prompts user for .SCO directory and evt output directory
-            % exportSCOtoEvt(sco_pathname) sco_pathname is the .SCO file containing
-            %    directory.  User is prompted for evt output directory
-            % exportSCOtoEvt(sco_pathname, evt_pathname) evt_pathname is the directory
-            %    where evt files are exported to.
-            %
             % Author: Hyatt Moore IV, Stanford University
             % Date Created: 1/9/2012
             % modified 2/6/2012: Checked if evt_pathname exists first and, if not,

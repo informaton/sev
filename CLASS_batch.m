@@ -21,153 +21,149 @@ classdef CLASS_batch < handle
         %> @brief checkPathForEDFs
         % ======================================================================
         %> @param  edfPath        
-        %> @retval edfPathStruct
-        %> [edf_filename_list, edf_fullfilename_list, edf_megabyte_count]
+        %> @playlist
+        %> @retval edfPathStruct Struct with fields describing the .edf
+        %> files found in the path specified (after filtering with playlist
+        %> when provided and it exists).
+        %> - @c edf_filename_list 
+        %> - @c edf_fullfilename_list 
+        %> - @c edf_megabyte_count
+        %> - @c statusString
+        %> - @c firstHDR
         % ======================================================================
         function edfPathStruct = checkPathForEDFs(edfPath,playlist)
             %looks in the path for EDFs
-            global GUI_TEMPLATE;
-            edfPathStruct.edf_filename_list = ;
-            edfPathStruct.edf_fullfilename_list = ;
-            edfPathStruct.edf_megabyte_count = ;
-            edfPathStruct.messasgeString = ;
+
+            edfPathStruct.edf_filename_list = [];
+            edfPathStruct.edf_fullfilename_list = [];
+            edfPathStruct.edf_megabyte_count = [];
+            edfPathStruct.statusString = [];
+            edfPathStruct.firstHDR = [];
             
+            if(nargin<1 || isempty(edfPath))
+                edfPath = pwd;
+            end
             if(nargin<2)
-                playlist = getPlaylist(handles);
+                playlist = []; %CLASS_batch.getPlaylist(handles);                
             end
             if(~exist(edfPath,'file'))
-                EDF_message = 'Directory does not exist. ';
+                edfPathStruct.statusString = 'Directory does not exist. ';
                 num_edfs = 0;
-                num_edfs_all = 0;
-                
+                num_edfs_all = 0;                
             else
-                [edf_filename_list, edf_fullfilename_list] = getFilenamesi(edfPath,'edf');
+                [edfPathStruct.edf_filename_list, edfPathStruct.edf_fullfilename_list] = getFilenamesi(edfPath,'edf');
                 
-                num_edfs_all = numel(edf_filename_list);
+                num_edfs_all = numel(edfPathStruct.edf_filename_list);
                 
                 if(~isempty(playlist))
-                    edf_filename_list = CLASS_batch.filterPlaylist(edf_filename_list,playlist);
+                    [edfPathStruct.edf_filename_list, filtered_intersect_indices] = CLASS_batch.filterPlaylist(edfPathStruct.edf_filename_list,playlist);
+                    edfPathStruct.edf_fullfilename_list = edfPathStruct.edf_fullfilename_list(filtered_intersect_indices);
                 end
-                num_edfs = numel(edf_filename_list);
+                num_edfs = numel(edfPathStruct.edf_filename_list);
                 total_bytes = 0;
                 for e=1:num_edfs
-                    tmpF = dir(edf_fullfilename_list{e});
+                    tmpF = dir(edfPathStruct.edf_fullfilename_list{e});
                     total_bytes = total_bytes+tmpF.bytes;
                 end
                 
                 total_megabytes = total_bytes/1E6;
                 if(~isempty(playlist))
-                    EDF_message = [num2str(num_edfs),' EDF files (',num2str(total_megabytes,'%0.2f'),' MB) found in the current play list. '];
+                    edfPathStruct.statusString = [num2str(num_edfs),' EDF files (',num2str(total_megabytes,'%0.2f'),' MB) found in the current play list. '];
                 else
-                    EDF_message = [num2str(num_edfs),' EDF files (',num2str(total_megabytes,'%0.2f'),' MB) found in the current directory. '];
+                    edfPathStruct.statusString = [num2str(num_edfs),' EDF files (',num2str(total_megabytes,'%0.2f'),' MB) found in the current directory. '];
                 end
-            end;
-            
+            end;            
             
             if(num_edfs==0)
                 
                 if(num_edfs_all==0)
-                    EDF_message = [EDF_message, 'Please choose a different directory'];
+                    edfPathStruct.statusString = [statusString, 'Please choose a different directory'];
                     set(get(handles.bg_panel_playlist,'children'),'enable','off');
                     
                 else
-                    EDF_message = [EDF_message, 'Please select a different play list or use ''All'''];
+                    edfPathStruct.statusString = [statusString, 'Please select a different play list or use ''All'''];
                 end
+            else               
+                first_edf_fullfilename = edfPathStruct.edf_fullfilename_list{1};
+                edfPathStruct.firstHDR = loadEDF(first_edf_fullfilename);
                 
-                set(handles.push_start,'enable','off');
-                EDF_labels = 'No Channels Available';
-                set(get(handles.panel_exportMethods,'children'),'enable','off');
-                
-                
-            else
-                set(get(handles.panel_synth_CHANNEL,'children'),'enable','on');
-                set(handles.edit_synth_CHANNEL_name,'enable','off');
-                set(handles.push_start,'enable','on');
-                
-                set(get(handles.panel_exportMethods,'children'),'enable','on');
-                
-                %     set(get(handles.panel_psd,'children'),'enable','on');
-                set(handles.pop_spectral_method,'enable','on');
-                set(handles.push_add_psd,'enable','on');
-                set(get(handles.panel_artifact,'children'),'enable','on');
-                set(get(handles.bg_panel_playlist,'children'),'enable','on');
-                set(handles.edit_selectPlayList,'enable','inactive');
-                
-                first_edf_filename = edf_file_list(1).name;
-                HDR = loadEDF(fullfile(edfPath,first_edf_filename));
-                EDF_labels = HDR.label;
-            end;
-            
-            GUI_TEMPLATE.EDF.labels = EDF_labels;
-            
-            set(handles.text_edfs_to_process,'string',EDF_message);
-            
-            
+            end;            
         end
 
-        % from batch export
-        function playlist = getPlaylist(handles,ply_filename)
-            if(nargin==2)
-                if(strcmpi(ply_filename,'-gui'))
-                    
-                    %make an educated guess regarding the file to be loaded
-                    fileGuess = get(handles.edit_selectPlayList,'string');
-                    if(~exist(fileGuess,'file'))
-                        fileGuess = get(handles.edit_edf_directory,'string');
-                    end
-                    
-                    [ply_filename, pathname, ~] = uigetfile({'*.ply','.EDF play list (*.ply)'},'Select batch mode play list',fileGuess,'MultiSelect','off');
-                    
-                    %did the user press cancel
-                    if(isnumeric(ply_filename) && ~ply_filename)
-                        ply_filename = [];
-                    else
-                        ply_filename = fullfile(pathname,ply_filename);
-                    end
-                end
-            else
+        %------------------------------------------------------------------%
+        %> @brief Returns a playlist of .EDF files to process as a subset from a directory
+        %> .EDF files.  This is helpful when a selection has been
+        %> identified for an experiment and the user does not want to copy
+        %> all of the files to another directory just to batch process those
+        %> only.
+        %------------------------------------------------------------------%        
+        %> @param List of filenames to filter through.
+        %> @param The list of files that must be matched.
+        %> @retval Nx1 cell of filenames that exist in both filename_list and
+        %> file_filter_list.  A cell type.
+        %> @retval Nx1 vector of indices such that filtered_filename_list =
+        %> filename_list(filtered_intersect_indices)
+        %------------------------------------------------------------------%
+        function [playList, filenameOfPlayList] = getPlaylist(directoryOfPlayList, filenameOfPlayList)
+            if(nargin<2 || (nargin==2 && (strcmpi(filenameOfPlayList,'-gui') || isempty(filenameOfPlayList)) ))
                 
-                if(strcmpi('on',get(handles.radio_processList,'enable')) && get(handles.radio_processList,'value'))
-                    ply_filename = get(handles.edit_selectPlayList,'string');
+                %make an educated guess regarding the file to be loaded
+                fileGuess = directoryOfPlayList;
+                
+                [filenameOfPlayList, pathname, ~] = uigetfile({'*.ply','.EDF play list (*.ply)'},'Select batch mode play list',fileGuess,'MultiSelect','off');
+                
+                %did the user press cancel
+                if(isnumeric(filenameOfPlayList) && ~filenameOfPlayList)
+                    filenameOfPlayList = [];
                 else
-                    ply_filename = [];  %just in case this is called unwantedly
+                    filenameOfPlayList = fullfile(pathname,filenameOfPlayList);
                 end
             end
             
-            if(exist(ply_filename,'file'))
-                fid = fopen(ply_filename);
+            if(exist(filenameOfPlayList,'file'))
+                fid = fopen(filenameOfPlayList);
                 data = textscan(fid,'%[^\r\n]');
-                playlist = data{1};
+                playList = data{1};
                 fclose(fid);
             else
-                playlist = [];
+                playList = [];
             end
-            
-            %update the gui
-            if(isempty(playlist))
-                set(handles.radio_processAll,'value',1);
-                set(handles.edit_selectPlayList,'string','<click to select play list>');
-            else
-                set(handles.radio_processList,'value',1);
-                set(handles.edit_selectPlayList,'string',ply_filename);
-            end
-            
         end
         
-        
-        % from batch export
-        function filtered_file_struct = filterPlaylist(file_struct,file_filter_list)
-            
+        %------------------------------------------------------------------%
+        %> @brief Returns the filenames common to both input arguments and the indices
+        %> at which the intersection occurs for the first argument.
+        %------------------------------------------------------------------%        
+        %> @param List of filenames to filter through.
+        %> @param The list of files that must be matched.
+        %> @retval Nx1 cell of filenames that exist in both filename_list and
+        %> file_filter_list.  A cell type.
+        %> @retval Nx1 vector of indices such that filtered_filename_list =
+        %> filename_list(filtered_intersect_indices)
+        %------------------------------------------------------------------%
+        function [filtered_filename_list, filtered_intersect_indices] = filterPlaylist(filename_list,file_filter_list)            
             if(~isempty(file_filter_list))
-                filename_cell = cell(numel(file_struct),1);
-                [filename_cell{:}] = file_struct.name;
-                [~,~,intersect_indices] = intersect(file_filter_list,filename_cell);  %need to handle case sensitivity
-                filtered_file_struct = file_struct(intersect_indices);
+                [filtered_filename_list,~,filtered_intersect_indices] = intersect(file_filter_list,filename_list);  %need to handle case sensitivity
             else
-                filtered_file_struct = file_struct;  %i.e. nothing to filter
+                filtered_filename_list = filename_list;  %i.e. nothing to filter
+                filtered_intersect_indices = 1:numel(filtered_name_list);
             end
         end
-            
+        
+        
+        %------------------------------------------------------------------%
+        %> @brief Parses an export information file (.inf) and returns 
+        %> each rows values as a struct entry.
+        %------------------------------------------------------------------%        
+        %> @param Full filename (path and name) of the export information
+        %> file to parse.
+        %> @retval Nx1 struct (one entry per non-header row parsed of .inf file)
+        %> with the following fields
+        %------------------------------------------------------------------%
+        function exportMethodsStruct = getExportMethods(exportInfFullFilename)
+            exportMethodsStruct = CLASS_code.parseExportInfFile(exportInfFullFilename);
+        end
+        
     end %End static methods
     
 end  % End class definition

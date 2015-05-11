@@ -68,8 +68,8 @@ else
         end
 
     end
-    
-    checkPathForEDFs(handles); %Internally, this calls getPlayList since no argument is given.
+    edfPath = pwd;
+    edfPathStruct = CLASS_batch.checkPathForEDFs(edfPath); %Internally, this calls getPlayList since no argument is given.
     
     
     
@@ -116,8 +116,10 @@ function initializeSettings(hObject)
     set(handles.button_selectChannels,'userdata',userdata,'value',0);
    
     % export methods
+    methods = handles.user.export_inf_filename
     set([handles.push_add_method;
         handles.push_method_settings],'enable','off');
+    set(handles.menu_export_method,'string',export_methods);
     
     % Start
     set(handles.push_start,'enable','off');
@@ -134,6 +136,8 @@ function initializeCallbacks(hObject)
     set(handles.menu_export_method,'callback',[]);
     set(handles.push_start,'callback',[]);
     set(handles.push_add_method,'callback',{@push_add_event_Callback,guidata(hObject)});
+    
+    set(handles.edit_selectPlayList,'buttondownfcn',{@edit_selectPlayList_ButtonDownFcn,guidata(hObject)});
 
 end
 
@@ -157,23 +161,23 @@ function push_edf_directory_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
     global MARKING;
     
-    path = get(handles.edit_edf_directory,'string');
+    edfPath = get(handles.edit_edf_directory,'string');
     
-    if(~exist(path,'file'))
-        path = MARKING.SETTINGS.BATCH_PROCESS.edf_folder;
+    if(~exist(edfPath,'file'))
+        edfPath = MARKING.SETTINGS.BATCH_PROCESS.edf_folder;
     end;
     
-    pathname = uigetdir(path,'Select the directory containing EDF files to process');
+    pathname = uigetdir(edfPath,'Select the directory containing EDF files to process');
     
     if(isempty(pathname)||(isnumeric(pathname)&&pathname==0))
-        pathname = path;
+        pathname = edfPath;
     else
         MARKING.SETTINGS.BATCH_PROCESS.edf_folder = pathname; %update for the next time..
     end;
     
     set(handles.edit_edf_directory,'string',pathname);
-    checkPathForEDFs(handles);
-    
+    edfPathStruct = CLASS_batch.checkPathForEDFs(pathname);
+    updateGUI(edfPathStruct);
 end
 
 
@@ -182,13 +186,6 @@ end
 
 
 
-function edit_edf_directory_Callback(hObject, eventdata, handles)
-% hObject    handle to edit_edf_directory (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-checkPathForEDFs(handles);
-
-end
 
 % --- Executes during object creation, after setting all properties.
 function edit_edf_directory_CreateFcn(hObject, eventdata, handles)
@@ -214,336 +211,6 @@ function push_start_Callback(hObject, eventdata, handles)
 %This function grabs the entries from the GUI and puts them into the global
 %variable BATCH_PROCESS which will be referenced during the batch
 %processing.
-
-
-global GUI_TEMPLATE;
-global MARKING;
-
-BATCH_PROCESS = handles.user.BATCH_PROCESS;
-
-% BATCH_PROCESS.output_files.MUSIC_filename = 'MUSIC'; %already set in the
-% _sev.parameters.txt
-EDF_labels = GUI_TEMPLATE.EDF.labels;
-export_inf = GUI_TEMPLATE.export;
-
-%% grab the synthesize channel configurations
-%flip handles up and down to put in more correct order as seen by the user from top to bottom
-synth_channel_settings_h = flipud(findobj(handles.panel_synth_CHANNEL,'-regexp','tag','push_synth_CHANNEL_settings'));
-synth_channel_names_h = flipud(findobj(handles.panel_synth_CHANNEL,'-regexp','tag','edit_synth_CHANNEL_name'));
-
-synth_channel_structs = get(synth_channel_settings_h,'userdata');
-synth_channel_names = get(synth_channel_names_h,'string');
-
-if(~iscell(synth_channel_names))
-    synth_channel_names = {synth_channel_names};
-    synth_channel_structs = {synth_channel_structs};
-end
-synth_indices = false(numel(synth_channel_structs),1);
-
-for k=1:numel(synth_indices)
-    if(~isempty(synth_channel_names{k})&&~isempty(synth_channel_structs{k}))
-        synth_indices(k)= true;
-        
-        %for the case where the synthetic channel has multiple
-        %configurations for it (e.g. adaptive noise cancel followed by
-        %wavelet denoising
-        for p=1:numel(synth_channel_structs{k})
-            if(isempty(synth_channel_structs{k}(p).params))
-                pfile = fullfile(MARKING.SETTINGS.rootpathname,MARKING.SETTINGS.VIEW.filter_path,strcat(synth_channel_structs{k}(p).m_file,'.plist'));
-                matfile = fullfile(MARKING.SETTINGS.rootpathname,MARKING.SETTINGS.VIEW.filter_path,strcat(synth_channel_structs{k}(p).m_file,'.mat'));
-                if(exist(pfile,'file'))
-                    try
-                        synth_channel_structs{k}(p).params = plist.loadXMLPlist(pfile);
-                    catch me
-                        fprintf(1,'Could not load parameters from %s directly.\n',pfile);
-                        showME(me);
-                    end
-                elseif(exist(matfile,'file'))
-                    try
-                        matfileStruct = load(matfile);
-                        synth_channel_structs{k}(p).params = matfileStruct.params;
-                    catch me
-                        fprintf(1,'Could not load parameters from %s directly.\n',matfile);
-                        showME(me);
-                    end
-                end
-            end
-        end
-    end
-end
-
-synth_channel_structs = synth_channel_structs(synth_indices);
-synth_channel_names = synth_channel_names(synth_indices);
-
-BATCH_PROCESS.synth_CHANNEL.names = synth_channel_names;
-BATCH_PROCESS.synth_CHANNEL.structs = synth_channel_structs;
-
-%this is for the source channels found in the .EDF which need to be loaded
-%in order to subsequently synthesize the channels in BATCH_PROCESS.synth_CHANNEL
-synth_channel_settings_lite = cell(numel(synth_channel_names),1);
-
-for k = 1:numel(synth_channel_structs)
-    labels = {synth_channel_structs{k}.src_channel_label}; %keep it as a cell for loading later in batch.load_file subfunction getChannelIndices
-    for j=1:numel(synth_channel_structs{k})
-        labels = [labels, synth_channel_structs{k}(j).ref_channel_label];
-    end
-    synth_channel_settings_lite{k}.channel_labels = labels;
-end
-
-BATCH_PROCESS.synth_CHANNEL.settings_lite = synth_channel_settings_lite; %necessary for loading the channels with batch.load_file
-
-%% grab the PSD parameters
-psd_spectral_methods_h = findobj(handles.panel_psd,'-regexp','tag','pop_spectral_method');
-
-selected_PSD_channels = [];
-psd_channel_settings = {};
-selected_MUSIC_channels = [];
-MUSIC_channel_settings = {};
-selected_coherence_channels = [];
-coherence_channel_settings = {};
-
-for k=1:numel(psd_spectral_methods_h)
-    method = GUI_TEMPLATE.spectrum_labels{get(psd_spectral_methods_h(k),'value')}; %labels defined in opening function at {'None','PSD','MUSIC'}
-
-    userdata = get(psd_spectral_methods_h(k),'userdata');
-    switch(lower(method))
-        case 'none'
-            
-        case 'psd'
-            selected_PSD_channels(end+1) = get(userdata.channel_h,'value');
-            psd_channel_settings{end+1} = get(userdata.settings_h,'userdata');
-        case 'music'
-            selected_MUSIC_channels(end+1) = get(userdata.channel_h,'value');
-            MUSIC_channel_settings{end+1} = get(userdata.settings_h,'userdata');
-        case 'coherence'
-            selected_coherence_channels(end+1) = get(userdata.channel_h,'value');
-            coherence_channel_settings{end+1} = get(userdata.settings_h,'userdata');
-        otherwise
-            disp(['unhandled selection ',lower(method)]);
-    end
-end     
-
-%PSD
-num_selected_PSD_channels = numel(selected_PSD_channels);
-PSD_settings = cell(num_selected_PSD_channels,1);
-
-for k = 1:num_selected_PSD_channels
-    PSDstruct = psd_channel_settings{k};
-    PSDstruct.channel_labels = EDF_labels(selected_PSD_channels(k));
- 
-    PSD_settings{k} = PSDstruct;
-end
-
-BATCH_PROCESS.PSD_settings = PSD_settings;
-
-%MUSIC
-
-num_selected_MUSIC_channels = numel(selected_MUSIC_channels);
-MUSIC_settings = cell(num_selected_MUSIC_channels,1);
-
-for k = 1:num_selected_MUSIC_channels
-    MUSICstruct = MUSIC_channel_settings{k};
-    MUSICstruct.channel_labels = EDF_labels(selected_MUSIC_channels(k));
- 
-    MUSIC_settings{k} = MUSICstruct;
-end
-
-BATCH_PROCESS.MUSIC_settings = MUSIC_settings;
-
-BATCH_PROCESS.standard_epoch_sec = MARKING.SETTINGS.VIEW.standard_epoch_sec;
-BATCH_PROCESS.base_samplerate = MARKING.SETTINGS.VIEW.samplerate;
-
-%The following snippet was an alternative, but I found it easier to keep
-%the same cell of structures format as the events and artifact settings
-%below, when dealing with processing functions such as batch.load_file and
-%such;
-% BATCH_PROCESS.PSD_settings.channel_labels= EDF_labels(psd_menu_values);
-
-%grab the event export paramaters
-
-% This is the indices of the event method(s) selected from the event method
-% drop down widget.  One value per event 
-event_method_values = get(flipud(findobj(handles.panel_exportMethods,'-regexp','tag','method')),'value');
-
-event_channel1_values = get(flipud(findobj(handles.panel_exportMethods,'-regexp','tag','channel1')),'value');
-event_channel2_values = get(flipud(findobj(handles.panel_exportMethods,'-regexp','tag','channel2')),'value');
-
-%obtain the userdata and value fields of the multichannel source button.
-event_multichannel_data = get(flipud(findobj(handles.panel_exportMethods,'tag','buttonEventSelectSources')),'userdata');
-event_multichannel_value = get(flipud(findobj(handles.panel_exportMethods,'tag','buttonEventSelectSources')),'value');
-
-event_settings_handles = flipud(findobj(handles.panel_exportMethods,'-regexp','tag','settings'));
-event_save_image_choices = get(flipud(findobj(handles.panel_exportMethods,'-regexp','tag','images')),'value');
-
-% convert from cell structures where needed.
-if(iscell(event_settings_handles))
-    event_settings_handles = cell2mat(event_settings_handles);
-end
-if(iscell(event_method_values))
-    event_method_values = cell2mat(event_method_values);
-    
-    event_channel1_values = cell2mat(event_channel1_values);
-    event_channel2_values = cell2mat(event_channel2_values);
-    
-    event_multichannel_data = cell2mat(event_multichannel_data);
-    event_multichannel_value = cell2mat(event_multichannel_value);
-    
-    event_save_image_choices = cell2mat(event_save_image_choices);
-end
-
-
-% The user can select 'none' for an event.  We want to remove these.
-selected_events = event_method_values>1;
-event_method_values = event_method_values(selected_events);
-event_settings_handles = event_settings_handles(selected_events);
-event_channel_values = [event_channel1_values(selected_events),event_channel2_values(selected_events)];
-event_save_image_choices = event_save_image_choices(selected_events);
-
-event_multichannel_data = event_multichannel_data(selected_events);
-event_multichannel_value = event_multichannel_value(selected_events);
-
-num_selected_events = sum(selected_events);
-event_settings = cell(num_selected_events,1);
-
-for k = 1:num_selected_events
-    selected_method = event_method_values(k);
-    num_reqd_channels = export_inf.reqd_indices(selected_method);
-    eventStruct.numConfigurations = 1;
-    eventStruct.save2img = event_save_image_choices(k);
-
-    %if we are using a multiple channel sourced event method
-    if(event_multichannel_value(k))
-        eventStruct.channel_labels = EDF_labels(event_multichannel_data(k).selectedIndices);        
-    else
-        eventStruct.channel_labels = EDF_labels(event_channel_values(k,1:num_reqd_channels));
-    end
-    
-    eventStruct.channel_configs = cell(size(eventStruct.channel_labels));
-    
-    %check to see if we are using a synthesized channel so we can audit it
-    if(~isempty(BATCH_PROCESS.synth_CHANNEL.names))
-        for ch=1:numel(eventStruct.channel_labels)
-           eventStruct.channel_configs{ch}  = BATCH_PROCESS.synth_CHANNEL.structs(strcmp(eventStruct.channel_labels{ch},BATCH_PROCESS.synth_CHANNEL.names));  %insert the corresponding synthetic channel where applicable
-
-%           This was commented out on 7/12/2014->
-%           channel_config = BATCH_PROCESS.synth_CHANNEL.structs(strcmp(eventStruct.channel_labels{ch},BATCH_PROCESS.synth_CHANNEL.names));  %insert the corresponding synthetic channel where applicable
-%           This was found commented out on 7/12/2014->
-%            if(~isempty(channel_config))
-%                 channel_config = channel_config{1};
-%                 channel_config.channel_label = eventStruct.channel_labels{ch};
-%                eventStruct.channel_configs{ch} = channel_config;
-%            end
-        end
-    end
-    
-    eventStruct.method_label = export_inf.labels{selected_method};
-    eventStruct.method_function = export_inf.mfile{selected_method};
-    eventStruct.batch_mode_label = char(export_inf.batch_mode_label{selected_method});
-    settings_userdata = get(event_settings_handles(k),'userdata');
-    eventStruct.pBatchStruct = settings_userdata.pBatchStruct;
-    eventStruct.rocStruct = settings_userdata.rocStruct;
-    params = [];
-    
-    % may not work on windows platform....
-    % if there is a change to the settings in the batch mode, then make sure
-    % that the change occurs here as well
-    if(~isempty(eventStruct.pBatchStruct))
-        for p=1:numel(eventStruct.pBatchStruct)
-           params.(eventStruct.pBatchStruct{p}.key) =  eventStruct.pBatchStruct{p}.start;
-        end
-    else
-        pfile = ['+export/',eventStruct.method_function,'.plist'];
-        if(exist(pfile,'file'))
-            params =plist.loadXMLPlist(pfile);
-        end
-    end
-    
-    eventStruct.detectorID = [];
-    eventStruct.params = params;
-    if(BATCH_PROCESS.database.auto_config==0 && BATCH_PROCESS.database.config_start>=0)
-        eventStruct.configID = BATCH_PROCESS.database.config_start;
-    else
-        eventStruct.configID = 0; %0 represents autoconfiguration required
-    end
-    event_settings{k} = eventStruct;
-end
-
-BATCH_PROCESS.event_settings = event_settings;
-
-%grab the artifact export paramaters
-artifact_method_values = get(flipud(findobj(handles.panel_artifact,'-regexp','tag','method')),'value');
-artifact_channel1_values = get(flipud(findobj(handles.panel_artifact,'-regexp','tag','channel1')),'value');
-artifact_channel2_values = get(flipud(findobj(handles.panel_artifact,'-regexp','tag','channel2')),'value');
-
-if(iscell(artifact_method_values))
-    artifact_method_values = cell2mat(artifact_method_values);
-    artifact_channel1_values = cell2mat(artifact_channel1_values);
-    artifact_channel2_values = cell2mat(artifact_channel2_values);
-end;
-
-artifact_settings_handles = flipud(findobj(handles.panel_artifact,'-regexp','tag','settings'));
-if(iscell(artifact_settings_handles))
-    artifact_settings_handles = cell2mat(artifact_settings_handles);
-end
-
-artifact_save_image_choices = get(flipud(findobj(handles.panel_artifact,'-regexp','tag','images')),'value');
-if(iscell(artifact_save_image_choices))
-    artifact_save_image_choices = cell2mat(artifact_save_image_choices);
-end
-
-selected_artifacts = artifact_method_values>1;
-artifact_save_image_choices = artifact_save_image_choices(selected_artifacts);
-artifact_settings_handles = artifact_settings_handles(selected_artifacts);
-artifact_method_values = artifact_method_values(selected_artifacts);
-artifact_channel_values = [artifact_channel1_values(selected_artifacts),artifact_channel2_values(selected_artifacts)];
-
-num_selected_artifacts = sum(selected_artifacts);
-artifact_settings = cell(num_selected_artifacts,1);
-
-for k = 1:num_selected_artifacts
-    selected_method = artifact_method_values(k);
-    num_reqd_channels = export_inf.reqd_indices(selected_method);
-
-    artifactStruct.save2img = artifact_save_image_choices(k);
-    artifactStruct.channel_labels = EDF_labels(artifact_channel_values(k,1:num_reqd_channels));
-    artifactStruct.method_label = export_inf.labels{selected_method};
-    artifactStruct.method_function = export_inf.mfile{selected_method};
-    artifactStruct.batch_mode_label = char(export_inf.batch_mode_label{selected_method});
-    
-    settings_userdata = get(artifact_settings_handles(k),'userdata');
-    pBatchStruct = settings_userdata.pBatchStruct;
-
-    params = [];
-    %for artifacts, only apply the first step in each case, that is the
-    %start value given
-    if(~isempty(pBatchStruct))
-        for key_ind=1:numel(pBatchStruct);
-            params.(pBatchStruct{key_ind}.key)=pBatchStruct{key_ind}.start;
-        end
-    end
-
-    %left overs fromn April 9, 2012 - which may not be necessary anymore...
-%         params = [];
-%        %may not work on windows platform....
-%         pfile = ['+export/',artifactStruct.method_function,'.plist'];
-%         if(exist(pfile,'file'))
-%             params =plist.loadXMLPlist(pfile);
-%         end
-%     else
-%         params = [];
-
-    artifactStruct.params = params;
-    artifact_settings{k} = artifactStruct;
-end
-
-BATCH_PROCESS.artifact_settings = artifact_settings;
-
-pathname = get(handles.edit_edf_directory,'string');
-playlist = getPlaylist(handles); 
-batch_process(pathname,BATCH_PROCESS,playlist);
-% warndlg({'you are starting the batch mode with the following channels',BATCH_PROCESS.PSD_settings});
-
-%goal two - run the batch mode with knowledge of the PSD channel only...
 end
 
 % --- Executes on button press in push_add_method.
@@ -736,126 +403,6 @@ end
 
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%
-function batch_process(pathname, BATCH_PROCESS,playlist)
-end
-%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%
-% --- Executes on button press in push_output_settings.
-function push_output_settings_Callback(hObject, eventdata, handles)
-% hObject    handle to push_output_settings (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-BATCH_PROCESS = handles.user.BATCH_PROCESS;
-
-settings = batch_output_settings_dlg(BATCH_PROCESS);
-if(~isempty(settings))
-    BATCH_PROCESS.output_files = settings.output_files;
-    BATCH_PROCESS.output_path = settings.output_path;
-    BATCH_PROCESS.database = settings.database;
-    BATCH_PROCESS.images = settings.images; 
-    handles.user.BATCH_PROCESS = BATCH_PROCESS;
-    
-end;
-
-guidata(hObject,handles);
-end
-
-% --- Executes on selection change in pop_spectral_method.
-function pop_spectral_method_Callback(hObject, eventdata, channels_h, settings_h)
-% hObject    handle to pop_spectral_method (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-global MARKING;
-PSD = MARKING.SETTINGS.PSD;
-MUSIC = MARKING.SETTINGS.MUSIC;
-contents = cellstr(get(hObject,'String'));% returns pop_spectral_method contents as cell array
-selection = contents{get(hObject,'Value')}; %returns selected item from pop_spectral_method
-
-switch(lower(selection))
-    case 'none'
-        %disable channel selection
-        %disable settings
-        set(channels_h,'enable','off');
-        set(settings_h,'enable','off');
-    case 'psd'
-        %enable channel selection
-        %enable settings
-        set(channels_h,'enable','on');
-        set(settings_h,'enable','on','callback',@push_psd_settings_Callback,'userdata',PSD);        
-    case 'music'
-        %enable  channel selection
-        %disable settings
-        set(channels_h,'enable','on');
-        set(settings_h,'enable','off','userdata',MUSIC);
-    case 'coherence'
-        %enable  channel selection
-        %disable settings
-        set(channels_h,'enable','on');
-        set(settings_h,'enable','off','userdata',[]);        
-    otherwise
-        disp 'Selection not handled';
-end
-end
-
-
-% --- Executes on button press in push_add_CHANNEL.
-function push_add_CHANNEL_Callback(hObject, eventdata, handles)
-% hObject    handle to push_add_CHANNEL (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-addCHANNELRow(handles);
-end
-
-
-% --- Executes on selection change in edit_synth_CHANNEL_name.
-function edit_synth_CHANNEL_name_Callback(hObject, eventdata, handles)
-% hObject    handle to edit_synth_CHANNEL_name (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: contents = cellstr(get(hObject,'String')) returns edit_synth_CHANNEL_name contents as cell array
-%        contents{get(hObject,'Value')} returns selected item from edit_synth_CHANNEL_name
-end
-
-function synthesize_CHANNEL_configuration_callback(hObject,eventdata,menuchannels_h,editoutputname_h)
-%enter the configuration parameters for the specified channel...
-global GUI_TEMPLATE;
-
-settings = get(hObject,'userdata');
-cur_channel_index = get(menuchannels_h,'value');
-
-[settings, noneEventIndices] = prefilter_dlg(GUI_TEMPLATE.EDF.labels{cur_channel_index},settings);
-settings(noneEventIndices) = [];
-
-
-%the user did not cancel and a settings structure exists
-if(~isempty(settings))
-    disp(settings);
-    set(hObject,'userdata',settings);
-    
-    %if this is the first time a channel has been synthesized on this row
-    %then give it a name, lock the row from using different source channels
-    %and update all other references to GUI_TEMPLATE.EDF.labels with the
-    %new name
-    if(isempty(get(editoutputname_h,'string')))
-        handles = guidata(hObject);
-        GUI_TEMPLATE.num_synth_channels =  GUI_TEMPLATE.num_synth_channels+1;
-        cur_label = GUI_TEMPLATE.EDF.labels{cur_channel_index};
-        set(menuchannels_h,'enable','inactive');
-        new_label = [cur_label,'_synth',num2str(GUI_TEMPLATE.num_synth_channels)];
-        set(editoutputname_h,'string',new_label);
-        
-        %adjust all popupmenu selection data/strings for changed EDF labels
-        GUI_TEMPLATE.EDF.labels{end+1} = new_label;
-        set(...
-            findobj(handles.figure1,'-regexp','tag','.*channel.*'),...
-            'string',GUI_TEMPLATE.EDF.labels);
-    end
-end
-end
-
 % returns whether the batch mode is ready for running.
 function isReady = canRun(handles)
     isReady = strcmpi(get(handles.push_start,'enable'),'on');
@@ -890,21 +437,6 @@ end
 end
 
 
-
-% --- Executes during object creation, after setting all properties.
-function menu_playlist_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to menu_playlist (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: popupmenu controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-end
-
 % --- Executes during object creation, after setting all properties.
 function edit_selectPlayList_CreateFcn(hObject, eventdata, handles)
 % hObject    handle to edit_selectPlayList (see GCBO)
@@ -919,21 +451,21 @@ end
 end
 
 
-% --- Executes when selected object is changed in bg_panel_playlist.
-function bg_panel_playlist_SelectionChangeFcn(hObject, eventdata, handles)
-% hObject    handle to the selected object in bg_panel_playlist 
+% --- Executes when selected object is changed in bg_panel_playList.
+function bg_panel_playList_SelectionChangeFcn(hObject, eventdata, handles)
+% hObject    handle to the selected object in bg_panel_playList 
 % eventdata  structure with the following fields (see UIBUTTONGROUP)
 %	EventName: string 'SelectionChanged' (read only)
 %	OldValue: handle of the previously selected object or empty if none was selected
 %	NewValue: handle of the currently selected object
 % handles    structure with handles and user data (see GUIDATA)
 if(eventdata.NewValue==handles.radio_processList)
-    playlist = getPlaylist(handles);
-    if(isempty(playlist))
-        playlist = getPlaylist(handles,'-gui');
+    playList = getPlaylist(handles);
+    if(isempty(playList))
+        playList = getPlaylist(handles,'-gui');
     end
-    handles.user.playlist = playlist;
-    checkPathForEDFs(handles,handles.user.playlist);
+    handles.user.playList = playList;
+    checkPathForEDFs(handles,handles.user.playList);
     guidata(hObject,handles);
     
 end
@@ -946,11 +478,31 @@ function edit_selectPlayList_ButtonDownFcn(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-[playlist,ply_filename] = getPlaylist(handles,'-gui');
+warndlg('This has been implemented, but not yet tested');
+            
+                
+% if(strcmpi('on',get(handles.radio_processList,'enable')) && get(handles.radio_processList,'value'))
+%     filenameOfPlayList = get(handles.edit_selectPlayList,'string');
+% else
+%     filenameOfPlayList = [];  %just in case this is called unwantedly
+% end
 
-handles.user.playlist = playlist;
-checkPathForEDFs(handles,handles.user.playlist);
+
+[handles.user.playList, filenameOfPlayList] = CLASS_batch.getPlaylist(handles,'-gui');
+
+%update the gui
+if(isempty(handles.user.playList))
+    set(handles.radio_processAll,'value',1);
+    set(handles.edit_selectPlayList,'string','<click to select play list>');
+else
+    set(handles.radio_processList,'value',1);
+    set(handles.edit_selectPlayList,'string',filenameOfPlayList);
+end
+
+CLASS_batch.checkPathForEDFs(getCurrentEDFPathname(hObject),handles.user.playList);
+
 guidata(hObject,handles);
+
 end
 
 function addEventRow(handles)
