@@ -18,6 +18,7 @@ else
     gui_mainfcn(gui_State, varargin{:});
 end
 % End initialization code - DO NOT EDIT
+
 end
 
 % --- Executes just before batch_export is made visible.
@@ -34,55 +35,48 @@ global GUI_TEMPLATE;
 %if MARKING is not initialized, then call sev.m with 'batch' argument in
 %order to initialize the MARKING global before returning here.
 debugMode = true;
-if(isempty(MARKING) && ~debugMode)
-    sev('batch_export'); %runs the sev first, and then goes to the default batch export callback.
+if(isempty(MARKING))
+    sev('init_batch_export'); %runs the sev first, and then goes to the default batch export callback.
 else
     
     %have to assign user data to the button that handles multiple channel
     %sourcing
-    maxSourceChannelsAllowed = 14;
-    userdata.nReqdIndices = maxSourceChannelsAllowed;
-    userdata.selectedIndices = 1:maxSourceChannelsAllowed;    
-    set(handles.buttonSelectChannels,'userdata',userdata,'value',0);
     
-    %still using a global here; not great...
-    createGlobalTemplate(handles);
-    
-    loadExportMethods();
+    initializeSettings(hObject);
+    initializeCallbacks(hObject)
     
     
-    
-    set(handles.menu_export_method,'string',GUI_TEMPLATE.export.labels,'callback',...
-        {@menu_event_callback,[handles.menu_event_channel1,handles.menu_event_channel2],handles.push_event_settings,handles.buttonSelectChannels});
-    
-    
-    if(isfield(MARKING.SETTINGS.BATCH_PROCESS,'edf_folder'))
-        if(~isdir(MARKING.SETTINGS.BATCH_PROCESS.edf_folder) || strcmp(MARKING.SETTINGS.BATCH_PROCESS.edf_folder,'.'))
-            MARKING.SETTINGS.BATCH_PROCESS.edf_folder = pwd;
-        end;
-        set(handles.edit_edf_directory,'string',MARKING.SETTINGS.BATCH_PROCESS.edf_folder);
-    else
-        set(handles.edit_edf_directory,'string',pwd);
+    % have to implement this still.
+    if(~debugMode)
+        loadExportMethods();
+        
+        %still using a global here; not great...
+        createGlobalTemplate(handles);
+        
+        
+        set(handles.menu_export_method,'string',GUI_TEMPLATE.export.labels,'callback',...
+            {@menu_event_callback,[handles.menu_event_channel1,handles.menu_event_channel2],handles.push_method_settings,handles.button_selectChannels});
+        
+        
+        if(isfield(MARKING.SETTINGS.BATCH_PROCESS,'edf_folder'))
+            if(~isdir(MARKING.SETTINGS.BATCH_PROCESS.edf_folder) || strcmp(MARKING.SETTINGS.BATCH_PROCESS.edf_folder,'.'))
+                MARKING.SETTINGS.BATCH_PROCESS.edf_folder = pwd;
+            end;
+            set(handles.edit_edf_directory,'string',MARKING.SETTINGS.BATCH_PROCESS.edf_folder);
+        else
+            set(handles.edit_edf_directory,'string',pwd);
+        end
+
     end
-    
-%         set( [
-%             handles.text_event_export_img;
-%             handles.check_event_export_images;
-%             handles.text_artifact_export_img;
-%             handles.check_artifact_export_images],'enable','off');
     
     checkPathForEDFs(handles); %Internally, this calls getPlayList since no argument is given.
     
     
-    set([handles.menu_artifact_channel1
-        handles.menu_event_channel1],'enable','off','string','Channel 1');
-    set([handles.menu_artifact_channel2
-        handles.menu_event_channel2],'enable','off','string','Channel 2');
-    set([handles.push_event_settings
-        handles.push_artifact_settings],'enable','off');
-    handles.user.BATCH_PROCESS = MARKING.SETTINGS.BATCH_PROCESS;
-    handles.user.PSD = MARKING.SETTINGS.PSD;
-    handles.user.PSD = MARKING.SETTINGS.PSD;
+    
+        % have to implement this still.
+    if(~debugMode)
+        handles.user.BATCH_PROCESS = MARKING.SETTINGS.BATCH_PROCESS;
+    end
     
     % Choose default command line output for batch_export
     handles.output = hObject;
@@ -93,85 +87,56 @@ else
 end
 end
 
-function addCHANNELRow(handles)
-resizeForAddedRow(handles,handles.panel_synth_CHANNEL);
-end
+function initializeSettings(hObject)
 
-function addEventRow(handles)
-%adds an event selection/export row to the specified panel
-%make room for the event row
-resizeForAddedRow(handles,handles.panel_events);
-end
-function addArtifactRow(handles)
-resizeForAddedRow(handles,handles.panel_artifact);
-end
-function addPSDRow(handles)
-resizeForAddedRow(handles,handles.panel_psd);
-end
-function resizeForAddedRow(handles,resized_panel_h)
-global GUI_TEMPLATE;
+    handles = guidata(hObject);
 
-%move all of the children up to account for the change in size and location
-%of the panel being resized.
-pan_children = allchild(resized_panel_h);
-children_pos = cell2mat(get(pan_children,'position'));
-children_pos(:,2)=children_pos(:,2)+GUI_TEMPLATE.row_separation;
-for k =1:numel(pan_children), set(pan_children(k),'position',children_pos(k,:));end;
-
-resized_panel_pos = get(resized_panel_h,'position');
-
-h = [handles.panel_directory
-    handles.panel_synth_CHANNEL
-    handles.panel_events
-    handles.panel_artifact
-    handles.panel_psd
-    handles.push_run
-    handles.figure1];
-
-for k=1:numel(h)
-    pos = get(h(k),'position');
+    % edf directory
+    set(handles.push_edf_directory,'enable','on');  % start here.
+    set([handles.edit_edf_directory;
+        handles.text_edfs_to_process],'enable','off');
     
-    if(h(k) == handles.figure1)
-        pos(2) = pos(2)-GUI_TEMPLATE.row_separation;
-        pos(4) = pos(4)+GUI_TEMPLATE.row_separation;
-    elseif(h(k)==resized_panel_h)
-        pos(4) = pos(4)+GUI_TEMPLATE.row_separation;
-    elseif(pos(2)>resized_panel_pos(2))
-        pos(2) = pos(2)+GUI_TEMPLATE.row_separation;
-    end;
-    set(h(k),'position',pos);
-end
-
-
-%add the additional controls depending on the panel being adjusted.
-if(resized_panel_h==handles.panel_psd)
-    hc1 = uicontrol(GUI_TEMPLATE.channel1,'parent',resized_panel_h,'string',GUI_TEMPLATE.EDF.labels);
-    h_params = uicontrol(GUI_TEMPLATE.push_parameter_settings,'parent',resized_panel_h,'userdata',handles.user.PSD);
-    userdata.channel_h = hc1;
-    userdata.settings_h = h_params;
-    uicontrol(GUI_TEMPLATE.spectrum,'parent',resized_panel_h,'enable','on',...
-        'callback',{@pop_spectral_method_Callback,hc1,h_params},'userdata',userdata);
-elseif(resized_panel_h==handles.panel_synth_CHANNEL)
     
-    %add a source channel - channel1
-    hc1 = uicontrol(GUI_TEMPLATE.channel1,'parent',resized_panel_h,'string',GUI_TEMPLATE.EDF.labels,'enable','on');
+    
+    % file selection
+    set(handles.radio_processAll,'value',1);
+    set([handles.radio_processAll;
+        handles.radio_processList;
+        handles.edit_selectPlayList],'enable','off');
+    
+    % channel selection
+    set(handles.radio_channelsAll,'value',1);
+    set([handles.radio_channelsAll;
+        handles.radio_channelsSome;
+        handles.button_selectChannels],'enable','off');
+    
+    maxSourceChannelsAllowed = 14;
+    userdata.nReqdIndices = maxSourceChannelsAllowed;
+    userdata.selectedIndices = 1:maxSourceChannelsAllowed;    
+    set(handles.button_selectChannels,'userdata',userdata,'value',0);
    
-    %add the edit output channel name
-    he1 = uicontrol(GUI_TEMPLATE.edit_synth_CHANNEL,'parent',resized_panel_h);
+    % export methods
+    set([handles.push_add_method;
+        handles.push_method_settings],'enable','off');
     
-    %add the configuration/settings button
-    h_params = uicontrol(GUI_TEMPLATE.push_CHANNEL_configuration,'parent',resized_panel_h,'enable','on',...
-        'callback',{@synthesize_CHANNEL_configuration_callback,hc1,he1});
-else
-    hc1=uicontrol(GUI_TEMPLATE.channel1,'parent',resized_panel_h);
-    hc2=uicontrol(GUI_TEMPLATE.channel2,'parent',resized_panel_h);
-    buttonEventSelectSources = uicontrol(GUI_TEMPLATE.buttonEventSelectSources,'parent',resized_panel_h);
+    % Start
+    set(handles.push_start,'enable','off');
     
-    h_check_save_img = uicontrol(GUI_TEMPLATE.check_save_image,'parent',resized_panel_h);
-    h_params=uicontrol(GUI_TEMPLATE.push_parameter_settings,'parent',resized_panel_h);
-    uicontrol(GUI_TEMPLATE.export_method,'parent',resized_panel_h,'callback',{@menu_event_callback,[hc1,hc2],h_params,buttonEventSelectSources});
-end;
 end
+
+function initializeCallbacks(hObject)
+
+    handles = guidata(hObject);
+    set(handles.push_edf_directory,'callback',{@push_edf_directory_Callback,guidata(hObject)});
+    set(handles.edit_edf_directory,'callback',{@edit_edf_directory_Callback,guidata(hObject)});
+	set(handles.edit_selectPlayList,'callback',{@edit_selectPlaylist_ButtonDownFcn,guidata(hObject)});
+    set(handles.button_selectChannels,'callback',[]);
+    set(handles.menu_export_method,'callback',[]);
+    set(handles.push_start,'callback',[]);
+    set(handles.push_add_method,'callback',{@push_add_event_Callback,guidata(hObject)});
+
+end
+
 
 % --- Outputs from this function are returned to the command line.
 function varargout = batch_export_OutputFcn(hObject, eventdata, handles) 
@@ -185,16 +150,19 @@ varargout{1} = handles.output;
 
 end
 
-% --- Executes on button press in push_directory.
-function push_directory_Callback(hObject, eventdata, handles)
-% hObject    handle to push_directory (see GCBO)
+% --- Executes on button press in push_edf_directory.
+function push_edf_directory_Callback(hObject, eventdata, handles)
+% hObject    handle to push_edf_directory (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
     global MARKING;
+    
     path = get(handles.edit_edf_directory,'string');
+    
     if(~exist(path,'file'))
         path = MARKING.SETTINGS.BATCH_PROCESS.edf_folder;
     end;
+    
     pathname = uigetdir(path,'Select the directory containing EDF files to process');
     
     if(isempty(pathname)||(isnumeric(pathname)&&pathname==0))
@@ -205,155 +173,13 @@ function push_directory_Callback(hObject, eventdata, handles)
     
     set(handles.edit_edf_directory,'string',pathname);
     checkPathForEDFs(handles);
-end
-
-function playlist = getPlaylist(handles,ply_filename)
-    if(nargin==2)
-        if(strcmpi(ply_filename,'-gui'))
-            
-            %make an educated guess regarding the file to be loaded
-            fileGuess = get(handles.edit_selectPlaylist,'string');
-            if(~exist(fileGuess,'file'))
-                fileGuess = get(handles.edit_edf_directory,'string');
-            end
-            
-            [ply_filename, pathname, ~] = uigetfile({'*.ply','.EDF play list (*.ply)'},'Select batch mode play list',fileGuess,'MultiSelect','off');
-            
-            %did the user press cancel
-            if(isnumeric(ply_filename) && ~ply_filename)
-                ply_filename = [];
-            else
-                ply_filename = fullfile(pathname,ply_filename);
-            end
-        end
-    else
-        
-        if(strcmpi('on',get(handles.radio_processList,'enable')) && get(handles.radio_processList,'value'))
-            ply_filename = get(handles.edit_selectPlaylist,'string');
-        else
-            ply_filename = [];  %just in case this is called unwantedly
-        end
-    end
     
-    if(exist(ply_filename,'file'))
-        fid = fopen(ply_filename);
-        data = textscan(fid,'%[^\r\n]');
-        playlist = data{1};
-        fclose(fid);
-    else
-        playlist = [];
-    end
-    
-    %update the gui
-    if(isempty(playlist))
-        set(handles.radio_processAll,'value',1);
-        set(handles.edit_selectPlaylist,'string','<click to select play list>');
-    else
-        set(handles.radio_processList,'value',1);
-        set(handles.edit_selectPlaylist,'string',ply_filename);
-    end
-
-end
-
-function filtered_file_struct = filterPlaylist(file_struct,file_filter_list)
-
-if(~isempty(file_filter_list))
-    filename_cell = cell(numel(file_struct),1);
-    [filename_cell{:}] = file_struct.name;
-    [~,~,intersect_indices] = intersect(file_filter_list,filename_cell);  %need to handle case sensitivity
-    filtered_file_struct = file_struct(intersect_indices);
-else
-   filtered_file_struct = file_struct;  %i.e. nothing to filter 
-end
 end
 
 
-function checkPathForEDFs(handles,playlist)
-%looks in the path for EDFs
-global GUI_TEMPLATE;
 
-if(nargin<2)
-    playlist = getPlaylist(handles);
-end
-    
-    path = get(handles.edit_edf_directory,'string');
-    if(~exist(path,'file'))
-        EDF_message = 'Directory does not exist. ';
-        num_edfs = 0;
-    else
-        %pc's do not have a problem with case; unfortunately the other side
-        %does
-        if(ispc)
-            edf_file_list = dir(fullfile(path,'*.EDF'));
-        else
-            edf_file_list = [dir(fullfile(path, '*.EDF'));dir(fullfile(path, '*.edf'))]; %dir(fullfile(path, '*.EDF'))];
-        end
-        
-        num_edfs_all = numel(edf_file_list);
-        
-        if(~isempty(playlist))  
-            edf_file_list = filterPlaylist(edf_file_list,playlist);
-        end
-        num_edfs = numel(edf_file_list);
-        bytes_cell = cell(num_edfs,1);
-        [bytes_cell{:}]=edf_file_list.bytes;
-        total_bytes = sum(cell2mat(bytes_cell))/1E6;
-        if(~isempty(playlist))
-            EDF_message = [num2str(num_edfs),' EDF files (',num2str(total_bytes,'%0.2f'),' MB) found in the current play list. '];
-        else
-            EDF_message = [num2str(num_edfs),' EDF files (',num2str(total_bytes,'%0.2f'),' MB) found in the current directory. '];
-        end
-    end;
-    
-    
-    if(num_edfs==0)
-        
-        if(num_edfs_all==0)
-            EDF_message = [EDF_message, 'Please choose a different directory'];
-            set(get(handles.bg_panel_playlist,'children'),'enable','off');
-            
-        else
-            EDF_message = [EDF_message, 'Please select a different play list or use ''All'''];
-        end
-        
-        set(handles.push_run,'enable','off');
-        EDF_labels = 'No Channels Available';
-        set(get(handles.panel_synth_CHANNEL,'children'),'enable','off');
-        set(get(handles.panel_events,'children'),'enable','off');
-        set(get(handles.panel_psd,'children'),'enable','off');
-        set(get(handles.panel_artifact,'children'),'enable','off');
-        updateSave2ImageOptions(handles);
-    
-        
-    else
-        set(get(handles.panel_synth_CHANNEL,'children'),'enable','on');
-        set(handles.edit_synth_CHANNEL_name,'enable','off');
-        set(handles.push_run,'enable','on');
-        
-        set(get(handles.panel_events,'children'),'enable','on');
-        
-        %     set(get(handles.panel_psd,'children'),'enable','on');
-        set(handles.pop_spectral_method,'enable','on');
-        set(handles.push_add_psd,'enable','on');
-        set(get(handles.panel_artifact,'children'),'enable','on');
-        set(get(handles.bg_panel_playlist,'children'),'enable','on');
-        set(handles.edit_selectPlaylist,'enable','inactive');
-        
-        first_edf_filename = edf_file_list(1).name;
-        HDR = loadEDF(fullfile(path,first_edf_filename));
-        EDF_labels = HDR.label;
-    end;
-    
-    GUI_TEMPLATE.EDF.labels = EDF_labels;
-    
-    set(handles.text_edfs_to_process,'string',EDF_message);
-    
-    %adjust all popupmenu selection data/strings for changed EDF labels
-    set(...
-        findobj(handles.figure1,'-regexp','tag','.*channel.*'),...
-        'string',EDF_labels);
 
-end
+
 
 
 function edit_edf_directory_Callback(hObject, eventdata, handles)
@@ -363,6 +189,7 @@ function edit_edf_directory_Callback(hObject, eventdata, handles)
 checkPathForEDFs(handles);
 
 end
+
 % --- Executes during object creation, after setting all properties.
 function edit_edf_directory_CreateFcn(hObject, eventdata, handles)
 % hObject    handle to edit_edf_directory (see GCBO)
@@ -376,9 +203,9 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
 end
 end
 
-% --- Executes on button press in push_run.
-function push_run_Callback(hObject, eventdata, handles)
-% hObject    handle to push_run (see GCBO)
+% --- Executes on button press in push_start.
+function push_start_Callback(hObject, eventdata, handles)
+% hObject    handle to push_start (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 %
@@ -536,17 +363,17 @@ BATCH_PROCESS.base_samplerate = MARKING.SETTINGS.VIEW.samplerate;
 
 % This is the indices of the event method(s) selected from the event method
 % drop down widget.  One value per event 
-event_method_values = get(flipud(findobj(handles.panel_events,'-regexp','tag','method')),'value');
+event_method_values = get(flipud(findobj(handles.panel_exportMethods,'-regexp','tag','method')),'value');
 
-event_channel1_values = get(flipud(findobj(handles.panel_events,'-regexp','tag','channel1')),'value');
-event_channel2_values = get(flipud(findobj(handles.panel_events,'-regexp','tag','channel2')),'value');
+event_channel1_values = get(flipud(findobj(handles.panel_exportMethods,'-regexp','tag','channel1')),'value');
+event_channel2_values = get(flipud(findobj(handles.panel_exportMethods,'-regexp','tag','channel2')),'value');
 
 %obtain the userdata and value fields of the multichannel source button.
-event_multichannel_data = get(flipud(findobj(handles.panel_events,'tag','buttonEventSelectSources')),'userdata');
-event_multichannel_value = get(flipud(findobj(handles.panel_events,'tag','buttonEventSelectSources')),'value');
+event_multichannel_data = get(flipud(findobj(handles.panel_exportMethods,'tag','buttonEventSelectSources')),'userdata');
+event_multichannel_value = get(flipud(findobj(handles.panel_exportMethods,'tag','buttonEventSelectSources')),'value');
 
-event_settings_handles = flipud(findobj(handles.panel_events,'-regexp','tag','settings'));
-event_save_image_choices = get(flipud(findobj(handles.panel_events,'-regexp','tag','images')),'value');
+event_settings_handles = flipud(findobj(handles.panel_exportMethods,'-regexp','tag','settings'));
+event_save_image_choices = get(flipud(findobj(handles.panel_exportMethods,'-regexp','tag','images')),'value');
 
 % convert from cell structures where needed.
 if(iscell(event_settings_handles))
@@ -719,9 +546,9 @@ batch_process(pathname,BATCH_PROCESS,playlist);
 %goal two - run the batch mode with knowledge of the PSD channel only...
 end
 
-% --- Executes on button press in push_add_event.
-function push_add_event_Callback(hObject, eventdata, handles)
-% hObject    handle to push_add_event (see GCBO)
+% --- Executes on button press in push_add_method.
+function push_add_method_Callback(hObject, eventdata, handles)
+% hObject    handle to push_add_method (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 addEventRow(handles);
@@ -747,7 +574,7 @@ function createGlobalTemplate(handles)
 global GUI_TEMPLATE;
 
 
-push_parameter_settings = get(handles.push_event_settings);
+push_parameter_settings = get(handles.push_method_settings);
 
 export_method = get(handles.menu_export_method);
 
@@ -773,7 +600,7 @@ export_method = rmfield(export_method,'Position');
 
 GUI_TEMPLATE.push_parameter_settings = push_parameter_settings;
 
-add_button_pos = get(handles.push_add_event,'position');
+add_button_pos = get(handles.push_add_method,'position');
 
 %I liked the distance between these two on the GUIDE display of the figure
 %and would like to keep the same spacing for additional rows that are added
@@ -786,7 +613,7 @@ function loadExportMethods()
 
 global MARKING;
 global GUI_TEMPLATE;
-
+    
 
 if(isfield(MARKING.SETTINGS.VIEW,'export_path'))
     export_inf = fullfile(MARKING.SETTINGS.VIEW.export_path,'export.inf');
@@ -868,14 +695,14 @@ if(strcmp(settings_gui,'none'))
 else
     %want to avoid calling plist_editor, and rather call plist_batch_editor
     %here so that the appropriate settings can be made.
-    if(strcmp(settings_gui,'plist_editor_dlg'))        
+    if(strcmp(settings_gui,'plist_editor_dlg'))
         set(h_push_settings,'userdata',userdata,'enable','on','callback',{@settings_callback,guidata(hObject)});
     else
         set(h_push_settings,'enable','on','callback',settings_gui);
     end
 end
 
-%turn off all channels first.  
+%turn off all channels first.
 set(h_pop_channels,'visible','off');
 
 nReqdIndices = GUI_TEMPLATE.export.reqd_indices(choice);
@@ -908,742 +735,9 @@ end
 end
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%
-% --- Executes on button press in push_PSD_settings.
-function push_psd_settings_Callback(hObject, eventdata)
-% hObject    handle to push_psd_settings (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-psd = get(hObject,'userdata');
-new_settings = psd_dlg(psd);  %.wintype,psd.FFT_window_sec,psd.interval);
-
-if(new_settings.modified)
-    new_settings = rmfield(new_settings,'modified');
-    set(hObject,'userdata',new_settings);
-end;
-end
-function cancel_batch_Callback(hObject,eventdata)
-% userdata = get(hObject,'userdata');
-user_cancelled = true;
-disp('Cancelling batch job');
-set(hObject,'userdata',user_cancelled);
-end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%
 function batch_process(pathname, BATCH_PROCESS,playlist)
-%this function executes the batch job with the specified parameters
-
-%default to all - i.e. process all .edf's found in pathname
-if(nargin<3)
-    playlist = [];
-end
-global MARKING;
-
-
-%why does this need to be persistent?  
-persistent log_fid; 
-
-% BATCH_PROCESS.output_path =
-%        parent: 'output'
-%           roc: 'ROC'
-%         power: 'PSD'
-%        events: 'events'
-%     artifacts: 'artifacts'
-%        images: 'images'
-%       current: '/Users/hyatt4/Documents/Sleep Project/Data/Spindle_7Jun11/output'
-%this is a given since the button is not activated unless an EDF is
-%found in the current directory
-
-if(pathname)
-    MARKING.SETTINGS.BATCH_PROCESS.edf_folder = pathname;
-    
-%     file_list = dir([fullfile(path, '*.EDF');fullfile(path, '*.edf')]);
-    %pc's do not have a problem with case; unfortunately the other side
-    %does
-    if(ispc)
-        file_list = dir(fullfile(pathname,'*.EDF'));
-    else
-        file_list = [dir(fullfile(pathname, '*.EDF'));dir(fullfile(pathname, '*.edf'))]; %dir(fullfile(path, '*.EDF'))];
-    end
-    
-    if(~isempty(playlist))
-        file_list = filterPlaylist(file_list, playlist);        
-    end
-    
-    MARKING.STATE.batch_process_running = true;
-    
-    %reference sev.m - sev_OpeningFcn (line ~192)
-    BATCH_PROCESS.output_path.current = fullfile(BATCH_PROCESS.output_path.parent);
-
-    % waitHandle = waitbar(0,'Initializing batch processing job','name','Batch Processing Statistics','resize','on','createcancelbtn',{@cancel_batch_Callback});
-    user_cancelled = false;
-    waitHandle = waitbar(0,'Initializing job','name','Batch Processing','resize','on','createcancelbtn',@cancel_batch_Callback,'userdata',user_cancelled,'tag','waitbarHTag');
-    
-    
-    BATCH_PROCESS.waitHandle = waitHandle;
-    %turn off the interpeter so that '_' does not cause subscripting 
-    set(findall(waitHandle,'interpreter','tex'),'interpreter','none');
-
-    waitbarPos = get(waitHandle,'position');
-    waitbarPos(4)=waitbarPos(4)*1.5;
-    set(waitHandle,'position',waitbarPos);
-    
-    file_count = numel(file_list);
-    
-    if(~isdir(BATCH_PROCESS.output_path.current))
-        mkdir(BATCH_PROCESS.output_path.current);        
-    end;
-    
-    full_roc_path = fullfile(BATCH_PROCESS.output_path.current,BATCH_PROCESS.output_path.roc);
-    if(~isdir(full_roc_path))
-        mkdir(full_roc_path);
-    end;
-    
-    full_psd_path = fullfile(BATCH_PROCESS.output_path.current,BATCH_PROCESS.output_path.power);
-    if(~isdir(full_psd_path))
-        mkdir(full_psd_path);
-    end;
-    full_events_path = fullfile(BATCH_PROCESS.output_path.current,BATCH_PROCESS.output_path.events);
-    if(~isdir(full_events_path))
-        mkdir(full_events_path);
-    end;
-    full_events_images_path = fullfile(BATCH_PROCESS.output_path.current,BATCH_PROCESS.output_path.events,BATCH_PROCESS.output_path.images);
-    if(~isdir(full_events_images_path))
-        mkdir(full_events_images_path);
-    end
-    full_artifacts_path = fullfile(BATCH_PROCESS.output_path.current,BATCH_PROCESS.output_path.artifacts);
-    if(~isdir(full_artifacts_path))
-        mkdir(full_artifacts_path);
-    end;
-    full_artifacts_images_path = fullfile(BATCH_PROCESS.output_path.current,BATCH_PROCESS.output_path.artifacts,BATCH_PROCESS.output_path.images);
-    if(~isdir(full_artifacts_images_path))
-        mkdir(full_artifacts_images_path);
-    end
-    
-   
-    if(BATCH_PROCESS.output_files.log_checkbox)
-        BATCH_PROCESS.start_time = datestr(now,'yyyymmmdd_HH_MM_SS');
-        log_filename = fullfile(BATCH_PROCESS.output_path.current,[BATCH_PROCESS.output_files.log_filename,BATCH_PROCESS.start_time,'.txt']);
-        log_fid = fopen(log_filename,'w');
-        
-        fprintf(log_fid,'SEV batch process run on %i files.\r\n',file_count);
-        if(numel(BATCH_PROCESS.event_settings)>0)
-            
-            fprintf(log_fid,'The following event detectors were run with this batch job.\r\n');
-            for k=1:numel(BATCH_PROCESS.event_settings)
-                method_label = char(BATCH_PROCESS.event_settings{k}.method_label);
-                pStruct = BATCH_PROCESS.event_settings{k}.pBatchStruct;
-                channel_labels = reshape(char(BATCH_PROCESS.event_settings{k}.channel_labels)',1,[]);
-                batch_mode_label = char(BATCH_PROCESS.event_settings{k}.batch_mode_label);
-                
-                fprintf(log_fid,'%u.\t%s\t(labeled as ''%s'')\tApplied to Channel(s): %s',k,method_label,batch_mode_label,channel_labels);
-                
-                %put one of these two in the log file
-                if(numel(pStruct)>0)
-                    fprintf(log_fid,'\t(Parameter, start, stop, num steps):');
-                    for c=1:numel(pStruct)
-                         fprintf(log_fid,' %s(%d,%d,%d)',pStruct{c}.key,pStruct{c}.start,pStruct{c}.stop,pStruct{c}.num_steps);
-                    end
-                else
-                   params = BATCH_PROCESS.event_settings{k}.params; 
-                   if(~isempty(params))
-                       keys =fieldnames(params);
-                       fprintf(log_fid,'\tParameter(value):');
-                       for c=1:numel(keys)
-                           fprintf(log_fid,' %s(%d)',keys{c},params.(keys{c}));
-                       end
-                   else
-                       fprintf(log_fid,' No adjustable settings for this method');
-                   end
-                end
-                fprintf(log_fid,'\r\n');               
-            end            
-        else
-            fprintf(log_fid,'No event detectors were run with this batch job.\r\n');
-        end;
-        if(numel(BATCH_PROCESS.artifact_settings)>0)
-            fprintf(log_fid,'The following artifact detectors were run with this batch job.\r\n');
-            
-            for k=1:numel(BATCH_PROCESS.artifact_settings)
-                method_label = char(BATCH_PROCESS.artifact_settings{k}.method_label);
-                params = BATCH_PROCESS.artifact_settings{k}.params;
-                channel_labels = reshape(char(BATCH_PROCESS.artifact_settings{k}.channel_labels)',1,[]);
-                batch_mode_label = char(BATCH_PROCESS.artifact_settings{k}.batch_mode_label);
-                
-                fprintf(log_fid,'%u.\t%s\t(labeled as ''%s'')\tApplied to Channel(s): %s',k,method_label,batch_mode_label,channel_labels);
-                
-                if(~isempty(params))
-                    keys =fieldnames(params);
-                    fprintf(log_fid,'\tParameter(value):');
-                    for c=1:numel(keys)
-                        fprintf(log_fid,' %s(%d)',keys{c},params.(keys{c}));
-                    end
-                else
-                    fprintf(log_fid,' No adjustable settings for this method');
-                end
-                fprintf(log_fid,'\r\n');
-               
-            end
-            
-                        
-        else
-            fprintf(log_fid,'No artifact detectors were run with this batch job.\r\n');
-        end;
-        
-        if(numel(BATCH_PROCESS.PSD_settings)>0)
-            fprintf(log_fid,'Power spectral density by periodogram analysis was conducted with the following configuration(s):\r\n');
-            for k=1:numel(BATCH_PROCESS.PSD_settings)
-               params = BATCH_PROCESS.PSD_settings{k};
-               fprintf(log_fid,'%u.\t',k);
-
-               if(~isempty(params))
-                   fprintf(log_fid,'Parameter(value):\t');
-                    keys =fieldnames(params);
-                    for c=numel(keys):-1:1
-                        switch(class(params.(keys{c})))
-                            case 'double'
-                                fprintf(log_fid,' %s(%d)',keys{c},params.(keys{c}));
-                            case 'cell'
-                                fprintf(log_fid,' %s(%s)',keys{c},params.(keys{c}){1});
-                            case 'char'
-                                fprintf(log_fid,' %s(%s)',keys{c},params.(keys{c}));
-                            otherwise
-                                fprintf(log_fid,' %s(unknownType)',keys{c});
-                        end
-                    end
-               else
-                   fprintf(log_fid,' No adjustable settings for this method');
-                end
-                fprintf(log_fid,'\r\n');
-            end
-        end
-        
-
-    
-    for k = 1:numel(event_settings)
-        method_label = event_settings{k}.method_label;
-        
-        pBatchStruct = event_settings{k}.pBatchStruct;
-        paramStruct = event_settings{k}.params;
-        event_settings{k}.numConfigurations = 1;
-        %grid out the combinations here...and reassign to pBatchStruct
-        if(~isempty(pBatchStruct))
-            
-            num_keys = numel(pBatchStruct); %this is the number of distinct settings that can be manipulated for the current (k) event detector
-            all_properties = cell(num_keys,1);
-            keys = cell(size(all_properties));
-            
-            %determine the range of values to go
-            %through for each property value
-            %allowed/specified
-            clear pStruct;
-            for j = 1:num_keys
-                keys{j} = pBatchStruct{j}.key;
-                pStruct.(keys{j}) = [];
-                if(isnumeric(pBatchStruct{j}.start))
-                    %add this check in here, otherwise a user may change
-                    %the start value, leaving the num steps one, but the
-                    %start value is less than the end value and linspace
-                    %will instead return the lesser value, and not
-                    %what the user wants in this case
-                    if(pBatchStruct{j}.num_steps==1)
-                        all_properties{j} = pBatchStruct{j}.start;
-                    else
-                        all_properties{j} = linspace(pBatchStruct{j}.start,pBatchStruct{j}.stop,pBatchStruct{j}.num_steps);
-                    end
-                else
-                    if(strcmp(pBatchStruct{j}.start,pBatchStruct{j}.stop))
-                        all_properties{j} = pBatchStruct{j}.start;
-                    else
-                        all_properties{j} = {pBatchStruct{j}.start,pBatchStruct{j}.stop};
-                    end
-                end
-            end
-            cell_all_properties = cell(size(all_properties));
-            [cell_all_properties{:}] = ndgrid(all_properties{:}); %grid it out, with all combinations...
-            
-            numConfigurations = numel(cell_all_properties{1});
-            pStructArray = repmat(pStruct,numConfigurations,1);
-
-            for j = 1:numConfigurations;
-                for p = 1:num_keys
-                    pStructArray(j).(keys{p}) = cell_all_properties{p}(j);
-                end
-            end
-            event_settings{k}.numConfigurations = numConfigurations;
-            if(~BATCH_PROCESS.database.save2DB)
-                event_settings{k}.configID = 1:numConfigurations;
-            end
-            event_settings{k}.params = pStructArray;
-            
-        end
-        
-        %this saves the detector configurations for each detector to a
-        %separate file, with an id for each cconfiguration setup that can
-        %be used to determine which file output is for which configuration
-        if(~isempty(paramStruct))
-            batch.saveDetectorConfigLegend(full_events_path,method_label,event_settings{k}.params);
-        end
-    end
-
-    
-    BATCH_PROCESS.event_settings = event_settings;
-    
-    
-    %% Begin batch file processing  - parallel computing parfor
-    %     parfor i = 1:file_count - need to update global calls to work
-    %     better here.
-    
-    startClock = clock;
-    files_attempted = false(file_count,1);
-    files_completed = false(file_count,1);
-    files_skipped = false(file_count,1); %logical indices to mark which files were skipped
-
-    
-    start_time = now;
-%     est_str = '?'; %estimate of how much time is left to run the job
-
-% user_cancelled = get(waitHandle,'userdata');
-
-    clear configID;
-    clear detectorID;
-    clear elapsed_dur_total_sec;
-
-%     if(BATCH_PROCESS.output_files.log_checkbox && ~isempty(log_fid))
-%         fclose(log_fid);
-%     end
-assignin('base','files_completed',files_completed);
-
-%MATLAB pool open ?
-
-try
-%     matlabpool open
-catch me
-    showME(me)
-end
-%     parfor i = 1:file_count
-
-     for i = 1:file_count
-      tStart = tic;
-      configID = [];
-      detectorID = [];
-      user_cancelled = false;
-%       waitHandle = findall(0,'tag','waitbarHTag');
-
-      
-      if(~user_cancelled)
-        
-        try
-
-%             if(BATCH_PROCESS.output_files.log_checkbox)
-%                 log_filename = fullfile(BATCH_PROCESS.output_path.current,[BATCH_PROCESS.output_files.log_filename,BATCH_PROCESS.start_time,'.txt']);
-%                 log_fid = fopen(log_filename,'w');
-%             end
-            if(~file_list(i).isdir)
-                files_attempted(i) = 1;
-                
-                
-                
-                %initialize the files...
-%                 tStart = clock;
-                cur_filename = file_list(i).name;
-                
-                skip_file = false;
-
-%                 BATCH_PROCESS.cur_filename = cur_filename;
-                stages_filename = fullfile(pathname,[cur_filename(1:end-3) 'STA']);
-                
-                if(~exist(stages_filename,'file'))
-                    stages_filename = fullfile(pathname,[cur_filename(1:end-3) 'evts']);
-                end
-                
-                %require stages filename to exist.                
-                if(~exist(stages_filename,'file'))
-                
-                    skip_file = true;
-                    
-                    %%%%%%%%%%%%%%%%%%%%%REVIEW%%%%%%%%%%%%%%%%%%%%%%%%
-%                     if(BATCH_PROCESS.output_files.log_checkbox)
-%                         fprintf(log_fid,'%s not found!  This EDF will be skipped.\r\n',stages_filename);
-%                     end;
-                end;
-                
-                if(~skip_file)
-                    
-                    
-                    %this loads the channels specified in the BATCH_PROCESS
-                    %variable, for the current EDF file
-                    
-                    %CREATES A GLOBAL CHANNELS_CONTAINER CLASS FOR THIS
-                    %iteration/run
-                    [batch_CHANNELS_CONTAINER, parBATCH_PROCESS, studyInfo] = batch.load_file(pathname,cur_filename, BATCH_PROCESS);
-                    %the following two settings need to follow batch.load
-                    %due the side effects that occur in batch.load_file
-                    %that change the event_settings to include new field
-                    %channel_indices which may change per EDF loaded as the
-                    %naming convention should/must remain the same, while
-                    %the channel numbering/ordering does not have the same
-                    %requirement
-                    artifact_settings = parBATCH_PROCESS.artifact_settings;
-                    event_settings = parBATCH_PROCESS.event_settings;               
-                    %handle the stage data, which is a requirement for
-                    %batch processing - that is, it must exist for batch
-                    %processing to continue/work
-                    %                     batch_STAGES = loadSTAGES(stages_filename,studyInfo.num_epochs);
-                    %                     unknown_stage=7; %can add this as
-                    %                     a third parameter below.
-                    batch_STAGES = CLASS_codec.loadSTAGES(stages_filename,studyInfo.num_epochs);
-                    batch_STAGES.startDateTime = studyInfo.startDateTime;
-                    
-                    %PROCESS ARTIFACTS
-                    batch_ARTIFACT_CONTAINER = CLASS_events_container([],[],parBATCH_PROCESS.base_samplerate,batch_STAGES); %this global variable may be checked in output functions and
-                    batch_ARTIFACT_CONTAINER.CHANNELS_CONTAINER = batch_CHANNELS_CONTAINER;
-                    artifact_filenames = fullfile(full_artifacts_path,[parBATCH_PROCESS.output_files.artifacts_filename,cur_filename(1:end-4)]);
-                        
-                    %this requires initialization
-
-                    if(numel(artifact_settings)>0)
-                        for k = 1:numel(artifact_settings)
-                            
-                            function_name = artifact_settings{k}.method_function;
-%                             function_call = [export_path,'.',function_name];
-                            
-                            source_indices = artifact_settings{k}.channel_indices;
-                            
-                            detectStruct = batch_ARTIFACT_CONTAINER.evaluateDetectFcn(function_name,source_indices, artifact_settings{k}.params);
-
-%                             detectStruct = feval(function_call,source_indices,params);
-                            sourceStruct = [];
-                            sourceStruct.channel_indices = source_indices;
-                            sourceStruct.algorithm = function_name;
-                            sourceStruct.editor = 'none';
-                            if(~isempty(detectStruct.new_events))
-                                
-                                batch_ARTIFACT_CONTAINER.addEvent(detectStruct.new_events,artifact_settings{k}.method_label,0,sourceStruct,detectStruct.paramStruct);
-                                if(artifact_settings{k}.save2img)
-                                    
-                                    %put these images in their own subdirectory based on
-                                    %patients identifier
-                                    artifact_images_path = fullfile(full_artifacts_images_path,cur_filename(1:end-4));
-                                    if(~isdir(artifact_images_path))
-                                        mkdir(artifact_images_path);
-                                    end
-                                    img_filename_prefix = [cur_filename(1:end-4),'-',artifact_settings{k}.method_label];
-                                    full_img_filename_prefix = fullfile(artifact_images_path,img_filename_prefix);
-                                    batch_ARTIFACT_CONTAINER.save2images(k,full_img_filename_prefix,image_settings);
-                                end
-                                
-                            else %add empty
-                                %                         events as well so that we can show what was and
-                                %                         was not met in the periodogram output...
-                                batch_ARTIFACT_CONTAINER.addEmptyEvent(artifact_settings{k}.method_label,0,sourceStruct,detectStruct.paramStruct);
-                                
-                            end
-                            batch_ARTIFACT_CONTAINER.cell_of_events{k}.batch_mode_label = artifact_settings{k}.batch_mode_label;
-                            
-                        end
-                        if(BATCH_PROCESS.output_files.save2mat)
-                            batch_ARTIFACT_CONTAINER.save2mat(artifact_filenames);
-                        end
-                        if(BATCH_PROCESS.database.save2DB)
-                            batch_ARTIFACT_CONTAINER.save2DB(artifact_filenames);
-                        end
-                        if(BATCH_PROCESS.output_files.save2txt)
-                            batch_ARTIFACT_CONTAINER.save2txt(artifact_filenames);
-                        end
-                    end
-
-                    
-                    %PROCESS THE EVENTS
-                    if(numel(event_settings)>0)
-                        batch_EVENT_CONTAINER = CLASS_events_container([],[],parBATCH_PROCESS.base_samplerate,batch_STAGES);
-                        batch_EVENT_CONTAINER.CHANNELS_CONTAINER = batch_CHANNELS_CONTAINER;
-                        event_filenames = fullfile(full_events_path,[parBATCH_PROCESS.output_files.events_filename,cur_filename(1:end-4)]);
-                        
-                        for k = 1:numel(event_settings)
-                            function_name = event_settings{k}.method_function;
-%                             function_call = [export_path,'.',function_name];
-                            
-                            pBatchStruct = event_settings{k}.pBatchStruct;
-                            
-                            %there are no combinations to use....
-                            if(isempty(pBatchStruct))
-                                source_indices = event_settings{k}.channel_indices;
-                                detectStruct = batch_EVENT_CONTAINER.evaluateDetectFcn(function_name, source_indices, event_settings{k}.params);
-                                if(~isempty(detectStruct.new_events))
-                                    sourceStruct = [];
-                                    sourceStruct.channel_indices = source_indices;
-                                    sourceStruct.algorithm = function_name;
-                                    sourceStruct.editor = 'none';
-                                    sourceStruct.pStruct = [];
-                                    
-                                    %add the event
-                                    batch_EVENT_CONTAINER.addEvent(detectStruct.new_events,event_settings{k}.method_label,source_indices,sourceStruct,detectStruct.paramStruct);                                    
-                                    batch_EVENT_CONTAINER.getCurrentChild.batch_mode_label = event_settings{k}.batch_mode_label;
-                                                                        
-                                    batch_EVENT_CONTAINER.getCurrentChild.configID = event_settings{k}.configID;
-                                    batch_EVENT_CONTAINER.getCurrentChild.detectorID = event_settings{k}.detectorID;
-                                    
-                                    
-%                                     if(~isempty(event_settings{k}.params)) %in this case, configurationLegend.export_method.txt file was created
-%                                         configID = 1;
-%                                     else
-%                                         configID = 0; %this is the default anyway...-> no file was created
-%                                     end
-%                                     
-%                                     EVENT_CONTAINER.cell_of_events{EVENT_CONTAINER.num_events}.configID = configID;
-                                    
-                                    if(event_settings{k}.save2img)
-                                        %put these images in their own subdirectory based on
-                                        %patients identifier
-                                        event_images_path = fullfile(full_events_images_path,event_settings{k}.method_label);
-                                        
-
-                                        img_filename_prefix = [cur_filename(1:end-4),'_',event_settings{k}.method_label];
-                                        full_img_filename_prefix = fullfile(event_images_path,img_filename_prefix);
-                                        batch_EVENT_CONTAINER.save2images(k,full_img_filename_prefix,image_settings);                                        
-                                    end
-                                end
-                                
-                                %alternate case is to create and add an event
-                                %for each pStruct combination possible from the
-                                %given pBatchStruct parameters.
-                            else
-                                start_export_ind = batch_EVENT_CONTAINER.num_events +1;
-                                for j = 1:event_settings{k}.numConfigurations;
-                                    pStruct = event_settings{k}.params(j);
-                                    source_indices = event_settings{k}.channel_indices;
-                                    detectStruct = batch_EVENT_CONTAINER.evaluateDetectFcn(function_name, source_indices, pStruct);
-%                                     detectStruct = feval(function_call,source_indices,pStruct);
-                                    try
-                                        configID = event_settings{k}.configID(j);
-                                        if(~isempty(event_settings{k}.detectorID))
-                                            detectorID = event_settings{k}.detectorID(j);
-                                        end
-                                    catch me
-                                       showME(me); 
-                                    end
-                                    if(~isempty(detectStruct.new_events))                                        
-                                        sourceStruct.channel_indices = source_indices;
-                                        sourceStruct.algorithm = function_name;
-                                        sourceStruct.editor = 'none';
-                                        sourceStruct.pStruct = pStruct;
-                                        batch_EVENT_CONTAINER.addEvent(detectStruct.new_events,event_settings{k}.method_label,source_indices,sourceStruct,detectStruct.paramStruct);
-                                        batch_EVENT_CONTAINER.cell_of_events{batch_EVENT_CONTAINER.num_events}.batch_mode_label = event_settings{k}.batch_mode_label;
-                                        batch_EVENT_CONTAINER.cell_of_events{batch_EVENT_CONTAINER.num_events}.configID = configID;
-                                        batch_EVENT_CONTAINER.cell_of_events{batch_EVENT_CONTAINER.num_events}.batch_mode_label = event_settings{k}.batch_mode_label;
-                                        batch_EVENT_CONTAINER.cell_of_events{batch_EVENT_CONTAINER.num_events}.detectorID = detectorID;
-                                    end
-                                end
-                                end_export_ind = batch_EVENT_CONTAINER.num_events;
-                                
-                                if(~isempty(event_settings{k}.rocStruct))
-                                    if(end_export_ind>=start_export_ind)  %make sure I didn't go through and get nothing...
-                                        rocStruct = event_settings{k}.rocStruct;
-                                        truth_file = dir(fullfile(rocStruct.truth_pathname,['*.',cur_filename(1:end-3),'*',rocStruct.truth_export_suffix]));
-                                        if(~isempty(truth_file))
-                                            truth_filename = fullfile(rocStruct.truth_pathname,truth_file(1).name);
-                                            if(exist(truth_filename,'file'))
-                                                
-                                                batch_EVENT_CONTAINER.loadEvtFile(truth_filename,MARKING.STATE.batch_process_running);
-                                                
-                                                %add this check here since the EVENT_CONTAINER will not load the event from a file if it was previously
-                                                %loaded.  Without this check, the roc may produce 100% matches since it would be comparing to itself
-                                                if(batch_EVENT_CONTAINER.num_events~=end_export_ind)
-                                                    batch_EVENT_CONTAINER.roc_truth_ind = batch_EVENT_CONTAINER.num_events;
-                                                end
-                                                save_filename = fullfile(full_roc_path,['ROC_',rocStruct.truth_export_suffix,'_VS_',function_name,'.txt']);
-                                                if(i==1 && exist(save_filename,'file'))
-                                                    delete(save_filename);
-                                                end
-                                                batch_EVENT_CONTAINER.save2roc_txt(save_filename,[start_export_ind,end_export_ind],rocStruct.truth_export_suffix,cur_filename);
-                                            end
-                                        end
-                                    end
-                                end
-                            end
-                        end
-                        
-                        if(BATCH_PROCESS.output_files.save2mat)
-                            batch_EVENT_CONTAINER.save2mat(event_filenames);
-                        end
-                        if(BATCH_PROCESS.database.save2DB)                            
-                            batch_EVENT_CONTAINER.save2DB(DBstruct,cur_filename(1:end-4)); %database_struct contains fileds 'name','user','password' for interacting with a mysql database
-                        end
-                        if(BATCH_PROCESS.output_files.save2txt)
-                            batch_EVENT_CONTAINER.save2txt(event_filenames);
-                        end
-                        
-                    end
-                           
-                    %SAVE THINGS TO FILE....
-                    %save the events to file... - this is now handled in
-                    %save_periodograms.m now
-                    %AGAIN - THIS IS NOW HANDLED IN SAVE_PERIODOGRAMS.M
-%                     if(BATCH_PROCESS.output_files.cumulative_stats_checkbox)
-%                          batch.updateBatchStatisticsTally();
-%                     end
-
-                    %this is handled in batch/save_periodograms.m now
-%                     if(BATCH_PROCESS.output_files.statistics_checkbox) %artifact statistics
-% %                         save_art_stats_Callback(hObject, eventdata, handles);
-%                           batch.saveArtifactandStageStatistics();
-%                     end;
-                    for k = 1:numel(parBATCH_PROCESS.PSD_settings)
-                        channel_label = parBATCH_PROCESS.PSD_settings{k}.channel_labels{:};
-                        channel_index = parBATCH_PROCESS.PSD_settings{k}.channel_indices;
-                        filename_out = fullfile(full_psd_path,[cur_filename(1:end-3), channel_label,'.', parBATCH_PROCESS.output_files.psd_filename]);
-                        batch.save_periodograms(batch_CHANNELS_CONTAINER.getChannel(channel_index),batch_STAGES,parBATCH_PROCESS.PSD_settings{k},filename_out,batch_ARTIFACT_CONTAINER,parBATCH_PROCESS.start_time);
-                    end;
-
-                    for k = 1:numel(parBATCH_PROCESS.MUSIC_settings)
-                        channel_label = parBATCH_PROCESS.MUSIC_settings{k}.channel_labels{:};
-                        channel_index = parBATCH_PROCESS.MUSIC_settings{k}.channel_indices;
-                        filename_out = fullfile(full_psd_path,[cur_filename(1:end-3), channel_label,'.', parBATCH_PROCESS.output_files.music_filename]);
-                        batch.save_pmusic(batch_CHANNELS_CONTAINER.getChannel(channel_index),batch_STAGES,parBATCH_PROCESS.MUSIC_settings{k},filename_out,batch_ARTIFACT_CONTAINER,parBATCH_PROCESS.start_time);
-                    end;
-                    
-                    %save the files to disk
-                    if(BATCH_PROCESS.output_files.log_checkbox)
-                        if(~isempty(fopen(log_fid)))
-                            fprintf(log_fid,'%s . . . completed successfully at %s\r\n',file_list(i).name,datestr(now));
-                        end
-                    end;
-                    
-                else
-                    if(BATCH_PROCESS.output_files.log_checkbox)
-%                         fprintf(log_fid,'%s . . . NOT PROCESSED (see notes above)\r\n',file_list(i).name);
-                    end;
-                    
-                    files_skipped(i) = true;
-                end;
-                files_completed(i) = true;
-                elapsed_dur_sec = toc(tStart);
-                fprintf('File %d of %d (%0.2f%%) Completed in %0.2f seconds\n',i,file_count,i/file_count*100,elapsed_dur_sec);
-                elapsed_dur_total_sec = etime(clock,startClock);
-                avg_dur_sec = elapsed_dur_total_sec/i;
-                
-                %                 num_files_completed = randi(1,0,100);
-                num_files_completed = i;
-                remaining_dur_sec = avg_dur_sec*(file_count-num_files_completed);
-                est_str = sprintf('%01ihrs %01imin %01isec',floor(mod(remaining_dur_sec/3600,24)),floor(mod(remaining_dur_sec/60,60)),floor(mod(remaining_dur_sec,60)));
-
-                msg = {['Processing ',file_list(i).name, ' (file ',num2str(i) ,' of ',num2str(file_count),')'],...
-                    ['Time Elapsed Time: ',datestr(now-start_time,'HH:MM:SS')],...
-                    ['Estimated Time Remaining: ',est_str]};
-                fprintf('%s\n',msg{2});
-                if(ishandle(waitHandle))
-                    waitbar(i/file_count,waitHandle,char(msg));
-                else
-%                     waitHandle = findall(0,'tag','waitbarHTag');
-                end
-
-            end;
-        catch cur_error
-%             showME(cur_error);
-            disp([file_list(i).name, ' SKIPPED: The following error was encountered: (' cur_error.message ')']);
-            file_warnmsg = cur_error.message;
-            showME(cur_error);
-            
-%             console_warnmsg = cur_error.message;           
-%             for s = 1:min(numel(cur_error.stack),2)
-%                 % disp(['<a href="matlab:opentoline(''',file,''',',linenum,')">Open Matlab to this Error</a>']);
-%                 stack_error = cur_error.stack(s);
-%                 console_warnmsg = sprintf('%s\r\n\tFILE: %s <a href="matlab:opentoline(''%s'',%s)">LINE: %s</a> FUNCTION: %s', console_warnmsg,stack_error.file,stack_error.file,num2str(stack_error.line),num2str(stack_error.line), stack_error.name);
-%                 file_warnmsg = sprintf('\t%s\r\n\t\tFILE: %s LINE: %s FUNCTION: %s', file_warnmsg,stack_error.file,num2str(stack_error.line), stack_error.name);
-%             end
-%             disp(console_warnmsg)
-
-            if(BATCH_PROCESS.output_files.log_checkbox)
-                if(~isempty(fopen(log_fid)))
-                    fprintf(log_fid,'%s . . . NOT PROCESSED.  The following error was encountered:\r\n%s\r\n',file_list(i).name,file_warnmsg);
-                end
-            end
-            files_skipped(i)= true;
-            files_completed(i) = true;
-            
-            
-            elapsed_dur_sec = toc(tStart);
-            fprintf('File %d of %d (%0.2f%%) Completed in %0.2f seconds\n',i,file_count,i/file_count*100,elapsed_dur_sec);
-            elapsed_dur_total_sec = etime(clock,startClock);
-            avg_dur_sec = elapsed_dur_total_sec/i;
-            remaining_dur_sec = avg_dur_sec*(file_count-i);
-            est_str = sprintf('%01ihrs %01imin %01isec',floor(mod(remaining_dur_sec/3600,24)),floor(mod(remaining_dur_sec/60,60)),floor(mod(remaining_dur_sec,60)));
-            
-            msg = {['Processing ',file_list(i).name, ' (file ',num2str(i) ,' of ',num2str(file_count),')'],...
-                ['Elapsed Time: ',datestr(now-start_time,'HH:MM:SS')],...
-                ['Estimated Time Remaining: ',est_str]};
-            
-            if(ishandle(waitHandle))
-                fprintf('You finished recently!\n');
-                waitbar(i/file_count,waitHandle,char(msg));
-            else
-%                 waitHandle = findall(0,'tag','waitbarHTag');
-            end
-        end
-      else
-          
-          files_skipped(i) = true;
-      end %end if not batch_process.cancelled
-    end; %end for all files
-    
-%     matlabpool close;
-    
-    num_files_completed = sum(files_completed);
-    num_files_skipped = sum(files_skipped);
-%     waitHandle = findobj('tag','waitbarTag');
-    
-    finish_str = {'SEV batch process completed!',['Files Completed = ',...
-        num2str(num_files_completed)],['Files Skipped = ',num2str(num_files_skipped)],...
-        ['Elapsed Time: ',datestr(now-start_time,'HH:MM:SS')]};
-        
-    if(ishandle(waitHandle))
-        waitbar(100,waitHandle,finish_str);
-    end;
-    
-    if(BATCH_PROCESS.output_files.log_checkbox)
-        if(~isempty(fopen(log_fid)))
-            fprintf(log_fid,'Job finished: %s\r\n',datestr(now));
-            fclose(log_fid);
-        end
-    end
-    [log_path,log_filename,log_file_ext] = fileparts(MARKING.SETTINGS.VIEW.parameters_filename);
-    MARKING.SETTINGS.saveParametersToFile([],fullfile(BATCH_PROCESS.output_path.current,[log_filename,log_file_ext]));
-    
-    %not really necessary, since I am not going to update the handles after
-    %this function call in order for everything to go back to what it was
-    %before hand ...;
-    
-    MARKING.STATE.batch_process_running = false;
-%     message = sprintf('Batch Processing finished.\r\n%i files attempted.\r\n%i files processed successfully.\r\n%i files skipped.',...
-%         num_files_attempted,num_files_completed,files_skipped);
-    message = finish_str;
-    
-    if(num_files_skipped>0)
-        skipped_filenames = cell(num_files_skipped,1);
-        [skipped_filenames{:}]=file_list(files_skipped).name;
-        [selections,clicked_ok]= listdlg('PromptString',message,'Name','Batch Completed',...
-            'OKString','Copy to Clipboard','CancelString','Close','ListString',skipped_filenames);
-        
-        if(clicked_ok)
-            %char(10) is newline
-            skipped_files = [char(skipped_filenames(selections)),repmat(char(10),numel(selections),1)];
-            skipped_files = skipped_files'; %filename length X number of files
-            
-            clipboard('copy',skipped_files(:)'); %make it a column (1 row) vector
-            disp([num2str(numel(selections)),' filenames copied to the clipboard.']);
-        end;
-    else
-         msgbox(message,'Completed');
-    end
-    
-    if(exist('waitHandle','var')&&ishandle(waitHandle))
-        delete(waitHandle(1));
-    end;
-
-else
-    disp 'nothing selected'
-end;
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -1662,7 +756,7 @@ if(~isempty(settings))
     BATCH_PROCESS.database = settings.database;
     BATCH_PROCESS.images = settings.images; 
     handles.user.BATCH_PROCESS = BATCH_PROCESS;
-    updateSave2ImageOptions(handles);
+    
 end;
 
 guidata(hObject,handles);
@@ -1764,27 +858,9 @@ end
 
 % returns whether the batch mode is ready for running.
 function isReady = canRun(handles)
-    isReady = strcmpi(get(handles.push_run,'enable'),'on');
+    isReady = strcmpi(get(handles.push_start,'enable'),'on');
 end
 
-function updateSave2ImageOptions(handles)
-%update whether the image option is available for selection or not based on
-%batch_process settings which can be changed and update
-
-global GUI_TEMPLATE;
-image_checkboxes = [findobj(handles.panel_events,'-regexp','tag','images');findobj(handles.panel_artifact,'-regexp','tag','images')];
-
-img_h = [handles.text_artifact_export_img;handles.text_event_export_img;image_checkboxes];
-
-if(canRun(handles) && handles.user.BATCH_PROCESS.images.save2img)
-    set(img_h,'enable','on');
-    GUI_TEMPLATE.check_save_image.enable = 'on';
-else
-    set(img_h,'enable','off','value',0);
-    GUI_TEMPLATE.check_save_image.enable = 'off';
-end
-
-end
 
 % --- Executes when user attempts to close figure1.
 function figure1_CloseRequestFcn(hObject, eventdata, handles)
@@ -1830,8 +906,8 @@ end
 end
 
 % --- Executes during object creation, after setting all properties.
-function edit_selectPlaylist_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to edit_selectPlaylist (see GCBO)
+function edit_selectPlayList_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to edit_selectPlayList (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
 
@@ -1864,9 +940,9 @@ end
 end
 
 % --- If Enable == 'on', executes on mouse press in 5 pixel border.
-% --- Otherwise, executes on mouse press in 5 pixel border or over edit_selectPlaylist.
-function edit_selectPlaylist_ButtonDownFcn(hObject, eventdata, handles)
-% hObject    handle to edit_selectPlaylist (see GCBO)
+% --- Otherwise, executes on mouse press in 5 pixel border or over edit_selectPlayList.
+function edit_selectPlayList_ButtonDownFcn(hObject, eventdata, handles)
+% hObject    handle to edit_selectPlayList (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
@@ -1875,4 +951,77 @@ function edit_selectPlaylist_ButtonDownFcn(hObject, eventdata, handles)
 handles.user.playlist = playlist;
 checkPathForEDFs(handles,handles.user.playlist);
 guidata(hObject,handles);
+end
+
+function addEventRow(handles)
+%adds an event selection/export row to the specified panel
+%make room for the event row
+    resizeForAddedRow(handles,handles.panel_exportMethods);
+end
+
+
+
+function resizeForAddedRow(handles,resized_panel_h)
+global GUI_TEMPLATE;
+
+%move all of the children up to account for the change in size and location
+%of the panel being resized.
+pan_children = allchild(resized_panel_h);
+children_pos = cell2mat(get(pan_children,'position'));
+children_pos(:,2)=children_pos(:,2)+GUI_TEMPLATE.row_separation;
+for k =1:numel(pan_children), set(pan_children(k),'position',children_pos(k,:));end;
+
+resized_panel_pos = get(resized_panel_h,'position');
+
+h = [handles.panel_directory
+    handles.panel_synth_CHANNEL
+    handles.panel_exportMethods
+    handles.panel_artifact
+    handles.panel_psd
+    handles.push_start
+    handles.figure1];
+
+for k=1:numel(h)
+    pos = get(h(k),'position');
+    
+    if(h(k) == handles.figure1)
+        pos(2) = pos(2)-GUI_TEMPLATE.row_separation;
+        pos(4) = pos(4)+GUI_TEMPLATE.row_separation;
+    elseif(h(k)==resized_panel_h)
+        pos(4) = pos(4)+GUI_TEMPLATE.row_separation;
+    elseif(pos(2)>resized_panel_pos(2))
+        pos(2) = pos(2)+GUI_TEMPLATE.row_separation;
+    end;
+    set(h(k),'position',pos);
+end
+
+
+%add the additional controls depending on the panel being adjusted.
+if(resized_panel_h==handles.panel_psd)
+    hc1 = uicontrol(GUI_TEMPLATE.channel1,'parent',resized_panel_h,'string',GUI_TEMPLATE.EDF.labels);
+    h_params = uicontrol(GUI_TEMPLATE.push_parameter_settings,'parent',resized_panel_h,'userdata',handles.user.PSD);
+    userdata.channel_h = hc1;
+    userdata.settings_h = h_params;
+    uicontrol(GUI_TEMPLATE.spectrum,'parent',resized_panel_h,'enable','on',...
+        'callback',{@pop_spectral_method_Callback,hc1,h_params},'userdata',userdata);
+elseif(resized_panel_h==handles.panel_synth_CHANNEL)
+    
+    %add a source channel - channel1
+    hc1 = uicontrol(GUI_TEMPLATE.channel1,'parent',resized_panel_h,'string',GUI_TEMPLATE.EDF.labels,'enable','on');
+   
+    %add the edit output channel name
+    he1 = uicontrol(GUI_TEMPLATE.edit_synth_CHANNEL,'parent',resized_panel_h);
+    
+    %add the configuration/settings button
+    h_params = uicontrol(GUI_TEMPLATE.push_CHANNEL_configuration,'parent',resized_panel_h,'enable','on',...
+        'callback',{@synthesize_CHANNEL_configuration_callback,hc1,he1});
+else
+    hc1=uicontrol(GUI_TEMPLATE.channel1,'parent',resized_panel_h);
+    hc2=uicontrol(GUI_TEMPLATE.channel2,'parent',resized_panel_h);
+    buttonEventSelectSources = uicontrol(GUI_TEMPLATE.buttonEventSelectSources,'parent',resized_panel_h);
+    
+    h_check_save_img = uicontrol(GUI_TEMPLATE.check_save_image,'parent',resized_panel_h);
+    h_params=uicontrol(GUI_TEMPLATE.push_parameter_settings,'parent',resized_panel_h);
+    uicontrol(GUI_TEMPLATE.export_method,'parent',resized_panel_h,'callback',{@menu_event_callback,[hc1,hc2],h_params,buttonEventSelectSources});
+end;
 end

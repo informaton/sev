@@ -27,8 +27,7 @@ if(~isempty(ext) && ext(1)=='.')
     ext(1)=[];
 end
 
-% Mac OS does some extra things to keep track of files that have been
-% downloaded which interfere here.  
+% Mac OS does some extra things to keep track of files in each directory which interfere here.  
 if(ismac)
     fileMatchesCell = regexpi(filenames,strcat('^[^\._].*',ext,'$'));
 else
