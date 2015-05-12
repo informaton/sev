@@ -30,61 +30,43 @@ function batch_export_OpeningFcn(hObject, eventdata, handles, varargin)
 % varargin   command line arguments to batch_export (see VARARGIN)
 
 global MARKING;
-global GUI_TEMPLATE;
 
-%if MARKING is not initialized, then call sev.m with 'batch' argument in
+%if MARKING is not initialized, then call sev.m with 'init_batch_Export' argument in
 %order to initialize the MARKING global before returning here.
 debugMode = true;
-if(isempty(MARKING))
-    sev('init_batch_export'); %runs the sev first, and then goes to the default batch export callback.
+
+if(isempty(MARKING) && ~debugMode)
+    %     sev('init_batch_export'); %runs the sev first, and then goes to the default batch export callback.
+    sev('init_batch_export');
 else
-    
+
     %have to assign user data to the button that handles multiple channel
     %sourcing
+    if(debugMode)
+        handles.user.exportInfFullFilename = '/Users/hyatt4/git/sev/+export/export.inf';
+
+    end
+    
+    handles.user.methodsStruct = CLASS_batch.getExportMethods(handles.user.exportInfFullFilename);
+    guidata(hObject,handles);
     
     initializeSettings(hObject);
     initializeCallbacks(hObject)
     
-    
-    % have to implement this still.
-    if(~debugMode)
-        loadExportMethods();
-        
-        %still using a global here; not great...
-        createGlobalTemplate(handles);
-        
-        
-        set(handles.menu_export_method,'string',GUI_TEMPLATE.export.labels,'callback',...
-            {@menu_event_callback,[handles.menu_event_channel1,handles.menu_event_channel2],handles.push_method_settings,handles.button_selectChannels});
-        
-        
-        if(isfield(MARKING.SETTINGS.BATCH_PROCESS,'edf_folder'))
-            if(~isdir(MARKING.SETTINGS.BATCH_PROCESS.edf_folder) || strcmp(MARKING.SETTINGS.BATCH_PROCESS.edf_folder,'.'))
-                MARKING.SETTINGS.BATCH_PROCESS.edf_folder = pwd;
-            end;
-            set(handles.edit_edf_directory,'string',MARKING.SETTINGS.BATCH_PROCESS.edf_folder);
-        else
-            set(handles.edit_edf_directory,'string',pwd);
-        end
 
-    end
     edfPath = pwd;
-    edfPathStruct = CLASS_batch.checkPathForEDFs(edfPath); %Internally, this calls getPlayList since no argument is given.
-    
-    
-    
-        % have to implement this still.
-    if(~debugMode)
-        handles.user.BATCH_PROCESS = MARKING.SETTINGS.BATCH_PROCESS;
-    end
-    
-    % Choose default command line output for batch_export
-    handles.output = hObject;
-    
+    updateGUI(CLASS_batch.checkPathForEDFs(edfPath),handles); 
+   
+
     % Update handles structure
     guidata(hObject, handles);
     
+    %bring this to the front...
+    
+
 end
+
+
 end
 
 function initializeSettings(hObject)
@@ -116,10 +98,10 @@ function initializeSettings(hObject)
     set(handles.button_selectChannels,'userdata',userdata,'value',0);
    
     % export methods
-    methods = handles.user.export_inf_filename
     set([handles.push_add_method;
-        handles.push_method_settings],'enable','off');
-    set(handles.menu_export_method,'string',export_methods);
+        handles.push_method_settings
+        handles.menu_export_method],'enable','off');
+    set(handles.menu_export_method,'string',handles.user.methodsStruct.description,'value',1);
     
     % Start
     set(handles.push_start,'enable','off');
@@ -127,18 +109,15 @@ function initializeSettings(hObject)
 end
 
 function initializeCallbacks(hObject)
-
     handles = guidata(hObject);
     set(handles.push_edf_directory,'callback',{@push_edf_directory_Callback,guidata(hObject)});
     set(handles.edit_edf_directory,'callback',{@edit_edf_directory_Callback,guidata(hObject)});
 	set(handles.edit_selectPlayList,'callback',{@edit_selectPlaylist_ButtonDownFcn,guidata(hObject)});
     set(handles.button_selectChannels,'callback',[]);
     set(handles.menu_export_method,'callback',[]);
-    set(handles.push_start,'callback',[]);
+    set(handles.push_start,'callback',{@push_start_Callback,guidata(hObject)});
     set(handles.push_add_method,'callback',{@push_add_event_Callback,guidata(hObject)});
-    
     set(handles.edit_selectPlayList,'buttondownfcn',{@edit_selectPlayList_ButtonDownFcn,guidata(hObject)});
-
 end
 
 
@@ -150,7 +129,7 @@ function varargout = batch_export_OutputFcn(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Get default command line output from handles structure
-varargout{1} = handles.output;
+varargout{1} = handles;
 
 end
 
@@ -177,14 +156,27 @@ function push_edf_directory_Callback(hObject, eventdata, handles)
     
     set(handles.edit_edf_directory,'string',pathname);
     edfPathStruct = CLASS_batch.checkPathForEDFs(pathname);
-    updateGUI(edfPathStruct);
+    updateGUI(edfPathStruct,handles);
 end
 
 
-
-
-
-
+function updateGUI(edfPathStruct,handles)
+  set(handles.text_edfs_to_process,'string',edfPathStruct.statusString); 
+  relevantHandles = [handles.push_start
+      handles.text_edfs_to_process
+      get(handles.panel_exportMethods,'children')];
+  if(~isempty(edfPathStruct.edf_filename_list))
+      set(relevantHandles,'enable','on');
+      
+      set(handles.edit_edf_directory,'enable','inactive');
+      
+      % have/may not implemented this yet.
+      set(handles.push_add_method,'enable','off');
+      
+  else
+      set(relevantHandles,'enable','off');
+  end
+end
 
 
 % --- Executes during object creation, after setting all properties.
@@ -208,183 +200,101 @@ function push_start_Callback(hObject, eventdata, handles)
 %
 %This function can only be called when there a valid directory (one which
 %contains EDF files) has been selected.
-%This function grabs the entries from the GUI and puts them into the global
-%variable BATCH_PROCESS which will be referenced during the batch
-%processing.
-end
-
-% --- Executes on button press in push_add_method.
-function push_add_method_Callback(hObject, eventdata, handles)
-% hObject    handle to push_add_method (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-addEventRow(handles);
-end
-% --- Executes on button press in push_add_psd.
-function push_add_psd_Callback(hObject, eventdata, handles)
-% hObject    handle to push_add_psd (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-addPSDRow(handles);
-end
-% --- Executes on button press in push_add_artifact.
-function push_add_artifact_Callback(hObject, eventdata, handles)
-% hObject    handle to push_add_artifact (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-addArtifactRow(handles);
-end
-
-function createGlobalTemplate(handles)
-%uses the intial panel entries created with GUIDE to serve as templates for
-%adding more entries later.
-global GUI_TEMPLATE;
-
-
-push_parameter_settings = get(handles.push_method_settings);
-
-export_method = get(handles.menu_export_method);
-
-
-
-%I should really consider implementing a for loop at this point....
-
-%the added Position and removal is to bypass a warning that pops because
-%Matalb does not like the units field to follow the position field when
-%initializing a uicontrol- notice that the copy is a lower case and thus
-%different than the upper-cased Position name
-push_parameter_settings = rmfield(push_parameter_settings,'Type');
-push_parameter_settings = rmfield(push_parameter_settings,'Extent');
-push_parameter_settings = rmfield(push_parameter_settings,'BeingDeleted');
-push_parameter_settings.position = push_parameter_settings.Position;
-push_parameter_settings = rmfield(push_parameter_settings,'Position');
-
-export_method = rmfield(export_method,'Type');
-export_method = rmfield(export_method,'Extent');
-export_method = rmfield(export_method,'BeingDeleted');
-export_method.position = export_method.Position;
-export_method = rmfield(export_method,'Position');
-
-GUI_TEMPLATE.push_parameter_settings = push_parameter_settings;
-
-add_button_pos = get(handles.push_add_method,'position');
-
-%I liked the distance between these two on the GUIDE display of the figure
-%and would like to keep the same spacing for additional rows that are added
-GUI_TEMPLATE.row_separation = add_button_pos(2)-export_method.position(2);
-end
-
-function loadExportMethods()
-%load up any available export methods found in the export_path
-%(initially this was labeled '+export' from the working path
-
-global MARKING;
-global GUI_TEMPLATE;
+%This function grabs the entries from the GUI and puts them into a settings
+%struct which is then passed to the export function.
+    exportSettings = getExportSettings(handles);
     
-
-if(isfield(MARKING.SETTINGS.VIEW,'export_path'))
-    export_inf = fullfile(MARKING.SETTINGS.VIEW.export_path,'export.inf');
-else
-    export_inf = fullfile('+export','export.inf');
+    process_export(edfPath,exportSettings);
 end
 
-%this part is initialized for the first choice, which is 'none' - no
-%artifact or event selected...
-export_label = 'none';
-mfile = 'Error';
-num_reqd_indices = 0;
-param_gui = 'none';
-batch_mode_label = '_';
 
-if(exist(export_inf,'file'))
-    [loaded_mfile, loaded_export_label, loaded_num_reqd_indices, loaded_param_gui, loaded_batch_mode_label] = textread(export_inf,'%s%s%n%s%s','commentstyle','shell');
-
-    export_label = [{export_label};loaded_export_label];
-    mfile = [{mfile};loaded_mfile];
-    num_reqd_indices = [num_reqd_indices;loaded_num_reqd_indices];
-    param_gui = [{param_gui};loaded_param_gui];
-    batch_mode_label = [batch_mode_label; loaded_batch_mode_label];
-end;
-
-GUI_TEMPLATE.export.labels = export_label;
-GUI_TEMPLATE.export.mfile = mfile;
-GUI_TEMPLATE.export.reqd_indices = num_reqd_indices;
-GUI_TEMPLATE.export.param_gui = param_gui;
-GUI_TEMPLATE.export.batch_mode_label = batch_mode_label;
-GUI_TEMPLATE.export_method.String = export_label;  %need this here so that newly created rows have these export options available.
-end
-%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-function settings_callback(hObject,~,~)
-global GUI_TEMPLATE;
-global MARKING;
-
-% choice = userdata.choice;
-
-% userdata = get(hObject,'userdata');
-% userdata.choice = choice;
-% userdata.pBatchStruct = [];
-% userdata.rocStruct = [];
-userdata = get(hObject,'userdata');
-if(~isempty(userdata) && isfield(userdata,'pBatchStruct'))
-    paramStruct = userdata.pBatchStruct;
-end
-if(~isempty(userdata) && isfield(userdata,'rocStruct'))
-    rocStruct = userdata.rocStruct;
+function exportSettings = getExportSettings(handles)
+    method_selection_index = get(handles.menu_export_method,'value');
+    methodFields = fieldnames(handles.user.methodsStruct);
+    for m=1:numel(methodFields)
+       fname = methodFields{m};
+       methodStruct.(fname) = handles.user.methodsStruct.(fname){method_selection_index};
+    end
+    channelSelection.all = get(radio_channels_all,'value');
+    
+    exportSettings.methodStruct = methodStruct;
+    exportSettings.edfPath = get(handles.edit_edf_directory,'string');
 end
 
-exportPath = fullfile(MARKING.SETTINGS.rootpathname,MARKING.SETTINGS.VIEW.export_path);
-% exportFilename = MARKING.SETTINGS.VIEW.export_inf_file;
-rocPath = fullfile(MARKING.SETTINGS.BATCH_PROCESS.output_path.parent,MARKING.SETTINGS.BATCH_PROCESS.output_path.roc);
-exportLabels = GUI_TEMPLATE.export.labels{userdata.choice};
-[pBatchStruct,rocStruct] = plist_batch_editor_dlg(exportLabels,exportPath,rocPath,paramStruct,rocStruct);
-if(~isempty(pBatchStruct))
-    userdata.pBatchStruct =pBatchStruct;
-    userdata.rocStruct = rocStruct;
-    set(hObject,'userdata',userdata);
-end
-end
-%%%%%%%%%%%%%%%%%%%%%%%%%%
+%> @brief This method controls the batch export process according to the
+%> settings provided.
+%> @param exportSettings is a struct with the following fields
+%> - @c methodStruct
+%> -- @c mfilename
+%> -- @c description
+%> -- @c settings
+%> - @c channel_selection
+%> -- @c all True/False If true, then load all channels for each file.
+%> (Optional, Default is True).
+%> -- @c sources Cell of channel labels to use if @c all is false.
+%> @param playList Optional Px1 cell of EDF filenames (not full filenames) to
+%> process from edfPath instead of using all .EDF files found in edfPath.
+function process_export(edfPath,exportSettings, channel_selection, playList)
+    
+    if(nargin<4)
+        playList = [];
+        if(nargin<3 || isempty(channel_selection))
+            channel_selection.all = true;
+        end
+    end
+    edfSelectionStruct = CLASS_batch.checkPathForEDFs(edfPath);
+    edf_fullfilenames = edfSelectionStruct.edf_full_filenames;
+    file_count = numel(edf_fullfilenames);
+    if(file_count>0)
+        waitbarH = waitbar(0,sprintf('%s\n\tInitializing',edfSelectionStruct.statusMessage),'name','Batch Export','resize','on','createcancelbtn',@cancel_batch_Callback,'tag','waitbarH');
+        set(findall(waitbarH,'interpreter','tex'),'interpreter','none');
+        
+        waitbarPos = get(waitbarH,'position');
+        waitbarPos(4)=waitbarPos(4)*1.5;
+        set(waitbarPos,'position',waitbarPos);
+        files_attempted = zeros(size(edf_fullfilenames));
+        files_failed = files_attemtped;
+        files_skipped = files_attempted;
+        for i=1:file_count
+            try
+                cur_edf_fullfilename = edf_fullfilenames{i};
+                [stages_filename, cur_edf_name] = CLASS_code.getStageFilenameFromEDF(cur_edf_fullfilename);
+                files_attempted(i)=1;
+                
+                
+                %require stages filename to exist.                
+                if(isempty(stages_filename) || ~exist(stages_filename,'file'))
+                    files_skipped(i) = true;
+                    
+                    %%%%%%%%%%%%%%%%%%%%%REVIEW%%%%%%%%%%%%%%%%%%%%%%%%
+%                     if(BATCH_PROCESS.output_files.log_checkbox)
+%                         fprintf(log_fid,'%s not found!  This EDF will be skipped.\r\n',stages_filename);
+%                     end;
 
-function menu_event_callback(hObject,event_data,h_pop_channels,h_push_settings,h_buttonSelectSource)
-global GUI_TEMPLATE;
-choice = get(hObject,'value');
-
-settings_gui = GUI_TEMPLATE.export.param_gui{choice};
-
-userdata.choice = choice;
-userdata.pBatchStruct = [];
-userdata.rocStruct = [];
-set(h_push_settings,'userdata',userdata);
-
-if(strcmp(settings_gui,'none'))
-    set(h_push_settings,'enable','off','callback',[]);
-else
-    %want to avoid calling plist_editor, and rather call plist_batch_editor
-    %here so that the appropriate settings can be made.
-    if(strcmp(settings_gui,'plist_editor_dlg'))
-        set(h_push_settings,'userdata',userdata,'enable','on','callback',{@settings_callback,guidata(hObject)});
+                else
+                    HDR = loadEDF(cur_edf_fullfilename);
+                    if(exportSettings.all_channels)
+                        
+                    else
+                        fprintf('Not implemented yet\n');
+                    end
+                    stagesStruct = CLASS_code.loadSTAGES(stages_filename,studyInfo.num_epochs);
+                    
+                end; 
+                
+                
+            catch me
+                showME(me);
+                files_failed(i) = 1;
+            end
+            
+        end
+        
+        
     else
-        set(h_push_settings,'enable','on','callback',settings_gui);
+        warndlg(sprintf('The check for EDFs in the following directory failed!\n\t%s',edfPath));
     end
-end
 
-%turn off all channels first.
-set(h_pop_channels,'visible','off');
-
-nReqdIndices = GUI_TEMPLATE.export.reqd_indices(choice);
-if(nReqdIndices<=2)
-    set(h_buttonSelectSource,'visible','off','enable','off','value',0);
-    for k=1:nReqdIndices
-        set(h_pop_channels(k),'visible','on','enable','on','string',GUI_TEMPLATE.EDF.labels);
-    end
-else
-    userdata.nReqdIndices = nReqdIndices;
-    if(~isfield(userdata,'selectedIndices'))
-        userdata.selectedIndices = 1:nReqdIndices;
-    end
-    set(h_buttonSelectSource,'visible','on','enable','on','value',1,'userdata',userdata,'callback', @buttonSelectSources_Callback);
-end
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -416,23 +326,8 @@ function figure1_CloseRequestFcn(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Hint: delete(hObject) closes the figure
-global MARKING;
 % in order to save settings between use.
-try
-    MARKING.SETTINGS.BATCH_PROCESS = handles.user.BATCH_PROCESS; %need to return this to the global for now 
-
-    if(ishandle(MARKING.figurehandle.sev))
-        MARKING.initializeSEV(); %this currently deletes any other MATLAB figures that are up.
-    else
-        delete(hObject);
-    end
-catch ME
-    try
-        delete(hObject);
-    catch me2
-        showME(me2);
-    end
-end
+delete(hObject);
     
 end
 
@@ -505,75 +400,4 @@ guidata(hObject,handles);
 
 end
 
-function addEventRow(handles)
-%adds an event selection/export row to the specified panel
-%make room for the event row
-    resizeForAddedRow(handles,handles.panel_exportMethods);
-end
 
-
-
-function resizeForAddedRow(handles,resized_panel_h)
-global GUI_TEMPLATE;
-
-%move all of the children up to account for the change in size and location
-%of the panel being resized.
-pan_children = allchild(resized_panel_h);
-children_pos = cell2mat(get(pan_children,'position'));
-children_pos(:,2)=children_pos(:,2)+GUI_TEMPLATE.row_separation;
-for k =1:numel(pan_children), set(pan_children(k),'position',children_pos(k,:));end;
-
-resized_panel_pos = get(resized_panel_h,'position');
-
-h = [handles.panel_directory
-    handles.panel_synth_CHANNEL
-    handles.panel_exportMethods
-    handles.panel_artifact
-    handles.panel_psd
-    handles.push_start
-    handles.figure1];
-
-for k=1:numel(h)
-    pos = get(h(k),'position');
-    
-    if(h(k) == handles.figure1)
-        pos(2) = pos(2)-GUI_TEMPLATE.row_separation;
-        pos(4) = pos(4)+GUI_TEMPLATE.row_separation;
-    elseif(h(k)==resized_panel_h)
-        pos(4) = pos(4)+GUI_TEMPLATE.row_separation;
-    elseif(pos(2)>resized_panel_pos(2))
-        pos(2) = pos(2)+GUI_TEMPLATE.row_separation;
-    end;
-    set(h(k),'position',pos);
-end
-
-
-%add the additional controls depending on the panel being adjusted.
-if(resized_panel_h==handles.panel_psd)
-    hc1 = uicontrol(GUI_TEMPLATE.channel1,'parent',resized_panel_h,'string',GUI_TEMPLATE.EDF.labels);
-    h_params = uicontrol(GUI_TEMPLATE.push_parameter_settings,'parent',resized_panel_h,'userdata',handles.user.PSD);
-    userdata.channel_h = hc1;
-    userdata.settings_h = h_params;
-    uicontrol(GUI_TEMPLATE.spectrum,'parent',resized_panel_h,'enable','on',...
-        'callback',{@pop_spectral_method_Callback,hc1,h_params},'userdata',userdata);
-elseif(resized_panel_h==handles.panel_synth_CHANNEL)
-    
-    %add a source channel - channel1
-    hc1 = uicontrol(GUI_TEMPLATE.channel1,'parent',resized_panel_h,'string',GUI_TEMPLATE.EDF.labels,'enable','on');
-   
-    %add the edit output channel name
-    he1 = uicontrol(GUI_TEMPLATE.edit_synth_CHANNEL,'parent',resized_panel_h);
-    
-    %add the configuration/settings button
-    h_params = uicontrol(GUI_TEMPLATE.push_CHANNEL_configuration,'parent',resized_panel_h,'enable','on',...
-        'callback',{@synthesize_CHANNEL_configuration_callback,hc1,he1});
-else
-    hc1=uicontrol(GUI_TEMPLATE.channel1,'parent',resized_panel_h);
-    hc2=uicontrol(GUI_TEMPLATE.channel2,'parent',resized_panel_h);
-    buttonEventSelectSources = uicontrol(GUI_TEMPLATE.buttonEventSelectSources,'parent',resized_panel_h);
-    
-    h_check_save_img = uicontrol(GUI_TEMPLATE.check_save_image,'parent',resized_panel_h);
-    h_params=uicontrol(GUI_TEMPLATE.push_parameter_settings,'parent',resized_panel_h);
-    uicontrol(GUI_TEMPLATE.export_method,'parent',resized_panel_h,'callback',{@menu_event_callback,[hc1,hc2],h_params,buttonEventSelectSources});
-end;
-end

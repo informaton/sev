@@ -67,6 +67,8 @@ classdef CLASS_batch < handle
                 end
                 
                 total_megabytes = total_bytes/1E6;
+                edfPathStruct.edf_megabyte_count = total_megabytes;
+                
                 if(~isempty(playlist))
                     edfPathStruct.statusString = [num2str(num_edfs),' EDF files (',num2str(total_megabytes,'%0.2f'),' MB) found in the current play list. '];
                 else
@@ -90,6 +92,7 @@ classdef CLASS_batch < handle
             end;            
         end
 
+        
         %------------------------------------------------------------------%
         %> @brief Returns a playlist of .EDF files to process as a subset from a directory
         %> .EDF files.  This is helpful when a selection has been
@@ -157,11 +160,14 @@ classdef CLASS_batch < handle
         %------------------------------------------------------------------%        
         %> @param Full filename (path and name) of the export information
         %> file to parse.
-        %> @retval Nx1 struct (one entry per non-header row parsed of .inf file)
-        %> with the following fields
+        %> @retval Struct with the following fields:
+        %> - @c mfilename Nx1 cell of filenames of the export method
+        %> - @c description Nx1 cell of descriptions for each export method.
+        %> - @c settingsEditor Nx1 cell of the settings editor to use for each method.     
+        %> @note One entry per non-header row parsed of .inf file
         %------------------------------------------------------------------%
         function exportMethodsStruct = getExportMethods(exportInfFullFilename)
-            exportMethodsStruct = CLASS_code.parseExportInfFile(exportInfFullFilename);
+            exportMethodsStruct = CLASS_codec.parseExportInfFile(exportInfFullFilename);
         end
         
     end %End static methods

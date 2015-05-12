@@ -25,8 +25,7 @@ classdef CLASS_codec < handle
         %> -@c line = the second column of stages_filename - the scored sleep stages
         %> -@c count = the number of stages for each one
         %> -@c cycle - the nrem/rem cycle
-        %> -@c firstNonWake - index of first non-Wake(0) and non-unknown(7) staged epoch
-        
+        %> -@c firstNonWake - index of first non-Wake(0) and non-unknown(7) staged epoch      
         %> @note Author: Hyatt Moore IV
         %> Written: 9.26.2012
         %> modified before 12.3.2012 to include scoreSleepCycles(.);
@@ -106,6 +105,33 @@ classdef CLASS_codec < handle
             STAGES.filename = stages_filename;
             STAGES.standard_epoch_sec = 30;
             STAGES.study_duration_in_seconds = STAGES.standard_epoch_sec*numel(STAGES.line);
+        end
+        
+        
+        % ======================================================================
+        %> @brief Retrieves SEV compatible hypnogram filename (with path)
+        %> based on the input edf filename provided (With path).        
+        % ======================================================================
+        %> @param edf_fullfilename Filename of the EDF file to find matching hypnogram file for.
+        %> @note The hypnogram file is expected to be in the same directory as edf_fullfilename
+        %> and have a file extension of '.STA' or '.evts'
+        %> @param stages_filename Filename of the hypnogram with path.
+        %> .STA is checked first, then .evts extension is checked if .STA is
+        %> not found.  If neither staging file type is found (.STA or .EVTS)
+        %> then stages_filename is returned as empty (i.e. [])
+        %> @edf_name edf filename sans pathname.
+        % ======================================================================
+        function [stages_filename, edf_name] = getStagesFilenameFromEDF(edf_fullfilename)
+            [edf_path,edf_name,edf_ext] = fileparts(edf_fullfilename);
+            stages_filename = fullfile(edf_path,strcat(edf_name,'.STA'));
+            
+            if(~exist(stages_filename,'file'))
+                stages_filename = fullfile(edf_path,strcat(edf_name,'.evts'));
+                if(~exist(stages_filename,'file'))
+                    stages_filename = [];
+                end
+            end  
+            edf_name = strcat(edf_name,edf_ext);
         end
         
         
