@@ -126,7 +126,7 @@ classdef CLASS_codec < handle
             stages_filename = fullfile(edf_path,strcat(edf_name,'.STA'));
             
             if(~exist(stages_filename,'file'))
-                stages_filename = fullfile(edf_path,strcat(edf_name,'.evts'));
+                stages_filename = fullfile(edf_path,strcat(edf_name,'.EVTS'));
                 if(~exist(stages_filename,'file'))
                     stages_filename = [];
                 end
