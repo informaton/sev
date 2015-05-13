@@ -275,10 +275,19 @@ function process_export(exportSettings)
         waitbarH = CLASS_batch.createWaitbar(initializationString);
         
         files_attempted = zeros(size(edf_fullfilenames));
+        files_completed = files_attempted;
         files_failed  = files_attempted;
         files_skipped = files_attempted;
+        
+        start_clock = clock;  %for etime
+        start_time = now;
+        timeMessage =sprintf('(Time: 00:00:00\tRemaining: ?)');
+ 
         for i=1:file_count
+            
             try
+                fileStartTime = tic;
+                
                 studyInfoStruct = [];  % initialize to empty.
                 
                 studyInfoStruct.edf_filename = edf_fullfilenames{i};
@@ -310,7 +319,7 @@ function process_export(exportSettings)
                     
                     
 
-                    status = sprintf('%s (%i of %i)\nLoading channels from EDF',studyInfoStruct.edf_name,i,file_count);
+                    status = sprintf('%s (%i of %i)\nLoading channels from EDF\n%s',studyInfoStruct.edf_name,i,file_count,timeMessage);
                     waitbar(i/(file_count+0.75),waitbarH,status);
                     
                     %% Load EDF channels
@@ -337,12 +346,29 @@ function process_export(exportSettings)
                         status = sprintf('%s (%i of %i)\nSaving output to file',studyInfoStruct.edf_name,i,file_count);
                         waitbar(i/(file_count+0.2),waitbarH,status);  
                         studyInfoStruct.saveFilename = fullfile(exportSettings.exportPathname,strcat(studyInfoStruct.study_name,'.mat'));
-                        save(studyInfoStruct.saveFilename,'exportData'); 
-                        clear(exportData);
+                        save(studyInfoStruct.saveFilename,'exportData');                         
+                        exportData = []; %#ok<NASGU>    
+                        files_completed(i) = true;
                         
                     else
+                        
                         files_failed(i) = true;
-                    end
+                        
+                    end   
+                    
+                    fileStopTime = toc(fileStartTime);
+                    fprintf('File %d of %d (%0.2f%%) Completed in %0.2f seconds\n',i,file_count,i/file_count*100,fileStopTime);
+                    fileElapsedTime = etime(clock,start_clock);
+                    avgFileElapsedTime = fileElapsedTime/i;
+                    
+                    %                 num_files_completed = randi(1,0,100);
+                    num_files_completed = i;
+                    remaining_dur_sec = avgFileElapsedTime*(file_count-num_files_completed);
+                    est_str = sprintf('%01ihrs %01imin %01isec',floor(mod(remaining_dur_sec/3600,24)),floor(mod(remaining_dur_sec/60,60)),floor(mod(remaining_dur_sec,60)));
+                    
+                    timeMessage = sprintf('(Time: %s\tRemaining: %s)',datestr(now-start_time,'HH:MM:SS'),est_str);
+                    fprintf('%s\n',timeMessage);
+
                     
                 end; 
                 
@@ -353,16 +379,21 @@ function process_export(exportSettings)
             
         end
         
+        %% Summary message and close out        
         if(ishandle(waitbarH))
             % This message will self destruct in 10 seconds
             delete(waitbarH);
         end
+        
+        CLASS_batch.showCloseOutMessage(edfSelectionStruct.edf_filename_list,files_attempted,files_completed,files_failed,files_skipped,start_time);
         
     else
         warndlg(sprintf('The check for EDFs in the following directory failed!\n\t%s',edfPath));
     end
 
 end
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%
 % --- Executes on button press of buttonSelectSource

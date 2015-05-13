@@ -71,13 +71,21 @@ classdef CLASS_batch < handle
                     total_bytes = total_bytes+tmpF.bytes;
                 end
                 
-                total_megabytes = total_bytes/1E6;
-                edfPathStruct.edf_megabyte_count = total_megabytes;
+
+                edfPathStruct.edf_megabyte_count = total_bytes/1E6;
+                
+                if(total_bytes>1E9)
+                    total_bytes = total_bytes/1E9;
+                    byte_suffix = 'GB';
+                else
+                    total_bytes = total_bytes/1E6;
+                    byte_suffix = 'MB';
+                end
                 
                 if(~isempty(playlist))
-                    edfPathStruct.statusString = [num2str(num_edfs),' EDF files (',num2str(total_megabytes,'%0.2f'),' MB) found in the current play list. '];
+                    edfPathStruct.statusString = [num2str(num_edfs),' EDF files (',num2str(total_bytes,'%0.1f'),' ',byte_suffix,') found in the current play list. '];
                 else
-                    edfPathStruct.statusString = [num2str(num_edfs),' EDF files (',num2str(total_megabytes,'%0.2f'),' MB) found in the current directory. '];
+                    edfPathStruct.statusString = [num2str(num_edfs),' EDF files (',num2str(total_bytes,'%0.1f'),' ',byte_suffix,') found in the current directory. '];
                 end
             end;            
             
@@ -270,7 +278,7 @@ classdef CLASS_batch < handle
             set(waitbarMsgH,'position',msgPos);
             
             waitbarPos = get(waitbarH,'position');
-            waitbarPos(4)=waitbarPos(4)*new_fontsize/original_fontsize*0.9;
+            waitbarPos(4)=waitbarPos(4)*new_fontsize/original_fontsize;
             %         waitbarPos(3)=waitbarPos(3)*new_fontsize/original_fontsize;
             set(waitbarH,'position',waitbarPos);
             set(waitbarH,'visible','on');
@@ -298,6 +306,61 @@ classdef CLASS_batch < handle
                 waitbar(1,waitbarH,'Cancelling!');
             end
         end
+        
+        
+        
+        %------------------------------------------------------------------%
+        %> @brief Creates a dialog to show summary of batch process on close out.
+        %------------------------------------------------------------------%
+        %> @param Nx1 cell of filenames (strings)
+        %> @param files_attempted Nx1 logical vector of files that were
+        %> attempted in batch processing.
+        %> @param files_completed Nx1 logical vector of files that 
+        %> successfully completed batch processing.
+        %> @param files_failed Nx1 logical vector of files that failed
+        %> batch processing due to unknown errors.
+        %> @param files_skipped Nx1 logical vector of files that were
+        %> skipped in batch processing due to known errors.
+        
+        %> @retval dialogH Handle to the dialog figure created.  
+        %> @param summaryText - text of summary output.
+        %------------------------------------------------------------------%
+        function [dialogH,summaryText] = showCloseOutMessage(filename_list,files_attempted,files_completed,files_failed,files_skipped,start_time)
+            num_files_attempted = sum(files_attempted);
+            num_files_completed = sum(files_completed);
+            num_files_skipped = sum(files_skipped);
+            num_files_failed = sum(files_failed);
+            elapsed_time = datestr(now-start_time,'HH:MM:SS');
+            
+            summaryText = sprintf(['Batch process summary',...
+                '\nFiles Attempted:\t%u',...
+                '\nFiles Skipped:\t%u',...
+                '\nFiles Failed:\t%u',...
+                '\nFiles Completed:\t%u',...
+                '\nTime elapsed:\t%s'],num_files_attempted,num_files_skipped,num_files_failed,num_files_completed,elapsed_time);
+
+            
+            if(num_files_attempted~=num_files_completed)
+                skipped_filenames = filename_list(files_skipped|files_failed);
+                [selections,clicked_ok]= listdlg('PromptString',message,'Name','Batch Completed',...
+                    'OKString','Copy to Clipboard','CancelString','Close','ListString',skipped_filenames);
+                
+                % send to clipboard as a one row vector
+                if(clicked_ok)
+                    %char(10) is newline
+                    skipped_files = [char(skipped_filenames(selections)),repmat(char(10),numel(selections),1)];
+                    skipped_files = skipped_files'; %filename length X number of files
+                    
+                    clipboard('copy',skipped_files(:)'); %make it a 1 row vector
+                    disp([num2str(numel(selections)),' filenames copied to the clipboard.']);
+                end;
+            else
+                dialogH = msgbox(summaryText,'Completed');
+            end
+            
+            
+        end
+        
         
         
     end %End static methods
