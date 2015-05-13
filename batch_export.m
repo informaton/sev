@@ -349,11 +349,8 @@ function process_export(exportSettings)
                         save(studyInfoStruct.saveFilename,'exportData');                         
                         exportData = []; %#ok<NASGU>    
                         files_completed(i) = true;
-                        
-                    else
-                        
-                        files_failed(i) = true;
-                        
+                    else                        
+                        files_failed(i) = true;                        
                     end   
                     
                     fileStopTime = toc(fileStartTime);
