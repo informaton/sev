@@ -40,33 +40,19 @@ if(isempty(MARKING) && ~debugMode)
     sev('init_batch_export');
 else
 
-    %have to assign user data to the button that handles multiple channel
-    %sourcing
-    if(debugMode)
-        handles.user.exportInfFullFilename = '/Users/hyatt4/git/sev/+export/export.inf';
+    handles.user.methodsStruct = CLASS_batch.getExportMethods();
 
-    end
-    
-    handles.user.methodsStruct = CLASS_batch.getExportMethods(handles.user.exportInfFullFilename);
     guidata(hObject,handles);
     
     initializeSettings(hObject);
     initializeCallbacks(hObject)
-    
-
+ 
     edfPath = pwd;
     updateGUI(CLASS_batch.checkPathForEDFs(edfPath),handles); 
-   
-
+ 
     % Update handles structure
     guidata(hObject, handles);
-    
-    %bring this to the front...
-    
-
 end
-
-
 end
 
 function initializeSettings(hObject)
@@ -77,8 +63,6 @@ function initializeSettings(hObject)
     set(handles.push_edf_directory,'enable','on');  % start here.
     set([handles.edit_edf_directory;
         handles.text_edfs_to_process],'enable','off');
-    
-    
     
     % file selection
     set(handles.radio_processAll,'value',1);
@@ -98,10 +82,12 @@ function initializeSettings(hObject)
     set(handles.button_selectChannels,'userdata',userdata,'value',0);
    
     % export methods
-    set([handles.push_add_method;
-        handles.push_method_settings
+    set([handles.push_method_settings
         handles.menu_export_method],'enable','off');
     set(handles.menu_export_method,'string',handles.user.methodsStruct.description,'value',1);
+    
+    set(handles.edit_export_directory,'string',pwd,'enable','inactive');    
+    set(handles.push_export_directory,'enable','on');
     
     % Start
     set(handles.push_start,'enable','off');
@@ -116,8 +102,8 @@ function initializeCallbacks(hObject)
     set(handles.button_selectChannels,'callback',[]);
     set(handles.menu_export_method,'callback',[]);
     set(handles.push_start,'callback',{@push_start_Callback,guidata(hObject)});
-    set(handles.push_add_method,'callback',{@push_add_event_Callback,guidata(hObject)});
     set(handles.edit_selectPlayList,'buttondownfcn',{@edit_selectPlayList_ButtonDownFcn,guidata(hObject)});
+    set(handles.push_export_directory,'callback',{@push_export_directory_Callback,guidata(hObject)});
 end
 
 
@@ -146,32 +132,45 @@ function push_edf_directory_Callback(hObject, eventdata, handles)
         edfPath = MARKING.SETTINGS.BATCH_PROCESS.edf_folder;
     end;
     
-    pathname = uigetdir(edfPath,'Select the directory containing EDF files to process');
+    pathname = uigetfulldir(edfPath,'Select the directory containing EDF files to process');
     
-    if(isempty(pathname)||(isnumeric(pathname)&&pathname==0))
-        pathname = edfPath;
-    else
+    if(~isempty(pathname))
         MARKING.SETTINGS.BATCH_PROCESS.edf_folder = pathname; %update for the next time..
+        set(handles.edit_edf_directory,'string',pathname);
+        edfPathStruct = CLASS_batch.checkPathForEDFs(pathname);
+        updateGUI(edfPathStruct,handles);
+    else
+        % The user pressed cancel and does not want tchange the pathname.
+        
     end;
+end
+
+
+% --- Executes on button press in push_export_directory.
+function push_export_directory_Callback(hObject, eventdata, handles)
     
-    set(handles.edit_edf_directory,'string',pathname);
-    edfPathStruct = CLASS_batch.checkPathForEDFs(pathname);
-    updateGUI(edfPathStruct,handles);
+    exportPathname = get(handles.edit_export_directory,'string');    
+    exportPathname = uigetfulldir(exportPathname,'Select the directory containing EDF files to process');
+    
+    if(~isempty(exportPathname))
+        set(handles.edit_export_directory,'string',exportPathname);
+    else
+        % The user pressed cancel and does not want tchange the pathname.
+        
+    end;
 end
 
 
 function updateGUI(edfPathStruct,handles)
-  set(handles.text_edfs_to_process,'string',edfPathStruct.statusString); 
+  set(handles.text_edfs_to_process,'string',edfPathStruct.statusString);
+  set(handles.edit_edf_directory,'string',edfPathStruct.edfPathname);
   relevantHandles = [handles.push_start
       handles.text_edfs_to_process
+      handles.edit_edf_directory
       get(handles.panel_exportMethods,'children')];
   if(~isempty(edfPathStruct.edf_filename_list))
-      set(relevantHandles,'enable','on');
-      
-      set(handles.edit_edf_directory,'enable','inactive');
-      
-      % have/may not implemented this yet.
-      set(handles.push_add_method,'enable','off');
+      set(relevantHandles,'enable','on');      
+      set(handles.edit_edf_directory,'enable','inactive');      %alter this so I don't have to deal with callbacks or changes to the pathname via the edit widget, but still give some visual feedback to the effect that it is ready.
       
   else
       set(relevantHandles,'enable','off');
@@ -204,26 +203,16 @@ function push_start_Callback(hObject, eventdata, handles)
 %struct which is then passed to the export function.
     exportSettings = getExportSettings(handles);
     
-    process_export(edfPath,exportSettings);
+    process_export(exportSettings);
 end
 
-
-function exportSettings = getExportSettings(handles)
-    method_selection_index = get(handles.menu_export_method,'value');
-    methodFields = fieldnames(handles.user.methodsStruct);
-    for m=1:numel(methodFields)
-       fname = methodFields{m};
-       methodStruct.(fname) = handles.user.methodsStruct.(fname){method_selection_index};
-    end
-    channelSelection.all = get(radio_channels_all,'value');
-    
-    exportSettings.methodStruct = methodStruct;
-    exportSettings.edfPath = get(handles.edit_edf_directory,'string');
-end
-
-%> @brief This method controls the batch export process according to the
-%> settings provided.
-%> @param exportSettings is a struct with the following fields
+%==========================================================================
+%> @brief Retrieves user configured export settings from the gui as a struct.
+%--------------------------------------------------------------------------
+%> @param Handles to the GUI.
+%> @retval exportSettings is a struct with the following fields
+%> - @c edfPathname Pathname containing EDF files to process.
+%> - @c edfSelectionList Cell of EDF names to use.  Can be empty for all.
 %> - @c methodStruct
 %> -- @c mfilename
 %> -- @c description
@@ -232,56 +221,130 @@ end
 %> -- @c all True/False If true, then load all channels for each file.
 %> (Optional, Default is True).
 %> -- @c sources Cell of channel labels to use if @c all is false.
+%> - @c exportPathname The path to save export data to.
+%==========================================================================
+function exportSettings = getExportSettings(handles)
+    method_selection_index = get(handles.menu_export_method,'value');
+    methodFields = fieldnames(handles.user.methodsStruct);
+    for m=1:numel(methodFields)
+       fname = methodFields{m};
+       methodStruct.(fname) = handles.user.methodsStruct.(fname){method_selection_index};
+    end
+    channelSelection.all = get(handles.radio_channelsAll,'value');
+    channelSelection.source = [];
+    
+    exportSettings.edfPathname = get(handles.edit_edf_directory,'string');
+    exportSettings.edfSelectionList = [];
+    exportSettings.methodStruct = methodStruct;
+    exportSettings.channelSelection = channelSelection;
+    exportSettings.exportPathname = get(handles.edit_export_directory,'string');
+end
+
+
+
+
+%==========================================================================
+%> @brief This method controls the batch export process according to the
+%> settings provided.
+%--------------------------------------------------------------------------
+%> @param exportSettings is a struct with the following fields
+%> - @c edfPathname
+%> - @c edfPathname Pathname containing EDF files to process.
+%> - @c edfSelectionList Cell of EDF names to use.  Can be empty for all.
+%> - @c methodStruct
+%> -- @c mfilename
+%> -- @c description
+%> -- @c settings
+%> - @c channelSelection
+%> -- @c all True/False If true, then load all channels for each file.
+%> (Optional, Default is True).
+%> -- @c sources Cell of channel labels to use if @c all is false.
 %> @param playList Optional Px1 cell of EDF filenames (not full filenames) to
 %> process from edfPath instead of using all .EDF files found in edfPath.
-function process_export(edfPath,exportSettings, channel_selection, playList)
-    
-    if(nargin<4)
-        playList = [];
-        if(nargin<3 || isempty(channel_selection))
-            channel_selection.all = true;
-        end
-    end
-    edfSelectionStruct = CLASS_batch.checkPathForEDFs(edfPath);
-    edf_fullfilenames = edfSelectionStruct.edf_full_filenames;
+%> - @c exportPathname The path to save export data to.
+%==========================================================================
+function process_export(exportSettings)    
+
+    edfSelectionStruct = CLASS_batch.checkPathForEDFs(exportSettings.edfPathname,exportSettings.edfSelectionList);
+    edf_fullfilenames = edfSelectionStruct.edf_fullfilename_list;
     file_count = numel(edf_fullfilenames);
     if(file_count>0)
-        waitbarH = waitbar(0,sprintf('%s\n\tInitializing',edfSelectionStruct.statusMessage),'name','Batch Export','resize','on','createcancelbtn',@cancel_batch_Callback,'tag','waitbarH');
-        set(findall(waitbarH,'interpreter','tex'),'interpreter','none');
         
-        waitbarPos = get(waitbarH,'position');
-        waitbarPos(4)=waitbarPos(4)*1.5;
-        set(waitbarPos,'position',waitbarPos);
+        % prep the waitbarHandle and make it look nice
+        initializationString = sprintf('%s\n\tInitializing',edfSelectionStruct.statusString);
+        waitbarH = CLASS_batch.createWaitbar(initializationString);
+        
         files_attempted = zeros(size(edf_fullfilenames));
-        files_failed = files_attemtped;
+        files_failed  = files_attempted;
         files_skipped = files_attempted;
         for i=1:file_count
             try
-                cur_edf_fullfilename = edf_fullfilenames{i};
-                [stages_filename, cur_edf_name] = CLASS_code.getStageFilenameFromEDF(cur_edf_fullfilename);
-                files_attempted(i)=1;
+                studyInfoStruct = [];  % initialize to empty.
                 
+                studyInfoStruct.edf_filename = edf_fullfilenames{i};
+                [studyInfoStruct.stages_filename, studyInfoStruct.edf_name] = CLASS_codec.getStagesFilenameFromEDF(studyInfoStruct.edf_filename);
+                
+                [~,studyInfoStruct.study_name,~] = fileparts(studyInfoStruct.edf_filename);
+                files_attempted(i)=1;
+                status = sprintf('%s (%i of %i)',studyInfoStruct.edf_name,i,file_count);
+                waitbar(i/(file_count+1),waitbarH,status);
                 
                 %require stages filename to exist.                
-                if(isempty(stages_filename) || ~exist(stages_filename,'file'))
+                if(isempty(studyInfoStruct.stages_filename) || ~exist(studyInfoStruct.stages_filename,'file'))
                     files_skipped(i) = true;
-                    
-                    %%%%%%%%%%%%%%%%%%%%%REVIEW%%%%%%%%%%%%%%%%%%%%%%%%
-%                     if(BATCH_PROCESS.output_files.log_checkbox)
-%                         fprintf(log_fid,'%s not found!  This EDF will be skipped.\r\n',stages_filename);
-%                     end;
-
+                    status = sprintf('%s (%i of %i)\nStage file not found!  Skipping!',studyInfoStruct.edf_name,i,file_count);
+                    waitbar(i/(file_count+1),waitbarH,status);
                 else
-                    HDR = loadEDF(cur_edf_fullfilename);
-                    if(exportSettings.all_channels)
+                    
+                    %% Load header 
+                    studyInfoStruct.edf_header = loadEDF(studyInfoStruct.edf_filename);
+                    status = sprintf('%s (%i of %i)\nLoading hypnogram (%s)',studyInfoStruct.edf_name,i,file_count,studyInfoStruct.stages_filename);
+                    waitbar(i/(file_count+0.9),waitbarH,status);
+                    
+                    sec_per_epoch = 30;
+                    studyInfo.num_epochs = studyInfoStruct.edf_header.duration_sec/sec_per_epoch;
+                    
+                    
+                    %% load stages
+                    stagesStruct = CLASS_codec.loadSTAGES(studyInfoStruct.stages_filename,studyInfo.num_epochs);
+                    
+                    
+
+                    status = sprintf('%s (%i of %i)\nLoading channels from EDF',studyInfoStruct.edf_name,i,file_count);
+                    waitbar(i/(file_count+0.75),waitbarH,status);
+                    
+                    %% Load EDF channels
+                    if(exportSettings.channelSelection.all)
+                        [~,edfChannels] = loadEDF(studyInfoStruct.edf_filename);
                         
                     else
-                        fprintf('Not implemented yet\n');
+                        fprintf(1,'exportSettings.channelSelection.sources has not been tested!\n');
+                        [~,edfChannels] = loadEDF(studyInfoStruct.edf_filename,exportSettings.channelSelection.sources);                        
                     end
-                    stagesStruct = CLASS_code.loadSTAGES(stages_filename,studyInfo.num_epochs);
+                    
+                    status = sprintf('%s (%i of %i)\nApplying export method(s)',studyInfoStruct.edf_name,i,file_count);
+                    waitbar(i/(file_count+0.4),waitbarH,status);
+                    
+                    %% obtain event file name
+                    studyInfoStruct.events_filename = CLASS_codec.getEventsFilenameFromEDF(studyInfoStruct.edf_filename);
+
+                    %% obtain export data
+                    exportData = CLASS_batch.getExportData(edfChannels,exportSettings.methodStruct,stagesStruct,studyInfoStruct);
+                    
+                    %% export data to disk 
+
+                    if(~isempty(exportData))
+                        status = sprintf('%s (%i of %i)\nSaving output to file',studyInfoStruct.edf_name,i,file_count);
+                        waitbar(i/(file_count+0.2),waitbarH,status);  
+                        studyInfoStruct.saveFilename = fullfile(exportSettings.exportPathname,strcat(studyInfoStruct.study_name,'.mat'));
+                        save(studyInfoStruct.saveFilename,'exportData'); 
+                        clear(exportData);
+                        
+                    else
+                        files_failed(i) = true;
+                    end
                     
                 end; 
-                
                 
             catch me
                 showME(me);
@@ -290,6 +353,10 @@ function process_export(edfPath,exportSettings, channel_selection, playList)
             
         end
         
+        if(ishandle(waitbarH))
+            % This message will self destruct in 10 seconds
+            delete(waitbarH);
+        end
         
     else
         warndlg(sprintf('The check for EDFs in the following directory failed!\n\t%s',edfPath));
@@ -312,11 +379,6 @@ end
 end
 
 
-
-% returns whether the batch mode is ready for running.
-function isReady = canRun(handles)
-    isReady = strcmpi(get(handles.push_start,'enable'),'on');
-end
 
 
 % --- Executes when user attempts to close figure1.
@@ -401,3 +463,11 @@ guidata(hObject,handles);
 end
 
 
+function edit_export_directory_CreateFcn(hObject, eventdata, handles)
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+end

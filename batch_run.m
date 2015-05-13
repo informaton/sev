@@ -206,8 +206,12 @@ function varargout = batch_run_OutputFcn(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Get default command line output from handles structure
-varargout{1} = handles.output;
-
+try
+    varargout{1} = handles.output;
+catch me
+    varargout{1} = [];
+end
+    
 end
 
 % --- Executes on button press in push_directory.

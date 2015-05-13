@@ -115,11 +115,11 @@ classdef CLASS_codec < handle
         %> @param edf_fullfilename Filename of the EDF file to find matching hypnogram file for.
         %> @note The hypnogram file is expected to be in the same directory as edf_fullfilename
         %> and have a file extension of '.STA' or '.evts'
-        %> @param stages_filename Filename of the hypnogram with path.
+        %> @retval stages_filename Filename of the hypnogram with path.
         %> .STA is checked first, then .evts extension is checked if .STA is
         %> not found.  If neither staging file type is found (.STA or .EVTS)
         %> then stages_filename is returned as empty (i.e. [])
-        %> @edf_name edf filename sans pathname.
+        %> @retval edf_name edf filename sans pathname.
         % ======================================================================
         function [stages_filename, edf_name] = getStagesFilenameFromEDF(edf_fullfilename)
             [edf_path,edf_name,edf_ext] = fileparts(edf_fullfilename);
@@ -134,9 +134,134 @@ classdef CLASS_codec < handle
             edf_name = strcat(edf_name,edf_ext);
         end
         
+        % ======================================================================
+        %> @brief Retrieves SEV compatible events filename (with path)
+        %> based on the input edf filename provided (With path).        
+        % ======================================================================
+        %> @param edf_fullfilename Filename of the EDF file to find matching events file for.
+        %> @note The events file is expected to be in the same directory as edf_fullfilename
+        %> and have a file extension of '.SCO' or '.EVTS'
+        %> @param events_filename Filename of the hypnogram with path.
+        %> .STA is checked first, then .evts extension is checked if .STA is
+        %> not found.  If neither staging file type is found (.STA or .EVTS)
+        %> then stages_filename is returned as empty (i.e. [])
+        %> @retval edf filename sans pathname.
+        % ======================================================================
+        function [events_filename, edf_name] = getEventsFilenameFromEDF(edf_fullfilename)
+            [edf_path,edf_name,edf_ext] = fileparts(edf_fullfilename);
+            events_filename = fullfile(edf_path,strcat(edf_name,'.SCO'));
+            
+            if(~exist(events_filename,'file'))
+                events_filename = fullfile(edf_path,strcat(edf_name,'.EVTS'));
+                if(~exist(events_filename,'file'))
+                    events_filename = [];
+                end
+            end  
+            edf_name = strcat(edf_name,edf_ext);
+        end
+                
+        % =================================================================
+        %> @brief Retrives a function call for files in directories with a '+'
+        %> prefix.
+        %------------------------------------------------------------------%
+        %> @param Method's name (sans path and .m)
+        %> @param Package name (string).  Supported values include
+        %> - @c export
+        %> - @c detection
+        %> - @c filter
+        %> @retval packageMethodName - Package.method name to call the method outside of its
+        %> directory via its package.
+        %> @retval fullFilename - Name of the .m file for the method with
+        %> pathname.  Empty if no match is found.
+        % =================================================================
+        function [packageMethodName, fullFilename] = getPackageMethodName(methodName,packageName)
+            candidateCategories = {'export','detection','filter'};
+            rootPath = fileparts(mfilename('fullpath'));
+            
+            if(isempty(intersect(packageName, candidateCategories)))
+                packageMethodName = [];
+                fullFilename = [];
+            else
+                fullFilename = fullfile(rootPath,strcat('+',packageName),strcat(methodName,'.m'));
+                if(exist(fullFilename,'file'))
+                    packageMethodName = strcat(packageName,'.',methodName);
+                else
+                    packageMethodName = [];
+                    fullFilename = [];
+                end
+            end
+        end
+        
+       % =================================================================
+        %> @brief Retrives the information file (.inf) for the package of interest.
+        %> Information files describe methods used in a particular toolbox.
+        %------------------------------------------------------------------%
+        %> @param Package name (string).  Supported values include
+        %> - @c export
+        %> - @c detection
+        %> - @c filter
+        %> @retval methodInformationFile Full filename of the information
+        %> file used to describe the toolbox associated with methodCategory.
+        %> Information files describe methods used in a particular toolbox.
+        %> Empty if no match is found.
+        % =================================================================
+        function methodInformationFilename = getMethodInformationFilename(packageName)
+            candidateCategories = {'export','detection','filter'};
+            rootPath = fileparts(mfilename('fullpath'));
+            
+            if(isempty(intersect(packageName, candidateCategories)))
+                methodInformationFilename = [];
+            else
+                methodInformationFilename = fullfile(rootPath,strcat('+',packageName),strcat(packageName,'.inf'));
+                if(~exist(methodInformationFilename,'file'))
+                    methodInformationFilename = [];
+                end
+            end
+        end
+        
+                
+        
+        
+        % =================================================================
+        %> @brief Retrives a function call for files in directories with a '+'
+        %> prefix.
+        %------------------------------------------------------------------%
+        %> @param Method's name (sans path and .m)
+        %> @param Package name that method is part of (string).  Supported values include
+        %> - @c export
+        %> - @c detection
+        %> - @c filter        
+        %> @retval packageMethodName - method name with package prefix (e.g. export.someMethod) to call the method in
+        %> the package a directory outside of its category.
+        %> Empty if no match is found.
+        % =================================================================
+        function [parameterStruct, packageMethodName] = getMethodParameters(methodName,packageName)
+            candidateCategories = {'export','detection','filter'};
+            rootPath = fileparts(mfilename('fullpath'));
+            
+            if(isempty(intersect(packageName, candidateCategories)))
+                packageMethodName = [];
+                parameterStruct = [];
+            else
+                fullFilename = fullfile(rootPath,strcat('+',packageName),strcat(methodName,'.m'));
+                if(exist(fullFilename,'file'))
+                    packageMethodName = strcat(packageName,'.',methodName);
+                    try
+                        parameterStruct = feval(packageMethodName);
+                    catch me
+                        showME(me);
+                        fprintf('An error occurred and was caught.  The variable parameterStruct will be set to []\n');
+                        parameterStruct = [];
+                    end
+                else
+                    packageMethodName = [];
+                    parameterStruct = [];
+                end
+            end
+        end        
         
         %------------------------------------------------------------------%
-        %> @brief Parses an export information file (.inf) and returns 
+        %> @brief Parses an export package information file (.inf) and returns 
         %> each rows values as a struct entry.
         %------------------------------------------------------------------%        
         %> @param Full filename (path and name) of the export information

@@ -2,19 +2,21 @@ function [HDR, signal] = loadEDF(filename,channels)
 %[HDR, signal] = loadEDF(filename,channels)
 %Loads EDF files (not EDF+ format), if only one output is specified then
 %only the header information (HDR) is loaded.
-%channels is a vector of the numeric signals to be loaded.  If left blank,
-%then all of the channels in the EDF will be loaded.  
+%channels is a vector of the numeric signals to be loaded.  If channels is not included,
+%is empty, or equals 0 then all of the channels in the EDF will be loaded
+%(i.e. returned in signal output argument).
 %Written by Hyatt Moore
 %last modified: October, 8, 2012
 %July 13, 2013: fixed a bug which could cause incorrect visual scaling in
 %cases where the channel units of measurement did not match up with the
 %index k.  
-
+% May 12, 2015: Modified so that channels argument included as empty 
+% (i.e. []) is treated the same as if it were not included.  
 if(nargin==0)
     disp 'No input filename given; aborting';
     return;
 end;
-if(nargin==1)
+if(nargin==1 || isempty(channels))
     channels = 0;
 end;
 if(nargin>2)
