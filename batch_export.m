@@ -161,7 +161,7 @@ end
 function push_export_directory_Callback(hObject, eventdata, handles)
     
     exportPathname = get(handles.edit_export_directory,'string');    
-    exportPathname = uigetfulldir(exportPathname,'Select the directory containing EDF files to process');
+    exportPathname = uigetfulldir(exportPathname,'Select the export destination directory');
     
     if(~isempty(exportPathname))
         set(handles.edit_export_directory,'string',exportPathname);
