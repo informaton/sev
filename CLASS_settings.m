@@ -378,9 +378,10 @@ classdef  CLASS_settings < handle
                                     cur_sub_field = structFnames{g};
                                     %check if there is a corruption
                                     if(~isfield(paramStruct.(cur_field),cur_sub_field))
-                                        fprintf('\nSettings file corrupted.  Using default SEV settings\n\n');
+                                        fprintf('\nSettings file corrupted.  The %s.%s parameter is missing.  Using initial/default SEV settings\n\n', cur_field,cur_sub_field);
                                         return;
                                     end                            
+
                                 end
                             end
                         end
