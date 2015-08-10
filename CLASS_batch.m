@@ -342,7 +342,7 @@ classdef CLASS_batch < handle
             
             if(num_files_attempted~=num_files_completed)
                 skipped_filenames = filename_list(files_skipped|files_failed);
-                [selections,clicked_ok]= listdlg('PromptString',message,'Name','Batch Completed',...
+                [selections,clicked_ok]= listdlg('PromptString',summaryText,'Name','Batch Completed',...
                     'OKString','Copy to Clipboard','CancelString','Close','ListString',skipped_filenames);
                 
                 % send to clipboard as a one row vector
