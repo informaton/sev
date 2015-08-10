@@ -65,16 +65,24 @@ function initializeSettings(hObject)
         handles.text_edfs_to_process],'enable','off');
     
     % file selection
+    bgColor = get(handles.bg_panel_playlist,'backgroundcolor');
     set(handles.radio_processAll,'value',1);
     set([handles.radio_processAll;
         handles.radio_processList;
         handles.edit_selectPlayList],'enable','off');
+    set([handles.radio_processAll;
+        handles.radio_processList],'backgroundcolor',bgColor);
+    
+    
     
     % channel selection
+    bgColor = get(handles.bg_channel_selection,'backgroundcolor');
     set(handles.radio_channelsAll,'value',1);
     set([handles.radio_channelsAll;
         handles.radio_channelsSome;
         handles.button_selectChannels],'enable','off');
+    set([handles.radio_channelsAll;
+        handles.radio_channelsSome],'backgroundcolor',bgColor);
     
     maxSourceChannelsAllowed = 14;
     userdata.nReqdIndices = maxSourceChannelsAllowed;
@@ -91,6 +99,9 @@ function initializeSettings(hObject)
     
     % Start
     set(handles.push_start,'enable','off');
+    
+    
+    
     
 end
 
