@@ -223,11 +223,13 @@ function push_start_Callback(hObject, eventdata, handles)
 %struct which is then passed to the export function.
     global MARKING;
     exportSettings = getExportSettings(handles);
-    
-    if(~exist(outputPath,'dir'))
+    outputPath = exportSettings.exportPathname;
+    if(exist(outputPath,'dir'))
         MARKING.SETTINGS.BATCH_PROCESS.export.output_folder = outputPath;
+        process_export(exportSettings);
+    else
+        warndlg(sprintf('Output path (%s) does not exist',outputPath));
     end;
-    process_export(exportSettings);
 end
 
 %==========================================================================
@@ -248,6 +250,7 @@ end
 %> - @c exportPathname The path to save export data to.
 %==========================================================================
 function exportSettings = getExportSettings(handles)
+
     method_selection_index = get(handles.menu_export_method,'value');
     methodFields = fieldnames(handles.user.methodsStruct);
     for m=1:numel(methodFields)
@@ -262,10 +265,8 @@ function exportSettings = getExportSettings(handles)
     exportSettings.methodStruct = methodStruct;
     exportSettings.channelSelection = channelSelection;
     exportSettings.exportPathname = get(handles.edit_export_directory,'string');
+    
 end
-
-
-
 
 %==========================================================================
 %> @brief This method controls the batch export process according to the
