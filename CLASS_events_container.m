@@ -1856,7 +1856,6 @@ classdef CLASS_events_container < handle
         function save2evts(obj,optional_filename)
             if(nargin>1 && ~isempty(optional_filename))
                 start_stop_matrix = [];
-                evt_indices = [];
                 evt_labels = cell(obj.num_events,1);
                 evt_filenames = evt_labels;
                 for k =1:obj.num_events                    
@@ -1868,7 +1867,6 @@ classdef CLASS_events_container < handle
                     else
                         labels = cellstr(repmat(evtObj.label,numRows,1));                        
                     end
-                    evt_indices = [evt_indices;repmat(k,numRows,1)]; 
                     start_stop_matrix = [start_stop_matrix;evtObj.start_stop_matrix];                    
                     evt_filenames = [evt_filenames;evtFilename];
                     evt_labels = [evt_labels; labels];
@@ -1880,7 +1878,6 @@ classdef CLASS_events_container < handle
                 
                 [~,i] = sort(start_stop_matrix(:,1));
                 event_start_stop_matrix = start_stop_matrix(i,:);
-                evt_indices = evt_indices(i);
                 evt_filenames = evt_filenames(i);
                 evt_labels = evt_labels(i);
                 
@@ -1907,9 +1904,9 @@ classdef CLASS_events_container < handle
                     stop_offset_sec =  (stops-1)/obj.defaults.parent_channel_samplerate; %add the seconds here
                     stop_times = datestr(datenum([zeros(numel(stop_offset_sec),numel(t0)-1),stop_offset_sec(:)])+datenum(t0),'HH:MM:SS.FFF');
                     
-                    for r=1:numel(evt_indices);
-                        e=evt_indices(r);
-                        fprintf(fid,'%u,%u,%s,%s,"%s",%s\n',starts,stops,start_times,stop_times,evt_labels{e},evt_filenames{e});
+                    
+                    for e=1:numel(starts);
+                        fprintf(fid,'%u,%u,%s,%s,"%s",%s\n',starts(e),stops(e),start_times(e),stop_times(e),evt_labels{e},evt_filenames{e});
                     end
                     
                     fclose(fid);
