@@ -1906,7 +1906,7 @@ classdef CLASS_events_container < handle
                     
                     
                     for e=1:numel(starts);
-                        fprintf(fid,'%u,%u,%s,%s,"%s",%s\n',starts(e),stops(e),start_times(e),stop_times(e),evt_labels{e},evt_filenames{e});
+                        fprintf(fid,'%u,%u,%s,%s,"%s",%s\n',starts(e),stops(e),start_times(e,:),stop_times(e,:),evt_labels{e},evt_filenames{e});
                     end
                     
                     fclose(fid);
