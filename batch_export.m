@@ -98,10 +98,7 @@ function initializeSettings(hObject)
     set(handles.push_export_directory,'enable','on');
     
     % Start
-    set(handles.push_start,'enable','off');
-    
-    
-    
+    set(handles.push_start,'enable','off');    
     
 end
 
