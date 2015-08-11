@@ -279,24 +279,24 @@ classdef CLASS_converter < handle
                             stage_evt_file = fullfile(edfSrcPath,'stage.evt');
                             if(exist(stage_evt_file,'file'))
                                 
-                                [eventStruct,src_samplerate] = CLASS_events_container.parseEmblaEvent(stage_evt_file,studyStruct.samplerate,studyStruct.samplerate);
-                                studyStruct.samplerate = src_samplerate;
+                                [stageEventStruct,embla_samplerate] = CLASS_events_container.parseEmblaEvent(stage_evt_file,studyStruct.samplerate,studyStruct.samplerate);
+                                studyStruct.samplerate = embla_samplerate;  %embla_samplerate is the source sample rate determined from the stage.evt file which we know/assume to use 30 seconds per epoch.
                                 
-                                if(num_epochs~=numel(eventStruct.epoch))
+                                if(num_epochs~=numel(stageEventStruct.epoch))
                                     %                         fprintf(1,'different stage epochs found in %s\n',studyname);
                                     if(any(strcmpi(outputType,{'STA','All'})))
-                                        fprintf(1,'%s\texpected epochs: %u\tencountered epochs: %u to %u\n',srcFile,num_epochs,min(eventStruct.epoch),max(eventStruct.epoch));
+                                        fprintf(1,'%s\texpected epochs: %u\tencountered epochs: %u to %u\n',srcFile,num_epochs,min(stageEventStruct.epoch),max(stageEventStruct.epoch));
                                     end
                                     
                                     new_stage = repmat(7,num_epochs,1);
                                     new_epoch = (1:num_epochs)';
-                                    new_stage(eventStruct.epoch)=eventStruct.stage;
-                                    eventStruct.epoch = new_epoch;
-                                    eventStruct.stage = new_stage;
+                                    new_stage(stageEventStruct.epoch)=stageEventStruct.stage;
+                                    stageEventStruct.epoch = new_epoch;
+                                    stageEventStruct.stage = new_stage;
                                 end
                                 
                                 if(strcmpi(outputType,'STA') || strcmpi(outputType,'all'))
-                                    y = [eventStruct.epoch,eventStruct.stage];
+                                    y = [stageEventStruct.epoch,stageEventStruct.stage];
                                     staFilename = fullfile(outPath,strcat(studyID,'STA'));
                                     save(staFilename,'y','-ascii');
                                 end
@@ -308,8 +308,8 @@ classdef CLASS_converter < handle
                                         obj.EDFexport(fullSrcFile,outPath);
                                         
                                     else
-                                        events_container_obj = CLASS_events_container.importEmblaEvtDir(edfSrcPath,src_samplerate);
-                                        studyStruct.line = eventStruct.stage;
+                                        events_container_obj = CLASS_events_container.importEmblaEvtDir(edfSrcPath,embla_samplerate);
+                                        studyStruct.line = stageEventStruct.stage;
                                         studyStruct.cycles = scoreSleepCycles_ver_REMweight(studyStruct.line);
                                         events_container_obj.setStageStruct(studyStruct);
                                         
@@ -333,6 +333,7 @@ classdef CLASS_converter < handle
                                             if(studyID(end)=='.')
                                                 studyID = studyID(1:end-1);
                                             end
+                                            events_container_obj.loadEmblaEvent(stage_evt_file,embla_samplerate);
                                             events_container_obj.save2evts(fullfile(outPath,strcat(studyID,'.EVTS')));
                                         end                                        
                                         %                                     if(strcmpi(outputType,'db') || strcmpi(outputType,'all'))
@@ -683,7 +684,7 @@ classdef CLASS_converter < handle
         
         
         function staticEmblaEvtExport(emblaStudyPath, outPath,outputType)
-            %outputType is 'sco','evt','sta','all' {default}, 'db','edf'
+            %outputType is 'sco','evt','evts','sta','all' {default}, 'db','edf'
             %db is database
             %sco is .SCO format
             %sta is .STA file formats   
@@ -760,6 +761,17 @@ classdef CLASS_converter < handle
                                     end
                                     events_container_obj.save2txt(fullfile(outPath,strcat('evt.',studyName)));
                                 end
+                                
+                                if(strcmpi(outputType,'evts') || strcmpi(outputType,'all'))
+                                    %avoid the problem of file
+                                    %names like : studyName..EVTS
+                                    if(studyName(end)=='.')
+                                        studyName = studyName(1:end-1);
+                                    end
+                                    events_container_obj.save2evts(fullfile(outPath,strcat(studyName,'.EVTS')));
+                                end
+                                
+                                
 
                             end
                         end

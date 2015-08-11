@@ -608,7 +608,31 @@ classdef CLASS_codec < handle
                         embla_samplerate = samples_per_epoch/seconds_per_epoch;
                         embla_samplerate_out = embla_samplerate;
                         stop_sample = start_sample+samples_per_epoch;
+                        description = cell(HDR.num_records,1);
                         
+                        description(stage==0) = {'Wake'};
+                        description(stage==1) = {'Stage 1'};
+                        description(stage==2) = {'Stage 2'};
+                        description(stage==3) = {'Stage 3'};
+                        description(stage==4) = {'Stage 4'};
+                        description(stage==5) = {'REM'};
+                        description(stage==7) = {'Unknown'};
+                        
+                        
+                                                %   stage_mat = fread(fid,[12,HDR.num_records],'uint8');
+                        %   x=reshape(stage_mat,12,[])';
+                        %  stage records are produced in 12 byte sections
+                        %    1:4 [uint32] - elapsed_seconds*2^8 (sample_rate)
+                        %    5:8 [uint32] - (stage*2^8)+1*2^0
+                        %    9:10 [uint16] = ['9','2']  %34...
+                        %    10:12 = ?
+                        % Should be 12 bytes per record
+                        %  1 = Wake
+                        %  2 = Stage 1
+                        %  3 = Stage 2
+                        %  4 = Stage 3
+                        %  5 = Stage 4
+                        %  7 = REM
                         % stage_mat = fread(fid,[bytes_per_record/4,HDR.num_records],'uint32')';
                         % start_sample = stage_mat(:,1);
                         % stage = (stage_mat(:,2)-1)/256;  %bitshifting will also work readily;
