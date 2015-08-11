@@ -1493,7 +1493,7 @@ classdef CLASS_events_container < handle
         %> to load.
         %> @param embla_samplerate Sampling rate used in the Embla files.
         %> @note The embla samplerate can often be determined from the
-        %stage.evt file.
+        %> stage.evt file.
         %> @retval embla_evt_Struct Result of internal parseEmblaEvent call
         % =================================================================
         function embla_evt_Struct = loadEmblaEvent(obj,evtFilename,embla_samplerate)
@@ -1873,6 +1873,11 @@ classdef CLASS_events_container < handle
                     evt_filenames = [evt_filenames;evtFilename];
                     evt_labels = [evt_labels; labels];
                 end
+                
+                
+                % Now handle the sleep stages
+                
+                
                 [~,i] = sort(start_stop_matrix(:,1));
                 event_start_stop_matrix = start_stop_matrix(i,:);
                 evt_indices = evt_indices(i);
@@ -2515,17 +2520,7 @@ classdef CLASS_events_container < handle
             if(nargin<2 || isempty(embla_samplerate))
                 stage_evt_file = fullfile(embla_path,'stage.evt');
                 if(exist(stage_evt_file,'file'))
-                    [eventStruct,base_samplerate] = CLASS_codec.parseEmblaEvent(stage_evt_file,studyStruct.samplerate,studyStruct.samplerate);
-                    embla_samplerate = base_samplerate;
-                    if(num_epochs~=numel(eventStruct.epoch))
-                        fprintf(1,'%s\texpected epochs: %u\tencountered epochs: %u to %u\n',srcFile,num_epochs,min(eventStruct.epoch),max(eventStruct.epoch));
-                        
-                        new_stage = repmat(7,num_epochs,1);
-                        new_epoch = (1:num_epochs)';
-                        new_stage(eventStruct.epoch)=eventStruct.stage;
-                        eventStruct.epoch = new_epoch;
-                        eventStruct.stage = new_stage;
-                    end
+                    [~,embla_samplerate] = CLASS_codec.parseEmblaEvent(stage_evt_file,studyStruct.samplerate,studyStruct.samplerate);
                 else
                     fprintf('Original embla samplerate used for storing events is unknown, so there is no point in continuing to load the file.');
                     embla_samplerate = [];
