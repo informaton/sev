@@ -1890,18 +1890,17 @@ classdef CLASS_events_container < handle
                     
                     
                     t0 = obj.stageStruct.startDateTime;
+
+                    %Subtract 1 here to conform to conform with Somnologic/Embla's 0-based format
+                    starts = event_start_stop_matrix(:,1)-1;
+                    stops = event_start_stop_matrix(:,2)-1;
                     
-                    starts = event_start_stop_matrix(:,1);
-                    stops = event_start_stop_matrix(:,2);
                     
-                    
-                    %subtract 1 below, since the 1st sample technically starts at
-                    %           %t0 and thus the first sample in matlab would otherwise be listed as 1/fs seconds after t0
-                    start_offset_sec = (starts-1)/obj.defaults.parent_channel_samplerate; %add the seconds here
+                    start_offset_sec = starts/obj.defaults.parent_channel_samplerate; %add the seconds here
                     start_times = datenum([zeros(numel(start_offset_sec),numel(t0)-1),start_offset_sec(:)])+datenum(t0);
                     start_times = datestr(start_times,'HH:MM:SS.FFF');
                     
-                    stop_offset_sec =  (stops-1)/obj.defaults.parent_channel_samplerate; %add the seconds here
+                    stop_offset_sec =  (stops)/obj.defaults.parent_channel_samplerate; %add the seconds here
                     stop_times = datestr(datenum([zeros(numel(stop_offset_sec),numel(t0)-1),stop_offset_sec(:)])+datenum(t0),'HH:MM:SS.FFF');
                     
                     
