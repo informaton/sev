@@ -1148,6 +1148,8 @@ classdef CLASS_events_container < handle
         %>  .algorithm = algorithm name that the event was derived from
         %> @param paramstruct Struct containing any parameter settings
         %> associated with the event (i.e. if it was derived in SEV)
+        %> @note This may have changed and perhaps be the parameters
+        %> associated with individual events.  
         %> @retval event_index The obj/container's index where the event is stored
         % =================================================================
         function event_index = updateEvent(obj,event_data,event_label,class_channel_index,sourceStruct,paramStruct)
@@ -1497,10 +1499,18 @@ classdef CLASS_events_container < handle
         function embla_evt_Struct = loadEmblaEvent(obj,evtFilename,embla_samplerate)
             embla_evt_Struct = CLASS_codec.parseEmblaEvent(evtFilename,embla_samplerate,obj.defaults.parent_channel_samplerate);
             if(~isempty(embla_evt_Struct) && embla_evt_Struct.HDR.num_records>0)
-                paramStruct = [];
+                if(isfield(embla_evt_Struct,'description'))
+                    paramStruct.description = embla_evt_Struct.description;
+                else
+                    paramStruct = [];
+                end
+                
                 class_channel_index = 0;
                 
-                sourceStruct.algorithm = 'external file (Embla .evt)';
+                [~,pth,ext] = fileparts(evtFilename);
+                
+               
+                sourceStruct.algorithm = strcat(pth,ext);
                 sourceStruct.channel_indices = 0;
                 sourceStruct.editor = 'none';
                 
@@ -1822,6 +1832,96 @@ classdef CLASS_events_container < handle
             end
         end
         
+
+        % =================================================================
+        %> @brief Saves events to .EVTS format; a multiplexed, comma separated 
+        %> file, with each row containing a unique events.        
+        %> @param obj instance of CLASS_events_container class.
+        %> @param Filename (string) Name of file to save events to.           
+        %> @note .EVTS file format contains the following columns/fields for
+        %> describing events on a per row basis:
+        %> - Start sample point (based on ? Hz sampling rate)
+        %> - End Sample
+        %> - Start time of the event in hh:mm:ss.fff 24 hour format
+        %> - End time of the event in hh:mm:ss.fff 24 hour format
+        %> - Event Name of the event, or description where available.  
+        %> - File Name - Name of file that the event was obtained from
+        %> @note Example output from an .EVTS formatted file
+        %> #scoreDir=scoredJA
+        %> Start Sample,End Sample,Start Time,End Time,Event,File Name
+        %> 32799,32799,00:01:04.060,00:01:04.060,"CPAP TRIAL STARTED WITH PATIENT'S OWN MASK;  RESMED MIRAGE QUATTRO MEDIUM FULL FACE @ 9 CM; LK @ 32",user.evt
+        %> 572001,572001,00:18:37.189,00:18:37.189,"Video Recording Started",biocals.evt
+        %> 572257,572257,00:18:37.689,00:18:37.689,"Impedence Check Passed",biocals.evt        
+        % =================================================================
+        function save2evts(obj,optional_filename)
+            if(nargin>1 && ~isempty(optional_filename))
+                start_stop_matrix = [];
+                evt_indices = [];
+                evt_labels = cell(obj.num_events,1);
+                evt_filenames = evt_labels;
+                for k =1:obj.num_events                    
+                    evtObj = obj.getEventObj(k);
+                    numRows = size(evtObj.start_stop_matrix,1);
+                    evtFilename = cellstr(repmat(evtObj.source.algorithm,numRows,1));
+                    if(any(strcmpi('description',evtObj.paramFieldNames)))
+                        labels = evtObj.paramStruct.description;
+                    else
+                        labels = cellstr(repmat(evtObj.label,numRows,1));                        
+                    end
+                    evt_indices = [evt_indices;repmat(k,numRows,1)]; 
+                    start_stop_matrix = [start_stop_matrix;evtObj.start_stop_matrix];                    
+                    evt_filenames = [evt_filenames;evtFilename];
+                    evt_labels = [evt_labels; labels];
+                end
+                [~,i] = sort(start_stop_matrix(:,1));
+                event_start_stop_matrix = start_stop_matrix(i,:);
+                evt_indices = evt_indices(i);
+                evt_filenames = evt_filenames(i);
+                evt_labels = evt_labels(i);
+                
+                fid = fopen(optional_filename,'w');
+                if(fid>1)
+                    
+                    % print the header
+                    fprintf(fid,'# Samplerate=%d\n',obj.defaults.parent_channel_samplerate);
+                    fprintf(fid,'Start Sample,End Sample,Start Time,End Time,Event,File Name\n');
+                    
+                    
+                    t0 = obj.stageStruct.startDateTime;
+                    
+                    starts = event_start_stop_matrix(:,1);
+                    stops = event_start_stop_matrix(:,2);
+                    
+                    
+                    %subtract 1 below, since the 1st sample technically starts at
+                    %           %t0 and thus the first sample in matlab would otherwise be listed as 1/fs seconds after t0
+                    start_offset_sec = (starts-1)/obj.defaults.parent_channel_samplerate; %add the seconds here
+                    start_times = datenum([zeros(numel(start_offset_sec),numel(t0)-1),start_offset_sec(:)])+datenum(t0);
+                    start_times = datestr(start_times,'HH:MM:SS.FFF');
+                    
+                    stop_offset_sec =  (stops-1)/obj.defaults.parent_channel_samplerate; %add the seconds here
+                    stop_times = datestr(datenum([zeros(numel(stop_offset_sec),numel(t0)-1),stop_offset_sec(:)])+datenum(t0),'HH:MM:SS.FFF');
+                    
+                    for r=1:numel(evt_indices);
+                        e=evt_indices(r);
+                        fprintf(fid,'%u,%u,%s,%s,"%s",%s\n',starts,stops,start_times,stop_times,evt_labels{e},evt_filenames{e});
+                    end
+                    
+                    fclose(fid);
+                else
+                    fprintf('Could not open %s for writing.\n',optional_filename);
+                end
+                
+                
+            else
+                if(obj.num_events<1)
+                    warndlg('No events currently available');
+                else
+                    
+                end;
+            end
+        end  %end save2evts(obj,varargin) 
+        
       
         % =================================================================
         %> @brief save2text() opens a dialog where the user can select which
@@ -1950,6 +2050,8 @@ classdef CLASS_events_container < handle
                 end;
             end
         end 
+        
+        
        % =================================================================
         %> @brief Saves events to a .SCO format file.
         %> @param obj instance of CLASS_events_container class.
@@ -2029,7 +2131,7 @@ classdef CLASS_events_container < handle
                     
                 end;
             end
-        end  %end save2txt(obj,varargin)
+        end  %end save2sco(obj,varargin)
         
         % =================================================================
         %> @brief
@@ -2409,7 +2511,7 @@ classdef CLASS_events_container < handle
         
         function obj = importEmblaEvtDir(embla_path,embla_samplerate,desired_samplerate)
             obj = CLASS_events_container();
-            import_types = {'resp','desat','plm'}; 
+            import_types = {'biocals','resp','desat','plm'}; 
             if(nargin<2 || isempty(embla_samplerate))
                 stage_evt_file = fullfile(embla_path,'stage.evt');
                 if(exist(stage_evt_file,'file'))

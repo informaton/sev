@@ -41,6 +41,6 @@ else
     end
     
     exportStruct.data = data;    
-    exportStruct.paramStruct = params;
+    exportStruct.paramStruct = [];
 end
 end

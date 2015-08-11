@@ -509,6 +509,10 @@ classdef CLASS_codec < handle
                 embla_evt_Struct = [];
                 disp([nvt_filename,' not handled']);
             else
+                
+                if(nargin < 3 || isempty(desired_samplerate))
+                    desired_samplerate = 0;
+                end
                 [~,name,~] = fileparts(evtFilename);
                 
                 fid = fopen(evtFilename,'r');
@@ -702,7 +706,7 @@ classdef CLASS_codec < handle
                     dur_sec = (start_stop_matrix(:,2)-start_stop_matrix(:,1))/embla_samplerate;
                     epoch = ceil(start_stop_matrix(:,1)/embla_samplerate/seconds_per_epoch);
                     
-                    if(nargin>2 && desired_samplerate>0)
+                    if(desired_samplerate>0)
                         start_stop_matrix = ceil(start_stop_matrix*(desired_samplerate/embla_samplerate));
                     end
                     
