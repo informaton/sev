@@ -2510,7 +2510,6 @@ classdef CLASS_events_container < handle
         end
         
         
-        
         function obj = importEmblaEvtDir(embla_path,embla_samplerate,desired_samplerate)
             obj = CLASS_events_container();
             import_types = {'biocals','resp','desat','plm'}; 
