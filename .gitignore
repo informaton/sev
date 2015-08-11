@@ -33,3 +33,5 @@ output/PSD/SEV_Tutorial.LOC-M2.psd.txt
 biocals.evt
 
 auxiliary/screenshotpath.mat
+
+*.txt~

@@ -652,6 +652,10 @@ classdef  CLASS_settings < handle
                         obj.BATCH_PROCESS.images.limit_flag = 1;
                         obj.BATCH_PROCESS.images.buffer_sec = 0.5;
                         obj.BATCH_PROCESS.images.buffer_flag = 1;
+                        
+                        %export
+                        obj.BATCH_PROCESS.export.edf_folder = '.'; %the edf folder to do a batch job on.
+                        obj.BATCH_PROCESS.export.output_folder = '.';                        
                 end
             end
         end

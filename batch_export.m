@@ -46,8 +46,13 @@ else
     
     initializeSettings(hObject);
     initializeCallbacks(hObject)
- 
-    edfPath = pwd;
+
+    edfPath = MARKING.SETTINGS.BATCH_PROCESS.export.edf_folder; %the edf folder to do a batch job on.
+
+    if(~exist(edfPath,'file'))
+        edfPath = pwd;        
+    end;
+
     updateGUI(CLASS_batch.checkPathForEDFs(edfPath),handles); 
  
     % Update handles structure
@@ -56,13 +61,15 @@ end
 end
 
 function initializeSettings(hObject)
-
+    global MARKING;
+    
     handles = guidata(hObject);
 
     % edf directory
     set(handles.push_edf_directory,'enable','on');  % start here.
     set([handles.edit_edf_directory;
         handles.text_edfs_to_process],'enable','off');
+    
     
     % file selection
     bgColor = get(handles.bg_panel_playlist,'backgroundcolor');
@@ -94,7 +101,12 @@ function initializeSettings(hObject)
         handles.menu_export_method],'enable','off');
     set(handles.menu_export_method,'string',handles.user.methodsStruct.description,'value',1);
     
-    set(handles.edit_export_directory,'string',pwd,'enable','inactive');    
+    exportPath = MARKING.SETTINGS.BATCH_PROCESS.export.output_folder;                        
+    if(~exist(exportPath,'file'))
+        exportPath = pwd;        
+    end;
+    
+    set(handles.edit_export_directory,'string',exportPath,'enable','inactive');    
     set(handles.push_export_directory,'enable','on');
     
     % Start
@@ -137,7 +149,7 @@ function push_edf_directory_Callback(hObject, eventdata, handles)
     edfPath = get(handles.edit_edf_directory,'string');
     
     if(~exist(edfPath,'file'))
-        edfPath = MARKING.SETTINGS.BATCH_PROCESS.edf_folder;
+        edfPath = MARKING.SETTINGS.BATCH_PROCESS.export.edf_folder; %the edf folder to do a batch job on.
     end;
     
     pathname = uigetfulldir(edfPath,'Select the directory containing EDF files to process');
@@ -156,12 +168,12 @@ end
 
 % --- Executes on button press in push_export_directory.
 function push_export_directory_Callback(hObject, eventdata, handles)
-    
+
     exportPathname = get(handles.edit_export_directory,'string');    
     exportPathname = uigetfulldir(exportPathname,'Select the export destination directory');
     
     if(~isempty(exportPathname))
-        set(handles.edit_export_directory,'string',exportPathname);
+        set(handles.edit_export_directory,'string',exportPathname);        
     else
         % The user pressed cancel and does not want tchange the pathname.
         
@@ -209,8 +221,12 @@ function push_start_Callback(hObject, eventdata, handles)
 %contains EDF files) has been selected.
 %This function grabs the entries from the GUI and puts them into a settings
 %struct which is then passed to the export function.
+    global MARKING;
     exportSettings = getExportSettings(handles);
     
+    if(~exist(outputPath,'dir'))
+        MARKING.SETTINGS.BATCH_PROCESS.export.output_folder = outputPath;
+    end;
     process_export(exportSettings);
 end
 

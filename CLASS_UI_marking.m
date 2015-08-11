@@ -1190,7 +1190,7 @@ classdef CLASS_UI_marking < handle
         %> @param eventdata  Unused reserved - to be defined in a future version of MATLAB
         % --------------------------------------------------------------------
         function menu_batch_edfExport_callback(obj,~, ~)
-            batch_export('edf');
+            batch_export();
         end
              
         
