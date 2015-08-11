@@ -140,19 +140,19 @@ classdef CLASS_codec < handle
         % ======================================================================
         %> @param edf_fullfilename Filename of the EDF file to find matching events file for.
         %> @note The events file is expected to be in the same directory as edf_fullfilename
-        %> and have a file extension of '.SCO' or '.EVTS'
+        %> and have a file extension of '.EVTS' or '.SCO'
         %> @param events_filename Filename of the hypnogram with path.
-        %> .STA is checked first, then .evts extension is checked if .STA is
+        %> .EVTS is checked first, then .SCO extension is checked if .STA is
         %> not found.  If neither staging file type is found (.STA or .EVTS)
         %> then stages_filename is returned as empty (i.e. [])
         %> @retval edf filename sans pathname.
         % ======================================================================
         function [events_filename, edf_name] = getEventsFilenameFromEDF(edf_fullfilename)
             [edf_path,edf_name,edf_ext] = fileparts(edf_fullfilename);
-            events_filename = fullfile(edf_path,strcat(edf_name,'.SCO'));
+            events_filename = fullfile(edf_path,strcat(edf_name,'.EVTS'));
             
             if(~exist(events_filename,'file'))
-                events_filename = fullfile(edf_path,strcat(edf_name,'.EVTS'));
+                events_filename = fullfile(edf_path,strcat(edf_name,'.SCO'));
                 if(~exist(events_filename,'file'))
                     events_filename = [];
                 end
