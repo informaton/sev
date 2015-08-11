@@ -326,6 +326,15 @@ classdef CLASS_converter < handle
                                             end
                                             events_container_obj.save2txt(fullfile(outPath,strcat('evt.',studyID)));
                                         end
+                                        
+                                        if(strcmpi(outputType,'evts') || strcmpi(outputType,'all'))
+                                            %avoid the problem of file
+                                            %names like : evt.studyName..txt
+                                            if(studyID(end)=='.')
+                                                studyID = studyID(1:end-1);
+                                            end
+                                            events_container_obj.save2evts(fullfile(outPath,strcat(studyID,'.EVTS')));
+                                        end                                        
                                         %                                     if(strcmpi(outputType,'db') || strcmpi(outputType,'all'))
                                         %                                         %ensure there is a record of it in
                                         %                                         %the database !!!
