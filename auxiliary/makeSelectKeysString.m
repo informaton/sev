@@ -11,7 +11,8 @@ function selectStr = makeSelectKeysString(cellOfKeys)
 %
 %    ans = 
 %               A0001,A0003,A0008
-%
+%  See also CLASS_database.cellstr2statcsv(cellOfFields,stat)
+%           CLASS_database.cellstr2csv(cellOfKeys)
 %------------------------------------------------------------
 
 % Hyatt Moore, IV (August 4, 2014)

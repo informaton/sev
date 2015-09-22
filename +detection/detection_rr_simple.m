@@ -190,6 +190,7 @@ else
     % detectStruct.paramStruct.summed_diff_hr = summed_diff_hr; %integrated difference of hr
     detectStruct.paramStruct.diff_hr = diff_hr; %slope of heart rate
     detectStruct.paramStruct.inst_rr = inst_rr;
+    detectStruct.paramStruct.somethingNEW = diff_hr*10;
     % mean(detectStruct.paramStruct.avg_rr)/sample_rate*60
     % detectStruct.new_data = avgdata;
     % new_data = avgdata;

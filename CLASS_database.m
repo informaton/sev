@@ -28,6 +28,7 @@
 %> Copy all innodb tables from the old mysql/data directory to the new one
 %>  (e.g. ib_logfile0, ib_logfile1, and ibdata).  
 %> From the terminal run, mysql_upgrade
+%> @note Copyright Hyatt Moore IV, 2011,2012,2013,2014,2015
 % ======================================================================
 classdef CLASS_database < handle
 
@@ -36,8 +37,7 @@ classdef CLASS_database < handle
         %> @li @c name Name of the database to use (string)
         %> @li @c user Database user (string)
         %> @li @c password Password for @c user (string)
-        dbStruct;
-        
+        dbStruct;        
     end
     
     
@@ -128,8 +128,7 @@ classdef CLASS_database < handle
             mym(['DROP DATABASE IF EXISTS ',obj.dbStruct.name]);
             mym(['CREATE DATABASE IF NOT EXISTS ',obj.dbStruct.name]);
             
-            mym('CLOSE');            
-            
+            mym('CLOSE');
         end
         
 
@@ -182,10 +181,65 @@ classdef CLASS_database < handle
             mym('close');
         end
         
+        % ======================================================================
+        %> @brief Creates a database table using the input arguments.
+        %> @param this Instance of CLASS_database
+        %> @param Name of the table to create (string)
+        %> @note Table is dropped first if it exists.
+        %> @param Column definitions for the table.  
+        %> @note Format needs to work as follows: sprintf('CREATE TABLE IF NOT EXISTS %s (%s)',tableName,tableStr);        
+        % ======================================================================        
+        function createTable(this,tableName,tableStr)
             
+            this.open(); % CLASS_database.openDB(dbStruct);
+            
+            tableName = lower(tableName);
+            this.dropTable(tableName);
+            createTableStr = sprintf('CREATE TABLE IF NOT EXISTS %s (%s)',tableName,tableStr);
+            mym(createTableStr);
+            this.close();
+        end
         
+        function dropTable(this,tableName)
+            closeOnExit = false;
+            if(mym())
+                this.open();
+                closeOnExit = true;
+            end
+            mym('DROP TABLE IF EXISTS {S}',tableName);
+            fprintf(1,'Table ''%s'' dropped from ''%s'' database.\n',tableName,this.dbStruct.name);
+            if(closeOnExit)
+                this.close();
+            end
+        end
         
+        function selectSome(this,tableName,limit)
+            if(nargin>1 && ischar(tableName))
+                if(nargin<3 || ~isnumeric(limit) || limit<1)
+                    limit = 5;
+                end
+                
+                if(mym())
+                    closeOnExit = true;
+                    this.open();
+                else
+                    closeOnExit = false;
+                end
+                mym('SELECT * FROM {S} LIMIT {Si}',tableName,limit);
+                if(closeOnExit())
+                    this.close();
+                end
+            end
+        end  
+        
+        function resultStruct = query(this,queryStr)
+            if(mym())
+                this.open();
+            end
+            resultStruct = mym(queryStr);
+        end
     end
+    
     
     methods(Static)
         
@@ -211,6 +265,7 @@ classdef CLASS_database < handle
             mym(['USE ',dbStruct.name]);
         end
         
+        
         % ======================================================================
         %> @brief Adds the user specified in the dbStruct instance variable to the
         %> the database (also specified in dbStruct)%> @param dbStruct A structure containing database accessor fields:
@@ -220,6 +275,79 @@ classdef CLASS_database < handle
         function grantPrivileges(dbStruct)
             mym(['GRANT ALL ON ',dbStruct.name,'.* TO ''',dbStruct.user,'''@''localhost'' IDENTIFIED BY ''',dbStruct.password,'''']);
         end
+        
+        
+        %------------------------------------------------------------
+        %> @brief Place ',' in between cell string entries for mysql select entry.
+        %> string = cellstr2csv(cellString)
+        %> @param Cell string of fields to select.  
+        %> @retval String
+        %> @note
+        %> example:
+        %>    cellString = {'A0001';
+        %>                  'A0003';
+        %>                  'A0008'};
+        %>
+        %>    selectStr = makeSelectKeysString(cellString)
+        %>
+        %>    ans =
+        %>               A0001,A0003,A0008
+        %>
+        %------------------------------------------------------------        
+        % Hyatt Moore, IV (August 4, 2014)        
+        function selectStr = cellstr2csv(cellOfKeys)            
+            if(isempty(cellOfKeys))
+                selectStr = '';
+            else
+                [r,c] = size(cellOfKeys);
+                if(r>c)
+                    selectStr = cell2mat(strcat(cellOfKeys,',')');
+                else
+                    selectStr = cell2mat(strcat(cellOfKeys',','));
+                end;
+                %remove the trailing ','
+                selectStr(end) = [];
+                
+            end
+        end
+        
+        
+        %------------------------------------------------------------
+        %> @brief Place ',' in between cell string entries for mysql select entry.
+        %> @param Cell string of fields to select.  
+        %> @param Optional mysql grouping command (default is 'mean').
+        %> @retval String
+        %> @note
+        %> example:
+        %>    cellString = {'A0001';
+        %>                  'A0003';
+        %>                  'A0008'};
+        %>
+        %>    selectStr = cellstr2statcsv(cellString)
+        %>
+        %>    ans =
+        %>               mean(A0001) AS A0001, mean(A0003) AS A0003, mean(A0008) AS A0008
+        %>
+        %------------------------------------------------------------        
+        % Hyatt Moore, IV (August 4, 2014)        
+        function selectStr = cellstr2statcsv(cellOfFields,stat)
+            if(isempty(cellOfFields))
+                selectStr = '';
+            else
+                if(nargin<2 || ~ischar(stat))
+                    stat = 'AVG';
+                end
+                [r,c] = size(cellOfFields);
+                if(r>c)
+                    selectStr = cell2mat(strrep(strcat('***',stat,'(',cellOfFields',') AS***',cellOfFields',','),'***',' '));
+                else
+                    selectStr = cell2mat(strrep(strcat('***',stat,'(',cellOfFields,') AS***',cellOfFields,','),'***',' '));
+                end;
+                %remove the trailing ','
+                selectStr(end) = [];                
+            end
+        end
+        
         
         
         % ======================================================================
