@@ -9,7 +9,8 @@ function string = makeWhereInString(data,dataType)
 %
 %------------------------------------------------------------
 
-% Hyatt Moore, IV (< June, 2013)
+% Hyatt Moore, IV (< June, 2013) - this is being moved to CLASS_database.m
+% as of 9/22/2015
 
 if(isempty(data))
     string = '';
