@@ -123,7 +123,7 @@ end
 
 set(handles.menu_methods,'string',handles.user.methods.evt_label,'value',selected_method_ind);
 handles.user.selected_method_ind = selected_method_ind;
-handles.user.MAX_NUM_PROPERTIES = 7; %used to be 7; still is 7
+handles.user.MAX_NUM_PROPERTIES = 17; %used to be 7; still is 7
 handles.user.modified = false;
 if(~isempty(input_pStruct))
     %ensure that the input_pStruct has the same fields as the property I

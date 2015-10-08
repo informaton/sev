@@ -49,7 +49,7 @@
 %> @li @c paramStruct.auc Area of the positive scaled amplitude
 %> @li @c paramStruct.low_uV Lowest signal amplitude
 %> @li @c paramStruct.high_uV Highest signal amplitude
-function detectStruct = detection_lm_dualthresh_twopass_variable_noisefloor_mediator(data_in, params, stageStruct)
+function detectStruct = detection_lm_dualthresh_twopass_variable_noisefloor_mediator(data_in, params, varargin)
 % detects PLM using dualthreshold method where the thresholds adjust based on a moving average power
 %  that accounts for other portions and then does a second pass, with
 %  adjustment to the noisefloor on account of detections made the first
@@ -123,8 +123,11 @@ else
     end
     
     
-    
-    data = data_in;
+    if(iscell(data_in) && numel(data_in)==2)
+        data = data_in{1}-data_in{2};
+    else
+        data = data_in;
+    end
     
     %merge events that are within 1/20th of a second of each other samples of each other
     dur_samples_below_count = ceil(0.05*params.samplerate);
@@ -186,7 +189,13 @@ else
         num_events = size(new_events,1);
         if(num_events>0)
             
-            data = data_in;
+           %  data = data_in; % Why is this here; perhaps MATLAB alters
+           %  data during previous call, but does not alter data_in ?
+           if(iscell(data_in) && numel(data_in)==2)
+               data = data_in{1}-data_in{2};
+           else
+               data = data_in;
+           end
             paramStruct.median = zeros(num_events,1);
             paramStruct.rms = zeros(num_events,1);
             paramStruct.abs_amplitude = zeros(num_events,1);

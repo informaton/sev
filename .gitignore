@@ -35,3 +35,5 @@ biocals.evt
 auxiliary/screenshotpath.mat
 
 *.txt~
+
+*.inf~
