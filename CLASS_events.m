@@ -237,10 +237,15 @@ classdef CLASS_events < handle
                     'color',obj.cur_color,'string',obj.label,...
                     'uicontextmenu',[],'interpreter','none');
 
-                enterFcn = @(figHandle, currentPoint)...
-                    set(figHandle, 'Pointer', 'crosshair');
-                iptSetPointerBehavior(obj.evt_patch_h, enterFcn);
-                iptPointerManager(obj.parent_fig);
+                try
+                    enterFcn = @(figHandle, currentPoint)...
+                        set(figHandle, 'Pointer', 'crosshair');
+                    iptSetPointerBehavior(obj.evt_patch_h, enterFcn);
+                    iptPointerManager(obj.parent_fig);
+                catch me
+                    % iptSetPointerBehavior requires
+                    % toolbox/shared/imageslib
+                end
             else
                 obj.label_h = [];
             end
@@ -442,7 +447,11 @@ classdef CLASS_events < handle
             art_ind = find(y_art);
             x = [art_ind;art_ind;art_ind];
             y = [zeros(size(art_ind)); y_art(art_ind); nan(size(art_ind))];
-            line(x(:),y(:)+y_offset,'color',obj.cur_color,'linestyle',style,'parent',parentH,'erasemode','normal','linewidth',1,'hittest','off');
+            if(verLessThan('matlab','7.14'))
+                line(x(:),y(:)+y_offset ,'color',obj.cur_color,'linestyle',style,'parent',parentH,'erasemode','normal','linewidth',1,'hittest','off');
+            else
+                line(x(:),y(:)+y_offset ,'color',obj.cur_color,'linestyle',style,'parent',parentH,'linewidth',1,'hittest','off');
+            end
             h = text('parent',parentH,'fontsize',7,'string',[obj.channel_name,' ',obj.label],'units','data','horizontalalignment','left','verticalalignment','baseline','interpreter','none');
             text_extent = get(h,'extent');
             label_position = [-text_extent(3), y_offset, 0];

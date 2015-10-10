@@ -24,7 +24,7 @@ function varargout = plist_editor_dlg(varargin)
 % last modified: 10.9.12
 % Edit the above text to modify the response to help plist_editor_dlg
 
-% Last Modified by GUIDE v2.5 15-Sep-2014 13:00:34
+% Last Modified by GUIDE v2.5 10-Oct-2015 09:16:45
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -104,7 +104,7 @@ if(numel(varargin)>0 && ~isempty(varargin{1}))
     if(isempty(selected_method_ind))
         %is the algorithm input instead of the label? - try again
         selected_method_label = strrep(selected_method_label,handles.user.detection_packageName,'');
-        selected_method_ind = find(strcmp(selected_method_label,handles.user.methods.mfile));
+        selected_method_ind = find(strcmp(selected_method_label,handles.user.methods.mfile),1);
     
         if(isempty(selected_method_ind))
             selected_method_ind = 1;
@@ -125,14 +125,8 @@ set(handles.menu_methods,'string',handles.user.methods.evt_label,'value',selecte
 handles.user.selected_method_ind = selected_method_ind;
 handles.user.MAX_NUM_PROPERTIES = 17; %used to be 7; still is 7
 handles.user.modified = false;
-if(~isempty(input_pStruct))
-    %ensure that the input_pStruct has the same fields as the property I
-    %want....
-    handles = set_method_fields(handles,input_pStruct);
-    
-else
-    handles = menu_methods_Callback(handles.menu_methods,[],handles);
-end
+
+handles = menu_methods_Callback(handles.menu_methods,[],handles);
 
 handles.output = get_params(handles);
 set(hObject,'name','Detector Settings (single study mode)');
@@ -140,8 +134,12 @@ set(hObject,'visible','on');
 % resizePanelForAddedControls(handles.pan_properties,2,20);
 % resizePanelAndParentForAddedControls(handles.pan_properties,2);
 % sizePanelAndParentForUIControls(handles.pan_properties,9,handles);
-
 handles = resizePanelAndFigureForUIControls(handles.pan_properties,handles.user.cur_num_properties,handles);
+
+% Fill in the properties with input values as available.
+if(~isempty(input_pStruct))
+    handles = set_method_fields(handles,input_pStruct);
+end
 
 % Update handles structure
 guidata(hObject, handles);
@@ -474,4 +472,3 @@ catch me
     warndlg(sprintf('Default settings not provided by this method (%s)',handles.user.methods.mfile{selection_ind}),'Warning','modla');
     showME(me);
 end
-

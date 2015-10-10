@@ -869,7 +869,7 @@ classdef CLASS_events_container < handle
                 catch ME
                     disp(ME.message);
                     disp(ME.stack(1))
-                    showME(me);
+                    showME(ME);
                     obj.num_events = obj.num_events-1;
                 end
             else
@@ -2347,8 +2347,7 @@ classdef CLASS_events_container < handle
                 assignin('base',varName,tmpStruct);
             catch me
                 varName = 'evtStruct';
-                assignin('base',varName,tmpStruct);
-                
+                assignin('base',varName,tmpStruct);                
             end
             uiwait(msgbox(sprintf('Event data assigned to workspace variable %s',varName)));
         end
