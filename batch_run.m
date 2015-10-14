@@ -311,12 +311,13 @@ end
         num_edfs = 0;
     else
         %pc's do not have a problem with case; unfortunately the other side
-        %does
-        if(ispc)
-            edf_file_list = dir(fullfile(path,'*.EDF'));
-        else
-            edf_file_list = [dir(fullfile(path, '*.EDF'));dir(fullfile(path, '*.edf'))]; %dir(fullfile(path, '*.EDF'))];
-        end
+        %does in prior versions...
+        %         if(ispc)
+        %             edf_file_list = dir(fullfile(path,'*.EDF'));
+        %         else
+        %             edf_file_list = [dir(fullfile(path, '*.EDF'));dir(fullfile(path, '*.edf'))]; %dir(fullfile(path, '*.EDF'))];
+        %         end
+        edf_file_list = dir(fullfile(path,'*.EDF'));
         
         num_edfs_all = numel(edf_file_list);
         
@@ -657,6 +658,9 @@ for k = 1:num_selected_events
         pfile = ['+detection/',eventStruct.method_function,'.plist'];
         if(exist(pfile,'file'))
             params =plist.loadXMLPlist(pfile);
+        else
+            mfile = ['detection.',eventStruct.method_function];        
+            params = feval(mfile);
         end
     end
     
@@ -2042,7 +2046,7 @@ function edit_selectPlaylist_ButtonDownFcn(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-[playlist,ply_filename] = getPlaylist(handles,'-gui');
+playlist = getPlaylist(handles,'-gui');
 
 handles.user.playlist = playlist;
 checkPathForEDFs(handles,handles.user.playlist);

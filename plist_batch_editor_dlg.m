@@ -122,7 +122,7 @@ else
 end;
 
 set(handles.text_detectorName,'string',handles.user.methods.evt_label{selected_method_ind});
-handles.user.MAX_NUM_PROPERTIES = 7;
+handles.user.MAX_NUM_PROPERTIES = 17;
 
 
 if(isempty(batchSettingsStruct))
