@@ -1058,15 +1058,15 @@ persistent log_fid;
 if(pathname)
     MARKING.SETTINGS.BATCH_PROCESS.edf_folder = pathname;
     
-%     file_list = dir([fullfile(path, '*.EDF');fullfile(path, '*.edf')]);
+    %     file_list = dir([fullfile(path, '*.EDF');fullfile(path, '*.edf')]);
     %pc's do not have a problem with case; unfortunately the other side
     %does
-    if(ispc)
-        file_list = dir(fullfile(pathname,'*.EDF'));
-    else
-        file_list = [dir(fullfile(pathname, '*.EDF'));dir(fullfile(pathname, '*.edf'))]; %dir(fullfile(path, '*.EDF'))];
-    end
-    
+    %     if(ispc)
+    %         file_list = dir(fullfile(pathname,'*.EDF'));
+    %     else
+    %         file_list = [dir(fullfile(pathname, '*.EDF'));  dir(fullfile(pathname, '*.edf'))]; %dir(fullfile(path, '*.EDF'))];
+%     end
+file_list = dir(fullfile(pathname,'*.EDF'));
     if(~isempty(playlist))
         file_list = filterPlaylist(file_list, playlist);        
     end
