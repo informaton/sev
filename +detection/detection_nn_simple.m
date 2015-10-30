@@ -47,10 +47,10 @@ else
     end
     
     
-    
     if(~iscell(data_cell))
         data_cell = {data_cell};
     end
+    
     data = data_cell{1};
     samplerate = params.samplerate;
     
@@ -186,18 +186,21 @@ else
     detectStruct.paramStruct.summed_diff_hr = summed_diff_hr; %integrated difference of hr
     detectStruct.paramStruct.diff_hr = diff_hr; %slope of heart rate
     detectStruct.paramStruct.inst_rr = inst_rr;
-    detectStruct.paramStruct.somethingNEW = diff_hr*10;
+    %     detectStruct.paramStruct.somethingNEW = diff_hr*10;
     % mean(detectStruct.paramStruct.avg_rr)/sample_rate*60
     % detectStruct.new_data = avgdata;
     % new_data = avgdata;
     
-    new_data = zeros(size(avgdata));
-    new_data(1:evt_i(1))=detectStruct.paramStruct.inst_hr(1);
-    for k=2:numel(evt_i);
-        new_data(evt_i(k-1):evt_i(k))=detectStruct.paramStruct.inst_hr(k);
-    end
+    %     new_data = zeros(size(avgdata));
+    %     new_data(1:evt_i(1))=detectStruct.paramStruct.inst_hr(1);
+    %     for k=2:numel(evt_i);
+    %         new_data(evt_i(k-1):evt_i(k))=detectStruct.paramStruct.inst_hr(k);
+    %     end
     
+    new_data = CLASS_events.eventParam2Signal(detectStruct,'inst_rr',numel(data),params.samplerate,params.normalized_samples_per_second);
     detectStruct.new_data = new_data;
+    
+    
 end
 
 

@@ -1251,6 +1251,44 @@ classdef CLASS_events < handle
             end;
         end
         
+        function signalVector = eventParam2DeltaSignal(eventStruct, paramName, signalLength, sampleRate, resampleOrder)
+            try
+                eventVector = zeros(signalLength,1);
+                paramVector = eventStruct.paramStruct.(paramName);
+                for d=1:size(eventStruct.new_events,1)
+                    eventVector(eventStruct.new_events(d,1):eventStruct.new_events(d,2)) = paramVector(d);
+                end
+                resampleFilter = zeros(sampleRate,1);
+                resampleFilter(linspace(1,sampleRate,resampleOrder))=1;
+                signalVector = conv(eventVector, resampleFilter);
+                
+            catch me
+                showME(me);
+                signalVector = [];
+            end            
+        end
+        
+        function signalVector = eventParam2Signal(eventStruct, paramName, signalLength, sampleRate, resampleOrder)
+            try
+                eventVector = zeros(signalLength,1);
+                paramVector = eventStruct.paramStruct.(paramName);
+                
+                eventVector(1:eventStruct.new_events(1,2))=paramVector(1);
+                
+                for d=2:size(eventStruct.new_events,1)
+                    eventVector(eventStruct.new_events(d-1,2):eventStruct.new_events(d,1)) = paramVector(d);
+                end
+                
+                resampleFilter = zeros(sampleRate,1);
+                resampleFilter(linspace(1,sampleRate,resampleOrder))=1;
+                signalVector = conv(eventVector, resampleFilter);
+                
+            catch me
+                showME(me);
+                signalVector = [];
+            end            
+        end
+        
         % =================================================================
         %> @brief
         %> @param

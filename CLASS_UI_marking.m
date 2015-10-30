@@ -569,7 +569,10 @@ classdef CLASS_UI_marking < handle
             if(~isempty(fullfile) && fs>0)
                 data = load(fullfile,'ascii');                
                 [~,filename,~]= fileparts(fullfile);
-                HDR = CHANNELS_CONTAINER.loadGenericChannel(data,fs,filename);
+                for ch=1:size(data,2)
+                    channelName = sprintf('%s_channel_%d',filename,ch);
+                    HDR = CHANNELS_CONTAINER.loadGenericChannel(data(:,ch),fs,channelName);
+                end
                 
                 obj.setDateTimeFromHDR(HDR);
                 stages_filename = [];                

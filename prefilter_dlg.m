@@ -229,7 +229,9 @@ else
     if(exist(pFile,'file'))
         params = plist.loadXMLPlist(pFile);
     elseif(exist(mFullFilename,'file'))
-        params = feval(strcat(handles.user.filter_packageName,mFile));
+        % get rid of the '.m' we just added on earlier to actually evalute
+        % the filter
+        params = feval(strcat(handles.user.filter_packageName,mFile(1:end-2)));
         if(strcmpi(param_gui,'plist_editor_dlg'))
             plist.saveXMLPlist(pFile,params);
         end
