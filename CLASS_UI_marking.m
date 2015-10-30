@@ -552,10 +552,22 @@ classdef CLASS_UI_marking < handle
         function menu_file_load_text_channel_callback(obj, hObject, eventdata)
             global CHANNELS_CONTAINER;
             msg = 'Select a text file with channel data (column format) to be loaded into SEV';
-            fullfile = uigetfullfile({'*.txt','*.*'},msg);
+            fileFilter = {'*.txt;*.TXT','Text files';'*.*','All files'};
+            fullfile = uigetfullfile(fileFilter,msg);
             if(~isempty(fullfile))
-                data = load(fullfile,'ascii');
-                fs = 100;
+                defaultAnswer = {'100'};
+                name = 'Sampling frequency';
+                numLines = 1;
+                fsStr = inputdlg('Enter sampling rate of data file',name,numLines,defaultAnswer);
+                if(~isempty(fsStr) && iscell(fsStr))
+                    fs = str2double(fsStr{1});
+                else
+                    fs = 0;
+                end
+            end
+                
+            if(~isempty(fullfile) && fs>0)
+                data = load(fullfile,'ascii');                
                 [~,filename,~]= fileparts(fullfile);
                 HDR = CHANNELS_CONTAINER.loadGenericChannel(data,fs,filename);
                 
