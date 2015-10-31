@@ -181,7 +181,7 @@ else
     detectStruct.paramStruct.diff_hr = diff_hr; %slope of heart rate
     % detectStruct.paramStruct.inst_rr = inst_rr;
     detectStruct.paramStruct.inst_hr = inst_hr; %instant heart rate
-    % detectStruct.paramStruct.avg_hr = avg_hr;
+    detectStruct.paramStruct.avg_hr = avg_hr;
     detectStruct.paramStruct.sympathetic_response = sym; %integrated difference of hr
     detectStruct.paramStruct.summed_diff_hr = summed_diff_hr; %integrated difference of hr
     detectStruct.paramStruct.diff_hr = diff_hr; %slope of heart rate
