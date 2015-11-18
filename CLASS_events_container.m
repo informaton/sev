@@ -1547,10 +1547,10 @@ classdef CLASS_events_container < handle
         end
            
         % =================================================================
-        %> @brief loadEventsFromSSCevtsFile loads events contained in a WSC
-        %> formatted .SCO file        
+        %> @brief loadEventsFromSSCevtsFile loads events contained in an SSC
+        %> formatted .evts ascii file        
         %> @param obj instance of CLASS_events_container class.
-        %> @param filename The name of the .SCO file
+        %> @param filename The name of the .evts file
         %> @retval obj instance of CLASS_events_container class
         % =================================================================
         function loadEventsFromSSCevtsFile(obj,filename)
@@ -1593,7 +1593,8 @@ classdef CLASS_events_container < handle
                         conversion_factor = channel_samplerate/SSC_evts.samplerate;
 
                         
-                        cur_event = round(SSC_evts.startStopSamples(event_indices(k)==indJ,:)*conversion_factor);
+
+                        cur_event = ceil(SSC_evts.startStopSamples(event_indices(k)==indJ,:)*conversion_factor);
                         
                         
                         cur_evt_label = event_labels{k};

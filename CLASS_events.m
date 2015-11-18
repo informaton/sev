@@ -91,7 +91,10 @@ classdef CLASS_events < handle
         hidden; 
         
         %> @brief this is the parameters of interest for this event that will
-        %> likely be saved later for post analysis
+        %> likely be saved later for post analysis.  These include
+        %> additional information related to detected events, and should not
+        %> be confused with setting parameters used by the source
+        %> detection algorithm to obtain events (see 'source' field).
         paramStruct;
         
         %> handle to textbox that displays paramStruct values
@@ -1276,7 +1279,7 @@ classdef CLASS_events < handle
                 controlPoints = [eventStruct.new_events(:,1), eventStruct.paramStruct.(paramName)];
                 signalVector = spline(controlPoints(:,1),controlPoints(:,2),resampledX);
                 
-                
+
                 %                  tic;signalVector = hySpline(resampledX,controlPoints,1000);toc;
                 %                 eventVector = zeros(signalLength,1);
                 %                 paramVector = eventStruct.paramStruct.(paramName);
@@ -1304,7 +1307,7 @@ classdef CLASS_events < handle
         % =================================================================
         function filled_events = fill_bins_with_events(event_mat_start_stop, num_samples)
             %this function breaks a timeline into num_samples chunks, and fills the
-            %entire chunck with 1's if it contains at least one event that is not 0
+            %entire chunk with 1's if it contains at least one event that is not 0
             %event_mat_start_stop is a two column matrix of start and stop indices (columns 1 and 2)
             %for the event_mat_start_stop
             num_samples = floor(num_samples);            
