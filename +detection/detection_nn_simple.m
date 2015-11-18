@@ -163,7 +163,7 @@ else
     summed_diff_hr = [summed_diff_hr((delay+1):end); zeros(delay,1)];
     
     %sympathetic response;
-    sym = sympthetic_response(inst_hr);
+    sym = sympathetic_response(inst_hr);
     
     
     avg_order = 4;
@@ -196,8 +196,10 @@ else
     %     for k=2:numel(evt_i);
     %         new_data(evt_i(k-1):evt_i(k))=detectStruct.paramStruct.inst_hr(k);
     %     end
-    
-    new_data = CLASS_events.eventParam2Signal(detectStruct,'inst_rr',numel(data),params.samplerate,params.normalized_samples_per_second);
+    resampleT = 1:numel(data);
+    controlPoints = [evt_i,inst_rr];
+    new_data = spline(resampleT,controlPoints);
+%     new_data = CLASS_events.eventParam2Signal(detectStruct,'inst_rr',numel(data),params.samplerate,params.normalized_samples_per_second);
     detectStruct.new_data = new_data;
     
     
@@ -205,7 +207,7 @@ end
 
 
 
-function sym = sympthetic_response(data)
+function sym = sympathetic_response(data)
 %calculates sympathetic response as follows
 % m(n) = mean(n-N1:n);  %normalize by the mean
 % sym(n) = [max(n:n+N2)-m(n)]/[min(n-N1:n)-m(n)] 

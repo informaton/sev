@@ -551,22 +551,31 @@ classdef CLASS_UI_marking < handle
         % =================================================================
         function menu_file_load_text_channel_callback(obj, hObject, eventdata)
             global CHANNELS_CONTAINER;
+            
+            
+            candidateFilename = obj.SETTINGS.VIEW.text_channels_filename;
+            
             msg = 'Select a text file with channel data (column format) to be loaded into SEV';
             fileFilter = {'*.txt;*.TXT','Text files';'*.*','All files'};
-            fullfile = uigetfullfile(fileFilter,msg);
+            
+            multiselectOption = 'off';
+            if(~exist(candidateFilename,'file'))
+                candidateFilename = pwd;
+            end
+            fullfile = uigetfullfile(fileFilter,msg,multiselectOption, candidateFilename);
             if(~isempty(fullfile))
-                defaultAnswer = {'100'};
-                name = 'Sampling frequency';
-                numLines = 1;
-                fsStr = inputdlg('Enter sampling rate of data file',name,numLines,defaultAnswer);
-                if(~isempty(fsStr) && iscell(fsStr))
-                    fs = str2double(fsStr{1});
-                else
-                    fs = 0;
+                try
+                    defaultAnswer = {num2str(obj.SETTINGS.VIEW.text_channels_samplerate)};
+                catch me
+                    showME(me);
+                    defaultAnswer = {'100'};
                 end
+                fs = getSamplerateDlg(defaultAnswer);
             end
                 
             if(~isempty(fullfile) && fs>0)
+                obj.SETTINGS.VIEW.text_channels_filename = fullfile;
+                obj.SETTINGS.VIEW.text_channels_samplerate = fs;
                 data = load(fullfile,'ascii');                
                 [~,filename,~]= fileparts(fullfile);
                 for ch=1:size(data,2)

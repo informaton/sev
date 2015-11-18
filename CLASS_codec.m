@@ -808,7 +808,8 @@ classdef CLASS_codec < handle
                 %Start Sample,End Sample,Start Time (elapsed),End Time (elapsed),Event,File Name
                 %0,58240,00:00:00.000,00:01:53.750,"Bad Data (SaO2)",BadData.evt
                 %----------------------------------------------/
-                scanCell = textscan(fid,'%f %f %s %s %s %s','delimiter',',','commentstyle','#','headerlines',2);
+                headerLine1 = fgetl(fid);
+                scanCell = textscan(fid,'%f %f %s %s %q %s','delimiter',',','commentstyle','#','headerlines',1);  %used to be 2, but now I retrieve the first line in case there is additional information there.
                 fclose(fid);
                 
                 if(isempty(scanCell{1}))
@@ -819,23 +820,33 @@ classdef CLASS_codec < handle
                     
                     % parse the stages first
                     stageInd = strcmp(scanCell{6},'stage.evt');
-                    stageStartStopSamples = [scanCell{1}(stageInd),scanCell{2}(stageInd)];
-                    stageStartStopDatenums =  [datenum(scanCell{3}(stageInd),'HH:MM:SS.FFF'),datenum(scanCell{4}(stageInd),'HH:MM:SS.FFF')];
-                    epochDurSec = datevec(diff(stageStartStopDatenums(1,:)))*[0;0;24*60;60;1;1/60]*60;
-                    epochDurSamples = diff(stageStartStopSamples(1,:));
-                    SCOStruct.samplerate = epochDurSamples/epochDurSec;
-                    lastStageSample  = stageStartStopSamples(end);
-                    numEpochs = lastStageSample/epochDurSamples;  %or stageStartStopSamples(end,1)/epochDurSamples+1;
-                    stageStr = strrep(strrep(strrep(strrep(scanCell{5}(stageInd),'"',''),'Stage ',''),'REM','5'),'Wake','0');
-                    %fill in any missing stages with 7.
-                    missingStageValue = default_unknown_stage;
-                    stageVec = repmat(missingStageValue,numEpochs,1);
-                    stageStartEpochs = stageStartStopSamples(:,1)/epochDurSamples+1;  %evts file's start samples begin at 0; 0-based nubmer, but MATLAB indexing starts at 1.
-                    stageVec(stageStartEpochs) = str2double(stageStr);  % or, equivalently, str2num(cell2mat(stageStr));
-                    %                 y = [eventStruct.epoch,eventStruct.stage];
-                    %                 staFilename = fullfile(outPath,strcat(studyID,'STA'));
-                    %                 save(staFilename,'y','-ascii');
                     
+                    if(isempty(stageInd) || ~any(stageInd))
+                        stageVec = [];
+                        fsCell = regexp(headerLine1,'#\s*\w+=(?<samplerate>\d+(\.\d+)?)','names');
+                        
+                        SCOStruct.samplerate = str2double(fsCell.samplerate);
+                        if(isempty(fsCell.samplerate))
+                           SCOStruct.samplerate = getSamplerateDlg();
+                        end
+                    else
+                        stageStartStopSamples = [scanCell{1}(stageInd),scanCell{2}(stageInd)];
+                        stageStartStopDatenums =  [datenum(scanCell{3}(stageInd),'HH:MM:SS.FFF'),datenum(scanCell{4}(stageInd),'HH:MM:SS.FFF')];
+                        epochDurSec = datevec(diff(stageStartStopDatenums(1,:)))*[0;0;24*60;60;1;1/60]*60;
+                        epochDurSamples = diff(stageStartStopSamples(1,:));
+                        SCOStruct.samplerate = epochDurSamples/epochDurSec;
+                        lastStageSample  = stageStartStopSamples(end);
+                        numEpochs = lastStageSample/epochDurSamples;  %or stageStartStopSamples(end,1)/epochDurSamples+1;
+                        stageStr = strrep(strrep(strrep(strrep(scanCell{5}(stageInd),'"',''),'Stage ',''),'REM','5'),'Wake','0');
+                        %fill in any missing stages with 7.
+                        missingStageValue = default_unknown_stage;
+                        stageVec = repmat(missingStageValue,numEpochs,1);
+                        stageStartEpochs = stageStartStopSamples(:,1)/epochDurSamples+1;  %evts file's start samples begin at 0; 0-based nubmer, but MATLAB indexing starts at 1.
+                        stageVec(stageStartEpochs) = str2double(stageStr);  % or, equivalently, str2num(cell2mat(stageStr));
+                        %                 y = [eventStruct.epoch,eventStruct.stage];
+                        %                 staFilename = fullfile(outPath,strcat(studyID,'STA'));
+                        %                 save(staFilename,'y','-ascii');
+                    end
                     
                     % Okay, now that we have taken care of the staging, let's
                     % remove it and everything else that is not going to be

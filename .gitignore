@@ -39,3 +39,5 @@ auxiliary/screenshotpath.mat
 *.inf~
 
 *.txt
+
+*.mat

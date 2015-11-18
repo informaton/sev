@@ -1282,9 +1282,9 @@ classdef CLASS_events < handle
                     eventVector(eventStruct.new_events(d-1,2):eventStruct.new_events(d,1)) = paramVector(d);
                 end
                 
-                resampleFilter = zeros(sampleRate,1);
-                resampleFilter(linspace(1,sampleRate,resampleOrder))=1;
-                signalVector = conv(eventVector, resampleFilter);
+                %resampleFilter = zeros(sampleRate,1);
+                %resampleFilter(linspace(1,sampleRate,resampleOrder))=1;
+                %signalVector = conv(eventVector, resampleFilter);
                 
             catch me
                 showME(me);
