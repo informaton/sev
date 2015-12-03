@@ -1273,18 +1273,26 @@ classdef CLASS_events < handle
         
         function signalVector = eventParam2Signal(eventStruct, paramName, signalLength, sampleRate, resampleOrder)
             try
-                eventVector = zeros(signalLength,1);
-                paramVector = eventStruct.paramStruct.(paramName);
+                %                 resampledX = 1:resampleOrder:signalLength;
+                resampledX = 1:signalLength';
                 
-                eventVector(1:eventStruct.new_events(1,2))=paramVector(1);
+                controlPoints = [eventStruct.new_events(:,1), eventStruct.paramStruct.(paramName)];
+                signalVector = spline(controlPoints(:,1),controlPoints(:,2),resampledX);
                 
-                for d=2:size(eventStruct.new_events,1)
-                    eventVector(eventStruct.new_events(d-1,2):eventStruct.new_events(d,1)) = paramVector(d);
-                end
+
+                %                  tic;signalVector = hySpline(resampledX,controlPoints,1000);toc;
+                %                 eventVector = zeros(signalLength,1);
+                %                 paramVector = eventStruct.paramStruct.(paramName);
+                %
+                %                 eventVector(1:eventStruct.new_events(1,2))=paramVector(1);
+                %
+                %                 for d=2:size(eventStruct.new_events,1)
+                %                     eventVector(eventStruct.new_events(d-1,2):eventStruct.new_events(d,1)) = paramVector(d);
+                %                 end
                 
-                %resampleFilter = zeros(sampleRate,1);
-                %resampleFilter(linspace(1,sampleRate,resampleOrder))=1;
-                %signalVector = conv(eventVector, resampleFilter);
+                %                 resampleFilter = zeros(sampleRate,1);
+                %                 resampleFilter(linspace(1,sampleRate,resampleOrder))=1;
+                %                 signalVector = conv(eventVector, resampleFilter);
                 
             catch me
                 showME(me);
