@@ -196,9 +196,11 @@ else
     %     for k=2:numel(evt_i);
     %         new_data(evt_i(k-1):evt_i(k))=detectStruct.paramStruct.inst_hr(k);
     %     end
-    resampleT = 1:numel(data);
+    pointsToResampleAt = 1:numel(data);
     controlPoints = [evt_i,inst_rr];
-    new_data = spline(resampleT,controlPoints);
+    
+    new_data = spline(pointsToResampleAt,controlPoints);
+
 %     new_data = CLASS_events.eventParam2Signal(detectStruct,'inst_rr',numel(data),params.samplerate,params.normalized_samples_per_second);
     detectStruct.new_data = new_data;
     
