@@ -235,22 +235,21 @@ classdef CLASS_channel < handle
                             filterS = obj.filterStruct(k);
                             if(obj.channel_index==filterS.src_channel_index)
                                 
-                                %handle the case where parameters are passed in
-                                %from previous settings
-                                if(~isempty(filterS.params))
-                                    filterS.params.samplerate = obj.samplerate; %needed at times in filters where the data is sent directly - otherwise a blank argument is passed to the function which then loads the data itself
-                                    if(isempty(filterS.ref_channel_index))
-                                        obj.filter_data =feval([filterS.filter_path(2:end),'.',filterS.m_file],obj.getData(),filterS.params);
-                                    else
-                                        obj.filter_data =feval([filterS.filter_path(2:end),'.',filterS.m_file],obj.getData(),filterS.ref_data,filterS.params);
-                                    end
-                                else
-                                    if(isempty(filterS.ref_channel_index))
-                                        obj.filter_data =feval([filterS.filter_path(2:end),'.',filterS.m_file],obj.getData());
-                                    else
-                                        obj.filter_data =feval([filterS.filter_path(2:end),'.',filterS.m_file],obj.getData(),filterS.ref_data);
-                                    end
+                                filterFcn = [filterS.filter_path(2:end),'.',filterS.m_file];
+                                
+                                % handle case where parameters are not seen
+                                % or passed in yet.
+                                if(isempty(filterS.params))
+                                    filterS.params = feval(filterFcn);
                                 end
+                                filterS.params.samplerate = obj.samplerate; %needed at times in filters where the data is sent directly - otherwise a blank argument is passed to the function which then loads the data itself
+                                if(isempty(filterS.ref_channel_index))
+                                    obj.filter_data =feval(filterFcn,obj.getData(),filterS.params);
+                                else
+                                    obj.filter_data =feval(filterFcn,obj.getData(),filterS.ref_data,filterS.params);
+                                end
+                                    
+                                
                                 
                                 %make sure we stay with row vectors for
                                 %consistency throughout gsev

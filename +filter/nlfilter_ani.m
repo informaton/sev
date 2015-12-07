@@ -6,7 +6,7 @@
 %> @brief 
 %> @param Vector of sample data to filter.
 %> @param params Structure of field/value parameter pairs that to adjust filter's behavior.
-%> @retval filtsig The filtered signal. 
+%> @retval filtSig The filtered signal. 
 %> written by Hyatt Moore IV, December 3, 2015
 
 %> @note Requires heart rate detection classification method,
@@ -14,40 +14,93 @@
 %> -
 %> - 
 %> - 
-function filtsig = nlfilter_ani(sigData, params)
+function filtSig = nlfilter_ani(sigData, params)
+    
+    % initialize default parameters
+    
+    defaultParams.freqStart_Hz = 0.15;
+    defaultParams.freqStop_Hz = 0.5;    
+    defaultParams.filter_order = 10;  %ECG filter
+    defaultParams.normalized_samples_per_second = 4;  %
+    defaultParams.duration_area_under_envelope_for_ani_seconds = 16;
+    
+    % return default parameters if no input arguments are provided.
+    if(nargin==0)
+        filtSig = defaultParams;
+    else
+        if(nargin<2 || isempty(params))
+            
+            pfile =  strcat(mfilename('fullpath'),'.plist');
+            
+            if(exist(pfile,'file'))
+                %load it
+                params = plist.loadXMLPlist(pfile);
+            else
+                %make it and save it for the future
+                params = defaultParams;
+                plist.saveXMLPlist(pfile,params);
+            end
+        end        
+        
+        stageStruct = [];
+        nn_params = params;
+        % Get normalized n.n signal
+        detectStruct = detection.detection_nn_simple(sigData,nn_params, stageStruct);
+        sigData = detectStruct.new_data(:);  %work with row vectors
+        
+        % wavelet filter for the interval of interest:
+        max_decompositions = 10;
+        waveletParams.wname = 'db4';
+        waveletParams.threshhold = 50;
+        waveletParams.num_levels = 5;
+        waveletParams.soft_threshhold = 1;
+        waveletParams.decomposition_levels = true(max_decompositions);
+        waveletParams.approximation_level = true;
+        waveletParams.samplerate = params.samplerate;
+        
+        % or just use a convential filter
+        bandPassParams.order=40;
+        bandPassParams.samplerate = params.samplerate;
+        bandPassParams.start_freq_hz=defaultParams.freqStart_Hz;
+        bandPassParams.stop_freq_hz=defaultParams.freqStop_Hz;
+        
+        %filterParams = bandPassParams;
+        filtSig = filter.fir_bp(sigData, bandPassParams);
+        
+        envelopeHeightSig = getEnvelopeHeight(filtSig);        
+        numSeconds = params.duration_area_under_envelope_for_ani_seconds;
+        movingSummerParams.order = numSeconds*params.samplerate;
+        movingSummerParams.abs = 0;
 
-% initialize default parameters
-defaultParams.order=10;
-defaultParams.abs = 0;
-% return default parameters if no input arguments are provided.
-if(nargin==0)
-    filtsig = defaultParams;
-else    
-    if(nargin<2 || isempty(params))
+        aucSig = filter.filter_ma(envelopeHeightSig(:), movingSummerParams);
+                
+%         aucSig1 = filter.filter_qma(envelopeHeightSig(:), movingSummerParams);
+%         
+%         aucSig2 = filter.filter_movsum(envelopeHeightSig(:), movingSummerParams)/movingSummerParams.order;
+
         
-        pfile =  strcat(mfilename('fullpath'),'.plist');
+        %         aucMin = aucSig;
+        %         aniSig = 100*(alpha*aucMin+beta)/somethingElse;
         
-        if(exist(pfile,'file'))
-            %load it
-            params = plist.loadXMLPlist(pfile);
-        else
-            %make it and save it for the future            
-            params = defaultParams;
-            plist.saveXMLPlist(pfile,params);
-        end
+        aniSig = aucSig;  %/max(aucSig)*100;
+        filtSig = aniSig;
     end
+end
+
+%calculate the upper and lower envelopes  
+function aueSig = getEnvelopeHeight(sigData)
+    [upperEnvelope, lowerEnvelope] = getSignalEnvelope(sigData);
+    aueSig = abs(upperEnvelope - lowerEnvelope);  % determine the distance between upper and lower envelope at each sample
+end
+
+function [upperEnvelope, lowerEnvelope] = getSignalEnvelope(sigData)
+    xx=1:numel(sigData);
     
-    % Currently this just calculates the moving average and needs to be
-    % updated.
-    % get root mean square
-    if(params.abs)
-        sigData = abs(sigData);
-    end
+    upperPeakIndices = sev_findpeaks(sigData);
+    upperPeakValues = sigData(upperPeakIndices);
+    upperEnvelope = spline(upperPeakIndices,upperPeakValues,xx);
     
-    delay = floor((params.order)/2);
-    b = ones(params.order,1);
-    filtsig = filter(b,1,sigData)/params.order;
-    
-    %account for the delay...
-    filtsig = [filtsig((delay+1):end); zeros(delay,1)];
+    lowerPeakIndices = sev_findpeaks(-sigData);   
+    lowerPeakValues = sigData(lowerPeakIndices);
+    lowerEnvelope = spline(lowerPeakIndices,lowerPeakValues,xx);
 end

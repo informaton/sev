@@ -298,14 +298,14 @@ fig_pos(4) = fig_pos(4)+handles.user.new_row_y_delta;
 fig_pos(2) = fig_pos(2)-handles.user.new_row_y_delta;
 set(handles.fig1,'position',fig_pos);
 
-props = rmfield(props,'Selected');
-props = rmfield(props,'Extent');
-props = rmfield(props,'Type');
+props = rmfieldSafe(props,'Selected');
+props = rmfieldSafe(props,'Extent');
+props = rmfieldSafe(props,'Type');
 
 pos = cell(numel(props),1);
 [pos{:}] = props.Position;
-props = rmfield(props,'Position');
-props = rmfield(props,'BeingDeleted');
+props = rmfieldSafe(props,'Position');
+props = rmfieldSafe(props,'BeingDeleted');
 new_tag_suffix = num2str(handles.user.num_rows);
 for k=1:numel(props)
     props(k).Position = pos{k};
