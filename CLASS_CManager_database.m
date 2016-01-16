@@ -801,7 +801,6 @@ classdef CLASS_CManager_database < CLASS_database
                 end
             end
         end
-
     end
     
 end

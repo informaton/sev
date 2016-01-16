@@ -48,6 +48,13 @@ function filtSig = nlfilter_ani(sigData, params)
         detectStruct = detection.detection_nn_simple(sigData,nn_params, stageStruct);
         sigData = detectStruct.new_data(:);  %work with row vectors
         
+        
+        %alternatively, use emil's HRV method ...
+        params.nlfilter_hrv.upperThreshold = 1.2;
+        params.nlfilter_hrv.lowerThreshold = 0.8;
+        params.nlfilter_hrv.samplerate = params.samplerate;
+        % sigData = filter.nlfilter_hrv(sigData, params.nlfilter_hrv);
+        
         % wavelet filter for the interval of interest:
         max_decompositions = 10;
         waveletParams.wname = 'db4';
@@ -64,9 +71,11 @@ function filtSig = nlfilter_ani(sigData, params)
         bandPassParams.start_freq_hz=defaultParams.freqStart_Hz;
         bandPassParams.stop_freq_hz=defaultParams.freqStop_Hz;
         
+        
+        
         %filterParams = bandPassParams;
         filtSig = filter.fir_bp(sigData, bandPassParams);
-        
+        %filtSig = sigData;
         envelopeHeightSig = getEnvelopeHeight(filtSig);        
         numSeconds = params.duration_area_under_envelope_for_ani_seconds;
         movingSummerParams.order = numSeconds*params.samplerate;
