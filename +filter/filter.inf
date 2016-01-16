@@ -34,3 +34,5 @@ nlfilter_plm_upper_threshold nlfilter_plm_upper_threshold 0 plist_editor_dlg PLM
 nlfilter_plm_mid_threshold nlfilter_plm_mid_threshold 0 plist_editor_dlg PLM_Mid
 nlfilter_plm_lower_threshold nlfilter_plm_lower_threshold 0 plist_editor_dlg PLM_Low
 nlfilter_ani nlfilter_ani 0 plist_editor_dlg NLFilterANI
+filter_ecg filter_ecg 0 plist_editor_dlg FilterECG
+nlfilter_hrv nlfilter_hrv 0 plist_editor_dlg NLFilterHRV
