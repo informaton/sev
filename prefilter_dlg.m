@@ -167,13 +167,12 @@ for k=1:nFilters
         channel_labl_index = filterArrayStruct(k).src_channel_index;
         ref_channel_index = filterArrayStruct(k).ref_channel_index;
         handles =push_add_row_Callback(handles.push_add_row, [], handles);
-
     end
 
     set(handles.(['menu_filter_',cur_row]),'string',handles.user.filterInf.evt_label,'value',evt_labl_index);
     set(handles.(['menu_src_channel_',cur_row]),'string',handles.user.channel_label,'value',channel_labl_index);
     
-    updateFilterSelection(handles,handles.user.num_rows); 
+    updateFilterSelection(handles,cur_row); 
     
     params = handles.user.paramCell{k};
     if(~isempty(params))
