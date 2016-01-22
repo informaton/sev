@@ -35,7 +35,7 @@ else
             plist.saveXMLPlist(pfile,params);
         end
     end
-    %get root mean square
+    %get absolute value
     if(params.abs)
         sigData = abs(sigData);
     end

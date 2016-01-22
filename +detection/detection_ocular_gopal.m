@@ -100,7 +100,7 @@ else
     
     % smooth
     smooth_params.order=params.smooth_filter_order;
-    smooth_params.rms = 0;
+    smooth_params.abs = 0;
     data = filter.filter_ma(data,smooth_params);
     
     
