@@ -101,7 +101,12 @@ handles.tabs = zeros(numTabs,1);
 
 for f=1:numTabs %fieldNames; %The field names of the parameters to be shown to the user (i.e. VIEW, BATCH_PROCESS, PSD,....)
     fname = handles.user.settings_obj.fieldNames{f}; %current field/tab name
-    handles.tabs(f) = uitab('v0','parent',handles.tabgroup,'Title',fname);
+    
+    if(verLessThan('matlab','7.14'))
+        handles.tabs(f) = uitab('v0','parent',handles.tabgroup,'Title',fname);
+    else
+        handles.tabs(f) = uitab('parent',handles.tabgroup,'Title',fname);        
+    end
     records = numel(fieldnames(handles.user.settings_obj.(fname)));
     if(records>maxRecords)
         maxRecords = records;
@@ -110,7 +115,11 @@ end
 
 handles = resizePanelAndFigureForUIControls(handles.panel_main,maxRecords,handles);
 
-set(handles.tabgroup,'SelectionChangeFcn',@tabgroup_callback);
+if(verLessThan('matlab','7.14'))
+    set(handles.tabgroup,'SelectionChangeFcn',@tabgroup_callback);
+else
+    set(handles.tabgroup,'SelectionChangedFcn',@tabgroup_callback);    
+end
 
 function handles = getCurrentSettings(handles,tabName)
 %grab the current settings panel values and return in the handles structure
@@ -214,8 +223,13 @@ function push_ok_close_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-tab_index =  get(handles.tabgroup,'selectedindex');
-tabName = get(handles.tabs(tab_index),'Title');
+if(verLessThan('matlab','7.14'))
+    tab_index =  get(handles.tabgroup,'selectedindex');
+    tabName = get(handles.tabs(tab_index),'Title');
+else
+    tabName = handles.tabgroup.SelectedTab.Title;
+end
+
 handles = getCurrentSettings(handles,tabName);
 handles.output = handles.user.settings_obj;
 guidata(hObject,handles);
