@@ -300,27 +300,35 @@ classdef CLASS_events_container < handle
             %label contextmenu for the label on the left hand side
             label_contextmenu_h = uicontextmenu('parent',obj.parent_fig,...
                 'callback',@obj.contextmenu_label_callback);%,get(parentAxes,'parent'));
+            
             uimenu(label_contextmenu_h,'Label','Next Event Epoch',...
                 'separator','off',...
                 'callback',@obj.contextmenu_label_nextEvent_callback);
+            
             uimenu(label_contextmenu_h,'Label','Previous Event Epoch',...
                 'separator','off',...
                 'callback',@obj.contextmenu_label_previousEvent_callback);
+            
             uimenu(label_contextmenu_h,'Label','Delete Event',...
                 'separator','on',...
                 'callback',@obj.contextmenu_label_deleteEvent_callback);
+            
             uimenu(label_contextmenu_h,'Label','Rename Event',...
                 'separator','off',...
                 'callback',@obj.contextmenu_label_renameEvent_callback);
+            
             uimenu(label_contextmenu_h,'Label','Show Histogram',...
                 'separator','on',...
-                'callback',@obj.contextmenu_changeColorcallback);
+                'callback',@obj.contextmenu_showHistogram_callback);
+            
             uimenu(label_contextmenu_h,'Label','Summary Statistics (Popout)',...
                 'separator','off',...
                 'callback',@obj.contextmenu_label_summaryStats_callback);
+            
             uimenu(label_contextmenu_h,'Label','Export to workspace',...
                 'separator','off',...
                 'callback',@obj.contextmenu_label_export2workspace_callback);
+            
             uimenu(label_contextmenu_h,'Label','Change Color',...
                 'separator','on',...
                 'callback',@obj.contextmenu_changeColor_callback);
@@ -332,7 +340,7 @@ classdef CLASS_events_container < handle
             contextmenu_patch_h = uicontextmenu('callback',@obj.contextmenu_patch_callback,'parent',obj.parent_fig);
             uimenu(contextmenu_patch_h,'Label','Change Color','separator','off','callback',@obj.contextmenu_changeColor_callback);
             uimenu(contextmenu_patch_h,'Label','Adjust Offset','separator','off','callback',@obj.contextmenu_patch_adjustOffset_callback);
-            uimenu(contextmenu_patch_h,'Label','Show Histogram','separator','off','callback',@obj.contextmenu_changeColorcallback);
+            uimenu(contextmenu_patch_h,'Label','Show Histogram','separator','off','callback',@obj.contextmenu_showHistogram_callback);
             uimenu(contextmenu_patch_h,'Label','Remove','separator','on','callback',@obj.contextmenu_patch_removeInstance_callback);
             obj.children_contextmenu_patch_h = contextmenu_patch_h;
             
@@ -889,6 +897,20 @@ classdef CLASS_events_container < handle
             label_contextmenu_h = copyobj(obj.children_contextmenu_label_h,get(obj.children_contextmenu_label_h,'parent'));
             patch_contextmenu_h = copyobj(obj.children_contextmenu_patch_h,get(obj.children_contextmenu_patch_h,'parent'));
             
+            % A change was made to this code, somewhere along the way.
+            if(~verLessThan('matlab','7.14'))
+                label_contextmenu_h.Callback = obj.children_contextmenu_label_h.Callback;
+                for l=1:numel(label_contextmenu_h.Children)
+                    label_contextmenu_h.Children(l).Callback = obj.children_contextmenu_label_h.Children(l).Callback;
+                end
+                patch_contextmenu_h.Callback = obj.children_contextmenu_patch_h.Callback;
+
+                for p=1:numel(patch_contextmenu_h.Children)
+                    patch_contextmenu_h.Children(p).Callback = obj.children_contextmenu_patch_h.Children(p).Callback;
+                end
+            end
+            
+            
             childobj.setContextmenus(patch_contextmenu_h,label_contextmenu_h,@obj.updateEvent_callback);
 
         end
@@ -917,7 +939,7 @@ classdef CLASS_events_container < handle
         %> @param
         %> @retval 
         % =================================================================
-        function contextmenu_changeColorcallback(obj,hObject,eventdata)
+        function contextmenu_showHistogram_callback(obj,hObject,eventdata)
             global MARKING;
             obj.summary_stats_axes_needs_update = true;
             MARKING.setUtilityAxesType('EvtStats');
@@ -2322,7 +2344,6 @@ classdef CLASS_events_container < handle
                     
                     if(ishandle(obj.summary_stats_uitable_h))
                         obj.contextmenu_label_summaryStats_callback([]);
-                        %         contextmenu_label_summaryStats_callback(hObject);
                     end
                     
                     MARKING.showReady();
@@ -2359,7 +2380,7 @@ classdef CLASS_events_container < handle
         %> @param
         %> @retval 
         % =================================================================
-        function contextmenu_label_summaryStats_callback(obj,hObject,~)            
+        function contextmenu_label_summaryStats_callback(obj,~,~)            
             %             curEvent_index = obj.index; %get(hObject,'userdata');
             obj.summary_stats = obj.getCurrentChild().get_summary_stats(obj.stageStruct);
             obj.summary_stats.description_str = ['Summary statistics for ',obj.getName(obj.cur_event_index)];
@@ -2540,8 +2561,6 @@ classdef CLASS_events_container < handle
                 end
             end
         end
-            
- 
     end
     
 end
