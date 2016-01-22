@@ -1744,7 +1744,6 @@ classdef CLASS_UI_marking < handle
             catch ME
                 fprintf(1,'Problem loading file in %s\n',mfilename('fullpath'));
                 showME(ME);
-%                 recoverFromError(guidata(hObject),ME);
             end
         end
         
