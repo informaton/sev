@@ -103,7 +103,7 @@ else
     
     %% moving window average/integration
     smooth_params.order=ceil(params.moving_window_sec * samplerate);
-    smooth_params.rms = 0;
+    smooth_params.abs = 0;
     integrated_data = filter.filter_ma(filtdata,smooth_params)*smooth_params.order;
     
     % win_len = ceil(params.moving_window_sec * samplerate);

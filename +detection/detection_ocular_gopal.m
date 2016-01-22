@@ -128,8 +128,8 @@ else
     %decision_ind vector which is a vector of sample indices into the EOG data
     %itself.
     dy_dx = dy./dx;
-    rule2_result = cat(0,dy>params.rule_2_thresh_ampl_uv);
-    rule1_result = cat(0,dy_dx > params.rule_1_thresh_slope);
+    rule2_result = [false;dy>params.rule_2_thresh_ampl_uv];
+    rule1_result = [false;dy_dx > params.rule_1_thresh_slope];
     
     hypothesis1 = rule2_result & rule1_result;
     

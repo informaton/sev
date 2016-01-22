@@ -1,4 +1,4 @@
-function detectStruct = detection_ocular_variable_dualthreshold(channel_cell_data,varargin)
+function detectStruct = detection_ocular_variable_dualthreshold(data,params,varargin)
 %Apply a dual threshold to single channel - prepped for ocular movements
 % (e.g. LOC is source_indices(1))
 % Detection begins when the signal rises above the first threshold and ends when
@@ -46,7 +46,7 @@ else
     
     
     samplerate = params.samplerate;
-    data = channel_cell_data{1};
+
     
     ma.params.order = ceil(params.min_duration_sec*samplerate);
     params.max_duration_sec = 30;

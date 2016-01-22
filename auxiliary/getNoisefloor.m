@@ -12,7 +12,7 @@ function [variable_threshold_low_uv, variable_threshold_high_uv, clean_data] = g
     %1. turn off variable noise floor when below engagement threshold
 
     ma_params.order=samplerate*params.average_power_window_sec;
-    ma_params.rms = 1;
+    ma_params.abs = 1;
     
     noisefloor = filter.filter_ma(data,ma_params);
 %     noisefloor = filter.nlfilter_rms(data,ma_params);
