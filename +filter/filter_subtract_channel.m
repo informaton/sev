@@ -11,5 +11,9 @@
 %> @note Last modified on 5/6/2014
 %> @note Last modified on 8/21/2014
 function filtsig = filter_subtract_channel(src_data,ref_data, varargin)
-filtsig = src_data - ref_data;
-
+    if(nargin<1)
+        filtsig = [];  %useful for abstracting other cases when we have no parameters.
+    else
+        filtsig = src_data - ref_data;
+    end
+end

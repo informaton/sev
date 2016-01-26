@@ -967,7 +967,13 @@ classdef CLASS_events < handle
                         paramValues = zeros(size(y,1),numel(paramNames));
                         for k = 1:numel(paramNames)
                             fprintf(fid,'\t%s',paramNames{k});
-                            paramValues(:,k) = obj.paramStruct.(paramNames{k})(:);
+                            try
+                                paramValues(:,k) = obj.paramStruct.(paramNames{k})(:);
+                            catch me
+                                showME(me);
+                                fprintf(1,'Likely encountered a cell to double conversion problem, which can happen with biocal description field.\nThe parameter values will be replaced with ''NaN'' in order to continue.\n');
+                                paramValues(:,k) = nan;
+                            end                                
                         end
                         
                         y = [y,paramValues];

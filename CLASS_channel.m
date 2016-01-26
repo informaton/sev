@@ -1,4 +1,4 @@
-%> @file CLASS_channel.m
+%> @file CLASS_channel.cpp
 %> @brief CLASS_channel used by SEV for handling polysomnogram channels.
 % ======================================================================
 %> @brief CLASS_channel used by SEV for handling polysomnogram channels.
@@ -125,12 +125,12 @@ classdef CLASS_channel < handle
         %> @param parent_fig MATLAB figure handle for displaying and interacting with the channel data
         %> @param parent_axes MATLAB axes handle where the data is
         %> displayed and interacted with (i.e. to hold the line handle and
-        %context menus of the channel).
+        %> context menus of the channel).
         %> @retval obj instance of CLASS_channel class.
         % =================================================================
-        %only first four parameters are required if not using graphics -
-        %i.e. just doing a batch mode processing and want a lite
-        %constructor
+        % only first four parameters are required if not using graphics -
+        % i.e. just doing a batch mode processing and want a lite
+        % constructor
         function obj = CLASS_channel(raw_data,...
                 src_title,src_channel_index,...
                 src_samplerate,desired_samplerate,...

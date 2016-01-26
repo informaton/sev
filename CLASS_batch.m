@@ -1,4 +1,4 @@
-%> @file CLASS_batch.m
+%> @file CLASS_batch.cpp
 %> @brief CLASS_batch serves as the controller class for SEV's batch mode
 %> operations which include (1) batch analysis (e.g. event classifications, artifact
 %> detection and power spectral analysis) and (2) batch export.
