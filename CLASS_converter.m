@@ -19,7 +19,7 @@ classdef CLASS_converter < handle
     end;
 
     
-    properties (Constant)
+    properties(Constant)
         %> The events pathname
         events_pathname = '_events';
         %> Expected HDR header fields for signal.
@@ -28,7 +28,7 @@ classdef CLASS_converter < handle
 
     
     % Must be implemented by instantiating class        
-    methods (Abstract)
+    methods(Abstract)
         %> Abstract method for converting
         convert2wsc(obj);
         mappedFilename = srcNameMapper(obj,srcFilename,mappedFileExtension);
@@ -37,7 +37,7 @@ classdef CLASS_converter < handle
     
     methods
         
-        %> @brief Class constructor.
+        %> @brief Constructor
         %> @retval Instance of CLASS_converter
         function obj = CLASS_converter()
             
