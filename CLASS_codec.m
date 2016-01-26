@@ -1,8 +1,7 @@
 %> @file CLASS_codec.cpp
-%> @brief CLASS_codec encapuslates many of the coding and decoding 
-%> functionality required by SEV's IO routines.  
 % ======================================================================
-%> @brief The methods here are all static.  
+%> @brief CLASS_codec encapuslates much of the coding and decoding 
+%> functionality required by SEV's IO routines.  The methods here are all static.
 %> @note Author: Hyatt Moore IV
 %> @note Created 9/29/2014 - Derived from CLASS_events_container static
 %> methods.
@@ -145,7 +144,8 @@ classdef CLASS_codec < handle
         %> .EVTS is checked first, then .SCO extension is checked if .STA is
         %> not found.  If neither staging file type is found (.STA or .EVTS)
         %> then stages_filename is returned as empty (i.e. [])
-        %> @retval edf filename sans pathname.
+        %> @retval event_Filename
+        %> @retval edf_name edf filename sans pathname.
         % ======================================================================
         function [event_Filename, edf_name] = getEventsFilenameFromEDF(edf_fullfilename)
             [edf_path,edf_name,edf_ext] = fileparts(edf_fullfilename);
@@ -164,8 +164,8 @@ classdef CLASS_codec < handle
         %> @brief Retrives a function call for files in directories with a '+'
         %> prefix.
         %------------------------------------------------------------------%
-        %> @param Method's name (sans path and .m)
-        %> @param Package name (string).  Supported values include
+        %> @param methodName Method's name (sans path and .m)
+        %> @param packageName Package name (string).  Supported values include
         %> - @c export
         %> - @c detection
         %> - @c filter
@@ -196,11 +196,11 @@ classdef CLASS_codec < handle
         %> @brief Retrives the information file (.inf) for the package of interest.
         %> Information files describe methods used in a particular toolbox.
         %------------------------------------------------------------------%
-        %> @param Package name (string).  Supported values include
+        %> @param packageName Package name (string).  Supported values include
         %> - @c export
         %> - @c detection
         %> - @c filter
-        %> @retval methodInformationFile Full filename of the information
+        %> @retval methodInformationFilename Full filename of the information
         %> file used to describe the toolbox associated with methodCategory.
         %> Information files describe methods used in a particular toolbox.
         %> Empty if no match is found.
@@ -219,18 +219,16 @@ classdef CLASS_codec < handle
             end
         end
         
-                
-        
-        
         % =================================================================
         %> @brief Retrives a function call for files in directories with a '+'
         %> prefix.
         %------------------------------------------------------------------%
-        %> @param Method's name (sans path and .m)
-        %> @param Package name that method is part of (string).  Supported values include
+        %> @param methodName Method's name (sans path and .m)
+        %> @param packageName Package name that method is part of (string).  Supported values include
         %> - @c export
         %> - @c detection
         %> - @c filter        
+        %> @retval parameterStruct
         %> @retval packageMethodName - method name with package prefix (e.g. export.someMethod) to call the method in
         %> the package a directory outside of its category.
         %> Empty if no match is found.
@@ -264,9 +262,9 @@ classdef CLASS_codec < handle
         %> @brief Parses an export package information file (.inf) and returns 
         %> each rows values as a struct entry.
         %------------------------------------------------------------------%        
-        %> @param Full filename (path and name) of the export information
+        %> @param exprtInfFullFilename Full filename (path and name) of the export information
         %> file to parse.
-        %> @retval Struct with the following fields:
+        %> @retval exportMethodsStruct Struct with the following fields:
         %> - @c mfilename Nx1 cell of filenames of the export method
         %> - @c description Nx1 cell of descriptions for each export method.
         %> - @c settingsEditor Nx1 cell of the settings editor to use for each method.     
@@ -287,7 +285,7 @@ classdef CLASS_codec < handle
         end
 
         % ======================================================================
-                %> @brief loads/parses the .SCO file associated with an EDF.        
+        %> @brief loads/parses the .SCO file associated with an EDF.
         % ======================================================================
         %> @param filename Full .SCO filename (i.e. with path) to load.
         %> @param dest_samplerate Sample rate to use for SCO fields (return value)
@@ -495,7 +493,9 @@ classdef CLASS_codec < handle
         %> Embla events to.  This is helpful when displaying a samplerate
         %> different than recorded in the .evt file.  If desired_samplerate
         %> is not provided, then embla_samplerate is used.
-        %> filename in .SCO format        
+        %> filename in .SCO format      
+        %> @retval embla_evt_Struct
+        %> @retval embla_samplerate_out
         % =================================================================
         function [embla_evt_Struct,embla_samplerate_out] = parseEmblaEvent(evtFilename,embla_samplerate,desired_samplerate)
             %embla_samplerate_out may change if there is a difference found in
@@ -950,8 +950,8 @@ classdef CLASS_codec < handle
         %> @brief searches through the roc_struct to find the best possible configurations in terms of sensitivity and specificity and K_0_0, and K_1_0
         %> the roc_struct fields are ordered first by study name and then
         %> by configuration
-        %> @param
-        %> @retval Struct with same fields as input roc_struct and also
+        %> @param roc_struct
+        %> @retval roc_struct Struct with same fields as input roc_struct and also
         %> additional field @c optimum which is a struct contaning the
         %> following fields:
         %> - @c K_0_0
