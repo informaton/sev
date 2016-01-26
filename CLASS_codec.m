@@ -1,4 +1,4 @@
-%> @file CLASS_codec.m
+%> @file CLASS_codec.cpp
 %> @brief CLASS_codec encapuslates many of the coding and decoding 
 %> functionality required by SEV's IO routines.  
 % ======================================================================
@@ -147,14 +147,14 @@ classdef CLASS_codec < handle
         %> then stages_filename is returned as empty (i.e. [])
         %> @retval edf filename sans pathname.
         % ======================================================================
-        function [events_filename, edf_name] = getEventsFilenameFromEDF(edf_fullfilename)
+        function [event_Filename, edf_name] = getEventsFilenameFromEDF(edf_fullfilename)
             [edf_path,edf_name,edf_ext] = fileparts(edf_fullfilename);
-            events_filename = fullfile(edf_path,strcat(edf_name,'.EVTS'));
+            event_Filename = fullfile(edf_path,strcat(edf_name,'.EVTS'));
             
-            if(~exist(events_filename,'file'))
-                events_filename = fullfile(edf_path,strcat(edf_name,'.SCO'));
-                if(~exist(events_filename,'file'))
-                    events_filename = [];
+            if(~exist(event_Filename,'file'))
+                event_Filename = fullfile(edf_path,strcat(edf_name,'.SCO'));
+                if(~exist(event_Filename,'file'))
+                    event_Filename = [];
                 end
             end  
             edf_name = strcat(edf_name,edf_ext);

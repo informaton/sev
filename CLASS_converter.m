@@ -1,8 +1,8 @@
 %> @file CLASS_converter.cpp
 %> @brief CLASS_converter is used for converting PSG studies from different
-%> formats into a format compatible with SEV.  
+%> formats into a format compatible with SEV.
 % ======================================================================
-%> CLASS_converter is used for converting PSG studies obtained
+%> @brief CLASS_converter is used for converting PSG studies obtained
 %> with proprietary equipment, such as that of Sandman or Embla.
 %> @note Written by Hyatt Moore IV
 % ======================================================================
@@ -13,11 +13,11 @@ classdef CLASS_converter < handle
         %> path to the output directory - converted files go here.
         destPath;
         %> String prefixed to studies
-        prefixStr; 
+        prefixStr;
         %> can be 'tier','flat','group','layer'
-        srcType; 
+        srcType;
     end;
-
+    
     
     properties(Constant)
         %> The events pathname
@@ -25,9 +25,9 @@ classdef CLASS_converter < handle
         %> Expected HDR header fields for signal.
         EDFHDRSignalFields = {'label','transducer','physical_dimension','physical_minimum','physical_maximum','digital_minimum','digital_maximum','prefiltering','number_samples_in_each_data_record'};
     end;
-
     
-    % Must be implemented by instantiating class        
+    
+    % Must be implemented by instantiating class
     methods(Abstract)
         convert2wsc(obj);
         mappedFilename = srcNameMapper(obj,srcFilename,mappedFileExtension);
@@ -54,6 +54,105 @@ classdef CLASS_converter < handle
             sevStruct.parameters_filename = '_sev.parameters.txt';
             
         end
+        
+        %> @brief Static method for exporting Embla file formats.
+        %> @param emblaStudyPath The path with the embla events to export.
+        %> @param outPath The destination path to store the exported output.
+        %> @param outputType is a string specifying the output format.  The following strings are recognized:
+        %> - @c sco for .SCO file format
+        %> - @c evt
+        %> - @c evts
+        %> - @c sta for .STA file format
+        %> - @c all (default)
+        %> - @c db for database
+        %> - @c edf for .EDF
+        function staticEmblaEvtExport(emblaStudyPath, outPath,outputType)
+            
+            if(nargin<3)
+                outputType = 'all';
+            end
+            pathnames = getPathnames(emblaStudyPath);
+            studyStruct = CLASS_converter.getSEVStruct();
+            studyStruct.samplerate = 256;
+            
+            for s=1:numel(pathnames)
+                try
+                    studyName = pathnames{s};
+                    srcFile = [studyName,'.edf'];                    
+                    edfSrcPath = fullfile(emblaStudyPath,pathnames{s});
+                    fullSrcFile = fullfile(edfSrcPath,srcFile);
+                    
+                    HDR = loadEDF(fullSrcFile);
+                    studyStruct.startDateTime = HDR.T0;
+                    
+                    num_epochs = ceil(HDR.duration_sec/studyStruct.standard_epoch_sec);
+                    
+                    stage_evt_file = fullfile(edfSrcPath,'stage.evt');
+                    if(exist(stage_evt_file,'file'))
+                        [eventStruct,src_samplerate] = CLASS_events_container.parseEmblaEvent(stage_evt_file,studyStruct.samplerate,studyStruct.samplerate);
+                        studyStruct.samplerate = src_samplerate;
+                        
+                        if(num_epochs~=numel(eventStruct.epoch))
+                            if(any(strcmpi(outputType,{'STA','All'})))
+                                fprintf(1,'%s\texpected epochs: %u\tencountered epochs: %u to %u\n',srcFile,num_epochs,min(eventStruct.epoch),max(eventStruct.epoch));
+                            end
+                            
+                            new_stage = repmat(7,num_epochs,1);
+                            new_epoch = (1:num_epochs)';
+                            new_stage(eventStruct.epoch)=eventStruct.stage;
+                            eventStruct.epoch = new_epoch;
+                            eventStruct.stage = new_stage;
+                        end
+                        
+                        if(strcmpi(outputType,'STA') || strcmpi(outputType,'all'))
+                            y = [eventStruct.epoch,eventStruct.stage];
+                            staFilename = fullfile(outPath,strcat(studyName,'.STA'));
+                            save(staFilename,'y','-ascii');
+                        end
+                        
+                        if(~strcmpi(outputType,'STA'))
+                            % export the .EDF
+                            if(strcmpi(outputType,'EDF'))
+                                fprintf('EDF conversion is not implemented as a static method');
+                            else
+                                event_container = CLASS_events_container.importEmblaEvtDir(edfSrcPath,src_samplerate);
+                                studyStruct.line = eventStruct.stage;
+                                studyStruct.cycles = scoreSleepCycles_ver_REMweight(studyStruct.line);
+                                event_container.setStageStruct(studyStruct);
+                                if(strcmpi(outputType,'sco') || strcmpi(outputType,'all'))
+                                    scoFilename = fullfile(outPath,strcat(studyName,'.SCO'));
+                                    event_container.save2sco(scoFilename);
+                                end
+                                
+                                if(strcmpi(outputType,'evt') || strcmpi(outputType,'all'))
+                                    % avoid the problem of file
+                                    % names like  'evt.studyName..txt'
+                                    if(studyName(end)=='.')
+                                        studyName = studyName(1:end-1);
+                                    end
+                                    event_container.save2txt(fullfile(outPath,strcat('evt.',studyName)));
+                                end
+                                
+                                if(strcmpi(outputType,'evts') || strcmpi(outputType,'all'))
+                                    % avoid the problem of file
+                                    % names like 'studyName..EVTS'
+                                    if(studyName(end)=='.')
+                                        studyName = studyName(1:end-1);
+                                    end
+                                    event_container.save2evts(fullfile(outPath,strcat(studyName,'.EVTS')));
+                                end
+                            end
+                        end
+                    else
+                        fprintf(1,'%s\tNo stage File found\n',srcFile);
+                    end
+                    
+                catch me
+                    showME(me);
+                    fprintf(1,'%s (%u) - Fail\n',srcFile,s);
+                end
+            end
+        end
     end
     methods
         
@@ -66,7 +165,7 @@ classdef CLASS_converter < handle
         %> @brief generates the mapping file for each conversion.  The
         %> mapping file helps audit cohort transcoding by placing the source
         %> psg filename on the same line with the generated .EDF, .SCO, and
-        %> .STA files (as applicable) during the conversion process.            
+        %> .STA files (as applicable) during the conversion process.
         %> @param obj Instance of CLASS_converter
         function generateMappingFile(obj)
             mapFilename = obj.getMappingFilename();
@@ -88,15 +187,15 @@ classdef CLASS_converter < handle
                         end
                         fclose(fid);
                     elseif(strcmpi(obj.srcType,'tier'))
-                            [~,edfPathnames] = getPathnames(obj.srcPath);
-                            
-                            for f=1:numel(edfPathnames)
-                                srcFilename = getFilenamesi(edfPathnames{f},psgExt);
-                                srcFilename = char(srcFilename);
-                                destFilename = obj.srcNameMapper(srcFilename,'EDF');
-                                fprintf(fid,'%s\t%s\n',srcFilename,destFilename);                                
-                            end
-                            fclose(fid);
+                        [~,edfPathnames] = getPathnames(obj.srcPath);
+                        
+                        for f=1:numel(edfPathnames)
+                            srcFilename = getFilenamesi(edfPathnames{f},psgExt);
+                            srcFilename = char(srcFilename);
+                            destFilename = obj.srcNameMapper(srcFilename,'EDF');
+                            fprintf(fid,'%s\t%s\n',srcFilename,destFilename);
+                        end
+                        fclose(fid);
                     elseif(strcmpi(obj.srcType,'flat'))
                         fnames = getFilenamesi(obj.srcPath,psgExt);
                         for f=1:numel(fnames)
@@ -201,15 +300,15 @@ classdef CLASS_converter < handle
             [~,edfPathnames] = getPathnames(obj.srcPath);
             for d=1:numel(edfPathnames)
                 obj.exportFlatEDFPath(obj,edfPathnames{d})
-            end            
+            end
         end
-
+        
         %> @brief Transfers .EDF files from their full source file to the full destination file given
         %> dual channel montage configurations are combined first
         %> single channel labels are normalized using list of names
         %> @param obj Instance of CLASS_converter
         %> @param fullSrcFile Full name of the source/input file
-        %> @param fullDestfile Full name of the destination/export file.
+        %> @param fullDestFile Full name of the destination/export file.
         function exportEDF(obj,fullSrcFile,fullDestFile)
             
             % dual channel configurations are first reduced to single channels and
@@ -222,11 +321,11 @@ classdef CLASS_converter < handle
             
             if(isempty(mergeHDRentries))
                 [success] = copyfile(fullSrcFile,fullDestFile);
-            else                
+            else
                 [success] = CLASS_converter.rewriteEDF(fullSrcFile,fullDestFile,mergeIndices,mergeHDRentries);
             end
             
-            % destPath .EDF file headers are relabeled in place            
+            % destPath .EDF file headers are relabeled in place
             if(success)
                 [newLabels, newLabelIndices] = obj.getSingleMontageConfigurations(fullDestFile);
                 if(~isempty(newLabels))
@@ -238,7 +337,7 @@ classdef CLASS_converter < handle
             else
                 fprintf('Could not export %s.  An error occurred.\n',fullSrcFile);
             end
-        end      
+        end
         
         %> @brief export flat edf path - exports a directory containing .EDFs listed
         %> flatly (i.e. not in subdirectories)
@@ -251,7 +350,7 @@ classdef CLASS_converter < handle
                 [srcFilenames,fullSrcFilenames] = getFilenamesi(obj.srcPath,'\.edf');
                 
             else
-                [srcFilenames,fullSrcFilenames] = getFilenamesi(optionalSrcPath,'\.edf');            
+                [srcFilenames,fullSrcFilenames] = getFilenamesi(optionalSrcPath,'\.edf');
             end
             if(~isdir(obj.destPath))
                 mkdir(obj.destPath);
@@ -286,7 +385,63 @@ classdef CLASS_converter < handle
             end
         end
         
-        %> @brief Method for exporting Embla file formats.
+        
+        
+        %> @brief export Grouped edf path - exports .EDF files found in subdirectories of the
+        %> source directory.
+        function exportGroupedXMLPath(obj,nameConvertFcn,exportType)
+            [~,xmlPathnames] = getPathnames(obj.srcPath);
+            for d=1:numel(xmlPathnames)
+                obj.exportFlatXMLPath(obj,nameConvertFcn,exportType,xmlPathnames{d})
+            end
+        end
+        
+        %> @brief Export flat XML path
+        %> @param obj Instance of CLASS_converter
+        %> @param nameConvertFcn
+        %> @param exportType
+        %> @param optionalSrcPath
+        function exportFlatXMLPath(obj,nameConvertFcn,exportType, optionalSrcPath)
+            
+            % the optional 'optionalSrcPath' variable allows the flat EDF
+            % path method to be used by the Grouped EDF path method.
+            if(nargin<3 || isempty(optionalSrcPath))
+                [srcFilenames,fullSrcFilenames] = getFilenamesi(obj.srcPath,'\.xml');
+            else
+                [srcFilenames,fullSrcFilenames] = getFilenamesi(optionalSrcPath,'\.xml');
+            end
+            if(~isdir(obj.destPath))
+                mkdir(obj.destPath);
+            end
+            if(isdir(obj.destPath))
+                
+                for f=1:numel(srcFilenames)
+                    try
+                        srcFile = srcFilenames{f};
+                        if(nargin>1 && isa(nameConvertFcn,'function_handle'))
+                            destFilename = nameConvertFcn(srcFile);
+                            fullDestFilename = fullfile(obj.destPath,destFilename);
+                        else
+                            fullDestFilename = fullfile(obj.destPath,srcFile);
+                        end
+                        
+                        if(exist(fullSrcFilenames{f},'file'))
+                            obj.exportXML(fullSrcFilenames{f},fullDestFilename,exportType);
+                        else
+                            fprintf('Could not export %s.  File not found.\n',fullSrcFile);
+                        end
+                    catch me
+                        showME(me);
+                        fprintf('Could not export %s.  File not found.\n',srcFile);
+                        
+                    end
+                end
+            else
+                fprintf('Could not create the destination path (%s).  Check your system level permissions.\n',obj.destPath);
+            end
+        end
+        
+%> @brief Method for exporting Embla file formats.
         %> @param obj Instance of CLASS_converter
         %> @param emblaStudyPath The path with the embla events to export.
         %> @param outPath The destination path to store the exported output.
@@ -369,12 +524,12 @@ classdef CLASS_converter < handle
                                         studyStruct.line = stageEventStruct.stage;
                                         studyStruct.cycles = scoreSleepCycles_ver_REMweight(studyStruct.line);
                                         
-                                        events_container_obj = CLASS_events_container.importEmblaEvtDir(edfSrcPath,embla_samplerate);
-                                        events_container_obj.setStageStruct(studyStruct);
+                                        event_container = CLASS_events_container.importEmblaEvtDir(edfSrcPath,embla_samplerate);
+                                        event_container.setStageStruct(studyStruct);
                                         
                                         if(strcmpi(outputType,'sco') || strcmpi(outputType,'all'))
                                             scoFilename = fullfile(outPath,strcat(studyID,'SCO'));
-                                            events_container_obj.save2sco(scoFilename);
+                                            event_container.save2sco(scoFilename);
                                         end
                                         
                                         if(strcmpi(outputType,'evt') || strcmpi(outputType,'all'))
@@ -383,7 +538,7 @@ classdef CLASS_converter < handle
                                             if(studyID(end)=='.')
                                                 studyID = studyID(1:end-1);
                                             end
-                                            events_container_obj.save2txt(fullfile(outPath,strcat('evt.',studyID)));
+                                            event_container.save2txt(fullfile(outPath,strcat('evt.',studyID)));
                                         end
                                         
                                         if(strcmpi(outputType,'evts') || strcmpi(outputType,'all'))
@@ -392,8 +547,8 @@ classdef CLASS_converter < handle
                                             if(studyID(end)=='.')
                                                 studyID = studyID(1:end-1);
                                             end
-                                            events_container_obj.loadEmblaEvent(stage_evt_file,embla_samplerate);
-                                            events_container_obj.save2evts(fullfile(outPath,strcat(studyID,'.EVTS')));
+                                            event_container.loadEmblaEvent(stage_evt_file,embla_samplerate);
+                                            event_container.save2evts(fullfile(outPath,strcat(studyID,'.EVTS')));
                                         end                                        
                                         if(strcmpi(outputType,'db') || strcmpi(outputType,'all'))
                                             % ensure there is a record of it in the database !!!
@@ -412,66 +567,12 @@ classdef CLASS_converter < handle
                     end
                 end
             end
-        end
-        
-        %> @brief export Grouped edf path - exports .EDF files found in subdirectories of the
-        %> source directory.
-        function exportGroupedXMLPath(obj,nameConvertFcn,exportType)
-            [~,xmlPathnames] = getPathnames(obj.srcPath);
-            for d=1:numel(xmlPathnames)
-                obj.exportFlatXMLPath(obj,nameConvertFcn,exportType,xmlPathnames{d})
-            end
-        end
-        
-        %> @brief Export flat XML path
-        %> @param obj Instance of CLASS_converter
-        %> @param nameConvertFcn
-        %> @param exportType
-        %> @param optionalSrcPath
-        function exportFlatXMLPath(obj,nameConvertFcn,exportType, optionalSrcPath)
-            
-            % the optional 'optionalSrcPath' variable allows the flat EDF
-            % path method to be used by the Grouped EDF path method.
-            if(nargin<3 || isempty(optionalSrcPath))
-                [srcFilenames,fullSrcFilenames] = getFilenamesi(obj.srcPath,'\.xml');
-            else
-                [srcFilenames,fullSrcFilenames] = getFilenamesi(optionalSrcPath,'\.xml');
-            end
-            if(~isdir(obj.destPath))
-                mkdir(obj.destPath);
-            end
-            if(isdir(obj.destPath))
-                
-                for f=1:numel(srcFilenames)
-                    try
-                        srcFile = srcFilenames{f};
-                        if(nargin>1 && isa(nameConvertFcn,'function_handle'))
-                            destFilename = nameConvertFcn(srcFile);
-                            fullDestFilename = fullfile(obj.destPath,destFilename);
-                        else
-                            fullDestFilename = fullfile(obj.destPath,srcFile);
-                        end
-                        
-                        if(exist(fullSrcFilenames{f},'file'))
-                            obj.exportXML(fullSrcFilenames{f},fullDestFilename,exportType);
-                        else
-                            fprintf('Could not export %s.  File not found.\n',fullSrcFile);
-                        end
-                    catch me
-                        showME(me);
-                        fprintf('Could not export %s.  File not found.\n',srcFile);
-                        
-                    end
-                end
-            else
-                fprintf('Could not create the destination path (%s).  Check your system level permissions.\n',obj.destPath);
-            end
-        end
+        end        
     end
     
     methods(Static)
         
-        %> @brief Return full list of channel names found by checking all .EDF file 
+        %> @brief Return full list of channel names found by checking all .EDF file
         %> headers listed in the directory path provided.
         %> @param psgPath Pathname to search for .EDF headers (optional).  If not included, a popup dialog
         %> is presented to the user to choose the path.
@@ -487,10 +588,10 @@ classdef CLASS_converter < handle
                 if(isnumeric(psgPath) && ~psgPath)
                     psgPath = [];
                 end
-            end  
+            end
             
-            files = getFilenames(psgPath,'*.EDF');            
-            channelNames = {};            
+            files = getFilenames(psgPath,'*.EDF');
+            channelNames = {};
             
             channelNamesAll = cell(numel(files),1);
             for f=1:numel(files)
@@ -498,12 +599,12 @@ classdef CLASS_converter < handle
                 fullSrcFile = fullfile(psgPath,srcFile);
                 if(exist(fullSrcFile,'file'))
                     HDR = loadEDF(fullSrcFile);
-                    channelNames = union(channelNames,HDR.label);                    
+                    channelNames = union(channelNames,HDR.label);
                     channelNamesAll{f} = HDR.label;
                 end
             end
             
-            disp(char(channelNames));            
+            disp(char(channelNames));
             
         end
         
@@ -558,7 +659,7 @@ classdef CLASS_converter < handle
                 {'C3-O1'}
                 {'C3-AVG'}
                 };
-
+            
             dualchannel = {
                 {'LAT','RAT','L/RAT'}
                 {'O1','A2','O1-A2'}
@@ -614,7 +715,7 @@ classdef CLASS_converter < handle
                 };
             
         end
-
+        
         
         % =================================================================
         %> @brief This function automates the file conversion process from
@@ -644,7 +745,7 @@ classdef CLASS_converter < handle
                 CLASS_converter.twinEvtExport(twinStudyPath,outPath,'evt');
             else
                 fprintf('One or both of the paths were not found');
-            end            
+            end
         end
         
         % =================================================================
@@ -654,8 +755,8 @@ classdef CLASS_converter < handle
         %> twin saved sleep studies.  Contents of this folder include
         %> subfolders for each sleep study.  The twinStudyPath is parsed for
         %> subfolders and the stage.evt files in each subfolder are saved to a
-        %> [study].STA files using each subfolder name in the twinStudyPath to 
-        %> identify [study].  
+        %> [study].STA files using each subfolder name in the twinStudyPath to
+        %> identify [study].
         %> for [study] and the event file name for [event].
         %> The user is prompted if twinStudy does not exist or is not
         %> entered.
@@ -672,7 +773,7 @@ classdef CLASS_converter < handle
             end
             
             if(exist(twinStudyPath,'file') && exist(outPath,'file'))
-        
+                
                 CLASS_converter.twinEvtExport(twinStudyPath,outPath,'STA');
             else
                 fprintf('One or both of the paths were not found');
@@ -697,9 +798,9 @@ classdef CLASS_converter < handle
             if(nargin<2)
                 disp('Select the directory containing Twin PSG files (i.e. *_E.TXT).');
                 msg = 'Select Twin PSG event directory (*_E.TXT) to use or Cancel for none.';
-                twinStudyPath = CLASS_converter.getPathname(pwd,msg);                
+                twinStudyPath = CLASS_converter.getPathname(pwd,msg);
                 disp('Select destination directory for .SCO files ');
-                outPath =CLASS_converter.getPathname(twinStudyPath,'Select directory to send .SCO files to.');                
+                outPath =CLASS_converter.getPathname(twinStudyPath,'Select directory to send .SCO files to.');
             end
             
             if(exist(twinStudyPath,'file') && exist(outPath,'file'))
@@ -737,7 +838,7 @@ classdef CLASS_converter < handle
                 CLASS_converter.staticEmblaEvtExport(emblaStudyPath,outPath,'evt'); %exports .evt files
             else
                 fprintf('One or both of the paths were not found');
-            end            
+            end
         end
         
         % =================================================================
@@ -747,8 +848,8 @@ classdef CLASS_converter < handle
         %> Embla saved sleep studies.  Contents of this folder include
         %> subfolders for each sleep study.  The emblaStudyPath is parsed for
         %> subfolders and the stage.evt files in each subfolder are saved to a
-        %> [study].STA files using each subfolder name in the emblaStudyPath to 
-        %> identify [study].  
+        %> [study].STA files using each subfolder name in the emblaStudyPath to
+        %> identify [study].
         %> for [study] and the event file name for [event].
         %> The user is prompted if emblaStudy does not exist or is not
         %> entered.
@@ -791,14 +892,14 @@ classdef CLASS_converter < handle
             if(nargin<2)
                 disp('Select Directory containing Embla PSG directories.  Typically Embla stores each study as a separate named directory.  Choose the directory that contains these named directories in them.');
                 msg = 'Select Event directory (*.evt) to use or Cancel for none.';
-                emblaStudyPath = CLASS_converter.getPathname(pwd,msg);                
+                emblaStudyPath = CLASS_converter.getPathname(pwd,msg);
                 disp('Select Directory (*.evt)');
-                outPath =CLASS_converter.getPathname(emblaStudyPath,'Select directory to send .SCO files to.');                
+                outPath =CLASS_converter.getPathname(emblaStudyPath,'Select directory to send .SCO files to.');
             end
             
             if(exist(emblaStudyPath,'file') && exist(outPath,'file'))
                 CLASS_converter.staticEmblaEvtExport(emblaStudyPath,outPath,'SCO'); %exports SCO files
-            
+                
                 %SSC_APOE_expressions = {'^(?<studyname>\d{4})_(?<studydate>\d{1,2}-\d{1,2}-\d{4})';
                 %    '^nonMatch(?<studyname>\d{1,3})'};
                 %CLASS_converter.emblaEvtExport(emblaStudyPath,outPath,SSC_APOE_expressions,'sco');
@@ -807,115 +908,7 @@ classdef CLASS_converter < handle
             end
         end
         
-        %> @brief Static method for exporting Embla file formats.
-        %> @param emblaStudyPath The path with the embla events to export.
-        %> @param outPath The destination path to store the exported output.
-        %> @param outputType is a string specifying the output format.  The following strings are recognized:
-        %> - @c 'sco' for .SCO file format
-        %> - @c 'evt'
-        %> - @c 'evts'
-        %> - @c 'sta' for .STA file format
-        %> - @c 'all' {default}
-        %> - @c 'db' for database
-        %> - @c 'edf' for .EDF
-        function staticEmblaEvtExport(emblaStudyPath, outPath,outputType)
-            
-            if(nargin<3)
-                outputType = 'all';
-            end
-            pathnames = getPathnames(emblaStudyPath);
-            
-            
-            studyStruct = CLASS_converter.getSEVStruct();
-            studyStruct.samplerate = 256;
-            
-            for s=1:numel(pathnames)
-                try
-                    studyName = pathnames{s};
-                    srcFile = [studyName,'.edf'];
-                    
-                    edfSrcPath = fullfile(emblaStudyPath,pathnames{s});
-                    
-                    
-                    fullSrcFile = fullfile(edfSrcPath,srcFile);
-                    
-                    HDR = loadEDF(fullSrcFile);
-                    studyStruct.startDateTime = HDR.T0;
-                    
-                    num_epochs = ceil(HDR.duration_sec/studyStruct.standard_epoch_sec);
-                    
-                    stage_evt_file = fullfile(edfSrcPath,'stage.evt');
-                    if(exist(stage_evt_file,'file'))
-                        
-                        [eventStruct,src_samplerate] = CLASS_events_container.parseEmblaEvent(stage_evt_file,studyStruct.samplerate,studyStruct.samplerate);
-                        studyStruct.samplerate = src_samplerate;
-                        
-                        if(num_epochs~=numel(eventStruct.epoch))
-                            if(any(strcmpi(outputType,{'STA','All'})))
-                                fprintf(1,'%s\texpected epochs: %u\tencountered epochs: %u to %u\n',srcFile,num_epochs,min(eventStruct.epoch),max(eventStruct.epoch));
-                            end
-                            
-                            new_stage = repmat(7,num_epochs,1);
-                            new_epoch = (1:num_epochs)';
-                            new_stage(eventStruct.epoch)=eventStruct.stage;
-                            eventStruct.epoch = new_epoch;
-                            eventStruct.stage = new_stage;
-                        end
-                        
-                        if(strcmpi(outputType,'STA') || strcmpi(outputType,'all'))
-                            y = [eventStruct.epoch,eventStruct.stage];
-                            staFilename = fullfile(outPath,strcat(studyName,'.STA'));
-                            save(staFilename,'y','-ascii');
-                        end
-                        
-                        if(~strcmpi(outputType,'STA'))
-                            
-                            if(strcmpi(outputType,'EDF'))
-                                % export the .EDF
-                                fprintf('EDF conversion is not implemented as a static method');                                
-                            else
-                                events_container_obj = CLASS_events_container.importEmblaEvtDir(edfSrcPath,src_samplerate);
-                                studyStruct.line = eventStruct.stage;
-                                studyStruct.cycles = scoreSleepCycles_ver_REMweight(studyStruct.line);
-                                events_container_obj.setStageStruct(studyStruct);
-                                if(strcmpi(outputType,'sco') || strcmpi(outputType,'all'))
-                                    scoFilename = fullfile(outPath,strcat(studyName,'.SCO'));
-                                    events_container_obj.save2sco(scoFilename);
-                                end
-                                
-                                if(strcmpi(outputType,'evt') || strcmpi(outputType,'all'))
-                                    % avoid the problem of file
-                                    % names like  'evt.studyName..txt'
-                                    if(studyName(end)=='.')
-                                        studyName = studyName(1:end-1);
-                                    end
-                                    events_container_obj.save2txt(fullfile(outPath,strcat('evt.',studyName)));
-                                end
-                                
-                                if(strcmpi(outputType,'evts') || strcmpi(outputType,'all'))
-                                    % avoid the problem of file
-                                    % names like 'studyName..EVTS'
-                                    if(studyName(end)=='.')
-                                        studyName = studyName(1:end-1);
-                                    end
-                                    events_container_obj.save2evts(fullfile(outPath,strcat(studyName,'.EVTS')));
-                                end
-                                
-                                
 
-                            end
-                        end
-                    else
-                        fprintf(1,'%s\tNo stage File found\n',srcFile);
-                    end
-                    
-                catch me
-                    showME(me);
-                    fprintf(1,'%s (%u) - Fail\n',srcFile,s);
-                end
-            end
-        end
-        
         %> @brief helper/wrapper function to get the pathnames.
         %> @param src_directory
         %> @param msg_string
@@ -939,7 +932,7 @@ classdef CLASS_converter < handle
         %> - sco is .SCO format
         %> - sta is .STA file formats
         %> -EDF is .EDF
-
+        
         function twinEvtExport(srcPath, destPath, outputType)
             if(nargin<3)
                 outputType = 'all';
@@ -960,7 +953,7 @@ classdef CLASS_converter < handle
             
             sta_problems = {};
             unknown_problems = {};
-
+            
             for f=1:numel(files)
                 try
                     filename = files{f};
@@ -991,7 +984,7 @@ classdef CLASS_converter < handle
                     exp = regexp(txt,['(?<type>.+) - DUR: (?<dur_sec>\d+.\d+) SEC. - (?<description>[^-]+).*|',...
                         '(?<type>.+) - (?<description>[^-]+).*|',...
                         '(?<type>.+)'],'names');
-                   
+                    
                     expMat = cell2mat(exp);
                     expTypes = cells2cell(expMat.type);
                     expDursec = cells2cell(expMat.dur_sec);
@@ -1014,7 +1007,7 @@ classdef CLASS_converter < handle
                     expDursec = str2double(expDursec);
                     
                     %give 0 duration to events with no listing
-                    expDursec(isnan(expDursec))=0; 
+                    expDursec(isnan(expDursec))=0;
                     
                     % studyStruct.samplerate = mode(HDR.samplerate);
                     studyStruct.startDateTime  = HDR.T0;
@@ -1092,7 +1085,7 @@ classdef CLASS_converter < handle
                                 eventContainer.loadGenericEvents(start_stop_matrix,evtLabel,src_label,paramStruct);
                             end
                         end
-                                                
+                        
                         if(strcmpi(outputType,'sco') || strcmpi(outputType,'all'))
                             scoFilename = fullfile(destPath,strcat(studyName,'.SCO'));
                             eventContainer.save2sco(scoFilename);
@@ -1101,7 +1094,7 @@ classdef CLASS_converter < handle
                         if(strcmpi(outputType,'evt') || strcmpi(outputType,'all'))
                             eventContainer.save2txt(fullfile(destPath,strcat('evt.',studyName)));
                         end
-                    end                
+                    end
                     
                 catch me
                     showME(me);
@@ -1139,7 +1132,7 @@ classdef CLASS_converter < handle
                 %                  else
                 %                      PatIDs = strtok(STAFiles,' ');
                 %                  end
-                % 
+                %
                 
                 %              for s=1:numel(STAFiles)
                 %                  cur_STA_filename = fullfile(edf_sta_path,STAFiles{s});
@@ -1197,7 +1190,7 @@ classdef CLASS_converter < handle
             
             if(~exist(evt_pathname,'dir'))
                 mkdir(evt_pathname);
-            end            
+            end
             if(~isempty(sco_pathname) && ~isempty(evt_pathname))
                 
                 dirStruct = dir(fullfile(sco_pathname,'*.SCO'));
@@ -1219,7 +1212,7 @@ classdef CLASS_converter < handle
                 evt_header_str = ['Event Label =\t%s\r\nEDF Channel Label(number) =\tUnset (0)\r\n',...
                     'Start_time\tDuration_seconds\tStart_sample\tStop_sample\tEpoch\tStage\r\n'];
                 
-
+                
                 
                 for k=1:filecount
                     sco_filename = filenames{k};
@@ -1289,7 +1282,7 @@ classdef CLASS_converter < handle
             end
         end
         
-
+        
         
         
         %> @brief Returns EDF names found in a directory.
@@ -1302,7 +1295,7 @@ classdef CLASS_converter < handle
             if(isdir(edfPathname))
                 dirdump = dir(edfPathname);
             else
-                dirdump = [];                
+                dirdump = [];
             end
         end
         
@@ -1314,22 +1307,22 @@ classdef CLASS_converter < handle
             
             dom = xmlread(srcFilename);
             epochLengthSec = str2double(dom.getDocumentElement.getElementsByTagName('EpochLength').item(0).getTextContent);
-                            
+            
             edfFilename = strcat(destFilename,'.EDF');
             % strrep(strrep(destFilename,'.STA','.EDF'),'.SCO','.EDF');
             
             edfHDR = loadEDF(edfFilename); % get the EDF header
-
+            
             if(strcmpi(exportType,'STA'))
-
+                
                 numEDFEpochs = ceil(edfHDR.duration_sec/epochLengthSec);
                 
                 sleepstages= dom.getElementsByTagName('SleepStage');
                 numStages = sleepstages.getLength();
-                if(numEDFEpochs~=numStages)                    
-                    fprintf(1,'%s\texpected epochs: %u\tencountered epochs: %u\n',srcFilename,numEDFEpochs,numStages);                    
+                if(numEDFEpochs~=numStages)
+                    fprintf(1,'%s\texpected epochs: %u\tencountered epochs: %u\n',srcFilename,numEDFEpochs,numStages);
                 end
-                if(numStages>0)                
+                if(numStages>0)
                     % java's xml implementation is 0-based
                     fid = fopen(strcat(destFilename,'.STA'),'w');
                     for n=0:min(numEDFEpochs,numStages)-1
@@ -1352,7 +1345,7 @@ classdef CLASS_converter < handle
                 scoredEvents = dom.getElementsByTagName('ScoredEvent');
                 t0 = edfHDR.T0;
                 numEvents = scoredEvents.getLength;
-                    
+                
                 fid = fopen(strcat(destFilename,'.SCO'),'w');
                 for e=0:numEvents-1
                     try
@@ -1379,7 +1372,7 @@ classdef CLASS_converter < handle
                         
                         
                         % this is the event category typed to the event, which has no meaning for us now, but still need this as a place holder
-                        unk = '0'; 
+                        unk = '0';
                         fprintf(fid,'%u\t%u\t%u\t%c\t%s\t%c\t%s\n',startEpoch,startSample,durationSamples,unk,...
                             curEventName,unk,startTimeStr);
                         % miscellaneous values that are added in
@@ -1395,17 +1388,16 @@ classdef CLASS_converter < handle
                 end
                 fclose(fid);
             end
-                
-        end            
+            
+        end
         
         
-         
+        
         
         %> @brief Remove HDR entries at indices purgeIndices
         %> @param HDR The header found in an .EDF file
-        %> purgeIndices is a 1-based vector of indices to purge from HDR
+        %> @param purgeIndices is a 1-based vector of indices to purge from HDR
         %> @retval purgedHDR The HDR with values removed at purgeIndices.
-        %
         function purgedHDR = purgeEDFHeader(HDR, purgeIndices)
             purgedHDR = HDR;
             for n=1:numel(CLASS_converter.EDFHDRSignalFields)
@@ -1424,7 +1416,7 @@ classdef CLASS_converter < handle
             extractedHDR = HDR;
             for n=1:numel(CLASS_converter.EDFHDRSignalFields)
                 curFieldname = CLASS_converter.EDFHDRSignalFields{n};
-                extractedHDR.(curFieldname) = HDR.(curFieldname)(extractIndices);                
+                extractedHDR.(curFieldname) = HDR.(curFieldname)(extractIndices);
             end
         end
         
@@ -1456,9 +1448,9 @@ classdef CLASS_converter < handle
             try
                 [HDR, channelData] = loadEDF(fullSrcFilename);
                 numMerges = size(mergeIndices,1);
-                mergeData = cell(numMerges,1);                                
+                mergeData = cell(numMerges,1);
                 for n=1:numMerges
-                   mergeData{n} = channelData{mergeIndices(n,1)}-channelData{mergeIndices(n,2)};                   
+                    mergeData{n} = channelData{mergeIndices(n,1)}-channelData{mergeIndices(n,2)};
                 end
                 
                 
@@ -1483,11 +1475,11 @@ classdef CLASS_converter < handle
                 %     fir_bp.params.order = fir_bp.params.sample_rate;
                 %     data.legs = +filter.fir_bp(data.legs,fir_bp.params);
                 
-           
+                
                 mergedHDR.num_signals = numel(mergedData);
                 CLASS_converter.writeEDF(fullDestFilename,mergedHDR,mergedData);
                 success = true;
-
+                
             catch me
                 showME(me);
                 success = false;
@@ -1496,7 +1488,7 @@ classdef CLASS_converter < handle
         
         
         %> @brief Rewrite an EDF header
-        %> @param edf_filename 
+        %> @param edf_filename
         %> @param label_indices = vector of indices (1-based) of the label to be replaced in
         %> the EDF header
         %> @param new_labels = cell of label names
@@ -1534,7 +1526,7 @@ classdef CLASS_converter < handle
         %  Hyatt Moore, IV
         %  < June, 2013
         %> @param signal is a vector of type double
-        %> @param hdr is the HDR information only for the signal passed
+        %> @param HDR is the HDR information only for the signal passed
         %> @param k is the index of signal in the HDR (.EDF)
         %> @retval edfData
         function edfData = double2EDFReadyData(signal,HDR,k)
@@ -1634,46 +1626,46 @@ classdef CLASS_converter < handle
             
             precision = 'uint8';
             fwrite(fid,output,precision); % Header is written to the file
-                 
+            
             % just do the whole thing slowly - at least we know it will work
             
             try
-            for rec=1:HDR.number_of_data_records
-                for k=1:ns
-                    samples_in_record = HDR.number_samples_in_each_data_record(k);
-                    
-                    range = (rec-1)*samples_in_record+1:(rec)*samples_in_record;
-                    if(iscell(signals))
-                        currentsignal = int16(signals{k}(range));
-                    else
-                        currentsignal = int16(signals(k,range));
+                for rec=1:HDR.number_of_data_records
+                    for k=1:ns
+                        samples_in_record = HDR.number_samples_in_each_data_record(k);
+                        
+                        range = (rec-1)*samples_in_record+1:(rec)*samples_in_record;
+                        if(iscell(signals))
+                            currentsignal = int16(signals{k}(range));
+                        else
+                            currentsignal = int16(signals(k,range));
+                        end
+                        fwrite(fid,currentsignal,'int16');
                     end
-                    fwrite(fid,currentsignal,'int16');
                 end
-            end
-            fclose(fid);
-
+                fclose(fid);
+                
             catch me
                 showME(me);
                 fclose(fid);
             end
             
         end
-            
+        
         %> @brief Modifies a string ('input') to be as long as 'length', with blanks filling
-        %> in the missing chars   
+        %> in the missing chars
         %> @param input
         %> @param length
         %> @retval resized_string
         % written by Adam Rhine  (June, 2011)
         
-        function [resized_string] = resize(input,length)            
-            resized_string = repmat(' ',1,length);            
+        function [resized_string] = resize(input,length)
+            resized_string = repmat(' ',1,length);
             for k=1:numel(input)
                 resized_string(k)=input(k);
-            end;            
+            end;
         end
-                
+        
         
         %> @brief Same as resize(), but does so for all elements in a cell array
         %> @param input
@@ -1707,7 +1699,7 @@ classdef CLASS_converter < handle
         end
         
         %> @brief The following XML functions were taken from the Mathworks website
-        %> on March 5, 2014 
+        %> on March 5, 2014
         %> @note Reference http://www.mathworks.com/help/matlab/ref/xmlread.html
         function theStruct = parseXML(filename)
             %  PARSEXML Convert XML file to a MATLAB structure.
@@ -1731,7 +1723,7 @@ classdef CLASS_converter < handle
         %> @param theNode
         %> @retval children
         %> @note Reference http://www.mathworks.com/help/matlab/ref/xmlread.html
-
+        
         function children = parseChildNodes(theNode)
             % Recurse over node children.
             children = [];
@@ -1792,7 +1784,9 @@ classdef CLASS_converter < handle
                     attributes(count).Value = char(attrib.getValue);
                 end
             end
-        end        
-    end    
+        end
+    end
+    
+    
 end
 
