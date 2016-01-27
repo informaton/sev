@@ -31,7 +31,7 @@ classdef CLASS_converter < handle
     methods(Abstract)
         convert2wsc(obj);
         mappedFilename = srcNameMapper(obj,srcFilename,mappedFileExtension);
-        [dualchannel, singlechannel, unhandled] = getMontageConfigurations(obj);
+        [dualchannel, singlechannel, unhandled] = getMontageConfigurations();
     end;
     
     
@@ -322,14 +322,14 @@ classdef CLASS_converter < handle
             if(isempty(mergeHDRentries))
                 [success] = copyfile(fullSrcFile,fullDestFile);
             else
-                [success] = CLASS_converter.rewriteEDF(fullSrcFile,fullDestFile,mergeIndices,mergeHDRentries);
+                [success] = obj.rewriteEDF(fullSrcFile,fullDestFile,mergeIndices,mergeHDRentries);
             end
             
             % destPath .EDF file headers are relabeled in place
             if(success)
                 [newLabels, newLabelIndices] = obj.getSingleMontageConfigurations(fullDestFile);
                 if(~isempty(newLabels))
-                    [success] = CLASS_converter.rewriteEDFHeader(fullDestFile,newLabelIndices,newLabels);
+                    [success] = obj.rewriteEDFHeader(fullDestFile,newLabelIndices,newLabels);
                     if(~success)
                         fprintf('An error occurred when relabeling channel names in the EDF header of %s.\n',fullDestFile);
                     end
@@ -385,7 +385,42 @@ classdef CLASS_converter < handle
             end
         end
         
-        
+        function emblaEDFPathExport(obj)
+            pathnames = getPathnames(obj.srcPath);
+            unknown_range = '0000';
+            
+            [~,i]=intersect(pathnames,{'.','..','_events'});
+            pathnames(i)=[];  %remove directories that are not from sleep study recordings
+            
+            for e=1:numel(obj.psg_expression)
+                %matched files
+                exp = regexp(pathnames,obj.psg_expression,'names');
+                numExp = numel(exp);
+                for s=1:numExp
+                    fprintf('Set %u - file %u of %u.\n',e,s,numExp);
+                    cur_exp = exp{s};                    
+                    if(~isempty(cur_exp))
+                        try
+                            studyname = strcat(unknown_range(1:end-numel(cur_exp.studyname)),cur_exp.studyname);
+                            srcFile = [pathnames{s},'.edf'];
+                            
+                            edfSrcPath = fullfile(obj.srcPath,pathnames{s});
+                            studyID = strcat(obj.prefixStr,'_',studyname,'');
+                            fullDestFile = fullfile(obj.destPath,strcat(studyID,'.EDF'));
+                            fullSrcFile = fullfile(edfSrcPath,srcFile);                            
+
+                            if(exist(fullSrcFile,'file'))
+                                obj.exportEDF(fullSrcFile,fullDestFile);
+                            else
+                                fprintf('Could not export %s.  File not found. (Is extension case, .EDF vs .edf, correct?)\n',fullSrcFile);
+                            end
+                        catch me
+                            showME(me);
+                        end
+                    end
+                end
+            end
+        end        
         
         %> @brief export Grouped edf path - exports .EDF files found in subdirectories of the
         %> source directory.
@@ -441,7 +476,7 @@ classdef CLASS_converter < handle
             end
         end
         
-%> @brief Method for exporting Embla file formats.
+        %> @brief Method for exporting Embla file formats.
         %> @param obj Instance of CLASS_converter
         %> @param emblaStudyPath The path with the embla events to export.
         %> @param outPath The destination path to store the exported output.
@@ -573,35 +608,64 @@ classdef CLASS_converter < handle
     methods(Static)
         
         %> @brief Return full list of channel names found by checking all .EDF file
-        %> headers listed in the directory path provided.
+        %> headers listed in the flat directory path provided.
         %> @param psgPath Pathname to search for .EDF headers (optional).  If not included, a popup dialog
         %> is presented to the user to choose the path.
         %> @retval channelNames is a cell of all unique channel labels
         %> listed in the EDF header's @c label field.
+        %> @param srcType This is the source type for the psgPath.  It is a
+        %> string and can be:
+        %> - tier
+        %> - flat (default)
         %> @retval channelNamesAll is a Nx1 cell, where N is the number of
         %> .EDF files found in the psg path.  Each cell contains the channel
         %> labels listed for the n_th EDF file (n is between 1 and N).
-        function [channelNames, channelNamesAll] = getAllChannelNames(psgPath)
-            if(nargin<1)
-                msg_string = 'Select directory with .EDFs';
-                psgPath =uigetdir(pwd,msg_string);
-                if(isnumeric(psgPath) && ~psgPath)
-                    psgPath = [];
+        function [channelNames, channelNamesAll] = getAllChannelNames(psgPath,srcType)
+            if(nargin<2)
+                srcType = 'flat';
+                
+                if(nargin<1)
+                    msg_string = 'Select directory with .EDFs';
+                    psgPath =uigetdir(pwd,msg_string);
+                    if(isnumeric(psgPath) && ~psgPath)
+                        psgPath = [];
+                    end
                 end
             end
             
-            files = getFilenames(psgPath,'*.EDF');
-            channelNames = {};
-            
-            channelNamesAll = cell(numel(files),1);
-            for f=1:numel(files)
-                srcFile = files{f};
-                fullSrcFile = fullfile(psgPath,srcFile);
-                if(exist(fullSrcFile,'file'))
-                    HDR = loadEDF(fullSrcFile);
-                    channelNames = union(channelNames,HDR.label);
-                    channelNamesAll{f} = HDR.label;
+            if(strcmpi(srcType,'flat'))
+                files = getFilenames(psgPath,'*.EDF');
+                channelNames = {};
+                
+                channelNamesAll = cell(numel(files),1);
+                for f=1:numel(files)
+                    srcFile = files{f};
+                    fullSrcFile = fullfile(psgPath,srcFile);
+                    if(exist(fullSrcFile,'file'))
+                        HDR = loadEDF(fullSrcFile);
+                        channelNames = union(channelNames,HDR.label);
+                        channelNamesAll{f} = HDR.label;
+                    end
                 end
+            elseif(strcmpi(srcType,'tier'))
+                [~,edfPathnames] = getPathnames(psgPath);
+                channelNamesAll = cell(numel(edfPathnames),1);
+                channelNames = {};
+                for d=1:numel(edfPathnames)
+                    psgPath = edfPathnames{d};
+                    srcFile = getFilenamesi(psgPath,'EDF');
+                    if(iscell(srcFile) && ~isempty(srcFile))
+                        srcFile = srcFile{1};
+                    end
+                    fullSrcFile = fullfile(psgPath,srcFile);
+                    if(exist(fullSrcFile,'file'))
+                        HDR = loadEDF(fullSrcFile);
+                        channelNames = union(channelNames,HDR.label);
+                        channelNamesAll{d} = HDR.label;
+                    end
+                end
+            else
+                fprintf('Source type must be ''tier'' or ''flat''\n');
             end
             
             disp(char(channelNames));
@@ -1285,7 +1349,7 @@ classdef CLASS_converter < handle
         
         
         
-        %> @brief Returns EDF names found in a directory.
+        %> @brief Returns EDF names found in a flat directory.
         %> @param edfPathname Pathname to check for EDF names.
         %> @retval dirdump
         function dirdump = getEDFNames(edfPathname)
