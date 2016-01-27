@@ -230,7 +230,7 @@ classdef CLASS_converter < handle
         %> @retval newLabelIndices are the indices to the original EDF
         %> channel names (their order) which the new labels (newLabels)
         %> correspond.
-        function [newLabels, newLabelIndices] = getSingleMontageConfigurations(obj,fullEDFFilename)
+        function [newLabels, newLabelIndices, newHDREntries] = getSingleMontageConfigurations(obj,fullEDFFilename)
             [~, singleChannel, ~] = obj.getMontageConfigurations();
             HDR = loadEDF(fullEDFFilename);
             
@@ -248,6 +248,13 @@ classdef CLASS_converter < handle
                     end
                 end
             end
+            
+            newHDREntries = [];
+            % remove any original labels
+            if(~isempty(newLabels))
+                newHDREntries = CLASS_converter.extractEDFHeader(HDR,newLabelIndices);
+                newHDREntries.label = newLabels(:);
+            end
         end
         
         
@@ -256,7 +263,7 @@ classdef CLASS_converter < handle
         %> @param fullSrcFile Full filename of EDF input file.
         %> @retval mergeHDRentries is empty if there are no dual channel
         %> configurations found in the EDF of the provided source file
-        %> @retval mergeIndices is a two column vector containing the indices of the
+        %> @retval mergeIndices is a two column matrix containing the indices of the
         %> EDF signals to combine (i.e., channel at mergeIndices(1) - channel
         %> at mergeIndices(2).
         function [mergedHDREntries, mergeIndices] = getDualMontageConfigurations(obj,fullSrcFile)
@@ -284,12 +291,6 @@ classdef CLASS_converter < handle
                 primaryIndices = mergeIndices(:,1);
                 mergedHDREntries = CLASS_converter.extractEDFHeader(HDR,primaryIndices);
                 mergedHDREntries.label = mergedLabels;
-                %                  for n=1:numel(CLASS_converter.EDFHDRSignalFields)
-                %                      curFieldname = CLASS_converter.EDFHDRSignalFields{n};
-                %                      if(~strcmpi(curFieldname,'label'))
-                %                          mergedHDREntries.(curFieldname) = HDR.(curFieldname)(primaryIndices);
-                %                      end
-                %                  end
             end
         end
         
@@ -300,6 +301,31 @@ classdef CLASS_converter < handle
             [~,edfPathnames] = getPathnames(obj.srcPath);
             for d=1:numel(edfPathnames)
                 obj.exportFlatEDFPath(obj,edfPathnames{d})
+            end
+        end
+        
+        %> @brief Exports only the channel names listed from
+        %> getChannelMontageConfiguration at the samplerate provided.
+        %> @param obj Instance of CLASS_converter
+        %> @param fullSrcFile Full name of the source/input file
+        %> @param fullDestFile Full name of the destination/export file.
+        %> @param exportSamplerate Samplerate to use for destination
+        %> channels.  If nothing is provided, then the original samplerate is
+        %> kept.
+        function didExport =exportCulledEDF(obj, fullSrcFile, fullDestFile, exportSamplerate)
+            % returns two column array of indices to combine (each row
+            % represents a unqiue channel that is formed by taking the
+            % difference of EDF signal from the per row indices
+            if(nargin< 4)
+                exportSamplerate = [];
+            end
+            [mergeHDREntries, mergeIndices] = obj.getDualMontageConfigurations(fullSrcFile);
+            %             [newLabels, newLabelIndices, newHDREntries] = obj.getSingleMontageConfigurations(fullSrcFile);
+            
+            if(isempty(mergeHDREntries))
+                didExport = false;
+            else
+                didExport = obj.rewriteCulledEDF(fullSrcFile,fullDestFile,mergeIndices,mergeHDREntries,exportSamplerate);
             end
         end
         
@@ -1456,8 +1482,6 @@ classdef CLASS_converter < handle
         end
         
         
-        
-        
         %> @brief Remove HDR entries at indices purgeIndices
         %> @param HDR The header found in an .EDF file
         %> @param purgeIndices is a 1-based vector of indices to purge from HDR
@@ -1501,6 +1525,9 @@ classdef CLASS_converter < handle
                 end
             end
         end
+        
+        
+        
         
         %> @brief Rewrite an EDF.
         %> @param fullSrcFilename
@@ -1584,7 +1611,67 @@ classdef CLASS_converter < handle
                 success = true;
             end
         end
-        
+
+
+        %> @brief Rewrite a culled EDF.  Only transfer over the merged
+        %> information, and nothing else (i.e. cull unspecified data).
+        %> @param fullSrcFilename Original EDF filename
+        %> @param fullDestFilename Exported, culled EDF filename
+        %> @param mergeIndices
+        %> @param HDREntriesToMerge
+        %> @retval success Is a true or false flag.
+        function success = rewriteCulledEDF(fullSrcFilename,fullDestFilename,mergeIndices,mergeHDR, reSamplerate)
+            try
+                
+                % Channel data is returned as a (2*N)x1 cell where N is the
+                % number of merge pairs; i.e. size(mergeIndices,1);  The
+                % loadEDF function returns the mergeIndices channels into
+                % channelData, where channelData pairs are separated by N
+                % rows within the cell.
+                
+                if(nargin<5 || reSamplerate<=0)
+                    reSamplerate = [];
+                else
+                    % Set the number of data records to be equal to the
+                    % total number of seconds.  This will make things
+                    % easier when resampling later.
+                    mergeHDR.number_of_data_records = mergeHDR.number_of_data_records*mergeHDR.duration_of_data_record_in_seconds;
+                    mergeHDR.duration_of_data_record_in_seconds = 1;
+                    mergeHDR.duration_sec = mergeHDR.number_of_data_records;
+                end
+                
+                [HDR, channelData] = loadEDF(fullSrcFilename, mergeIndices(:));
+                numMerges = size(mergeIndices,1);
+                mergedData = cell(numMerges,1);
+                for n=1:numMerges
+                    mergedData{n} = channelData{n}-channelData{n+numMerges};
+                    if(~isempty(reSamplerate))
+                        % get the sample rate from the header's original
+                        % channel location of the first merge index.  If we
+                        % have different sampling rates for the merge pair
+                        % we will have errored out already.
+                        srcSamplerate = HDR.samplerate(mergeIndices(n)); 
+                        [N,D] = rat(reSamplerate/srcSamplerate);     % reSamplerate = srcSamplerate*N/D               
+                        
+                        if(N~=D)
+                            if(numel(mergedData{n})>0)
+                                mergedData{n} = resample(mergedData{n},N,D); %resample to get the desired sample rate
+                                mergeHDR.number_samples_in_each_data_record(n) = mergeHDR.number_samples_in_each_data_record(n) * N/D;  % should be reSamplerate
+                            end;
+                        end;
+                    end
+                    mergedData{n} = CLASS_converter.double2EDFReadyData(mergedData{n},mergeHDR,n);
+                end
+                
+                mergeHDR.num_signals = numel(mergedData);
+                CLASS_converter.writeEDF(fullDestFilename,mergeHDR,mergedData);
+                success = true;
+                
+            catch me
+                showME(me);
+                success = false;
+            end
+        end        
         
         %> @brief helper function for something, but it has been a while
         %  Hyatt Moore, IV

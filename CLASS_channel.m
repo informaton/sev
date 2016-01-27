@@ -148,8 +148,8 @@ classdef CLASS_channel < handle
             [N,D] = rat(desired_samplerate/src_samplerate);
             if(N~=D)
                 if(numel(raw_data)>0)
-                    b = fir1(100,0.5);
-%                     raw_data2 = filtfilt(b,1,raw_data);
+                    %                     b = fir1(100,0.5);
+                    %                     raw_data2 = filtfilt(b,1,raw_data);
                     raw_data = resample(raw_data,N,D); %resample to get the desired sample rate
                 end;
             end;

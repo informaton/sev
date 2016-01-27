@@ -75,7 +75,10 @@ else
     spectrum_ind = spectrum_ind(1):spectrum_ind(2);
     
     spectrum_psd = sum(channel_psd(:,spectrum_ind),2);
-    median_vals = moving_median_filter(spectrum_psd,round(params.long_window_sec/params.short_window_sec));
+    params.order = round(params.long_window_sec/params.short_window_sec);
+    median_vals = filter.nlfilter_median(spectrum_psd,params);
+    
+%     median_vals = moving_median_filter(spectrum_psd,round(params.long_window_sec/params.short_window_sec));
     
     new_evt_ind = find(spectrum_psd>median_vals(:)*params.threshold_scale);
     new_evt_ind = (new_evt_ind-1)*params.short_window_sec*samplerate+1;

@@ -9,8 +9,6 @@
 %> @param sig Vector of sample data to filter.
 %> @param params Structure of field/value parameter pairs that to adjust filter's behavior.
 %> - @c order = 100  (filter order; window length to calculate median from)
-%> - @c abs = 1     (1 if the result should be all positive values (absolute
-% %value)
 %> @retval filtsig The nonlinear filtered signal. 
 %> @note Uses MATLAB medfilt1() method
 %> written by Hyatt Moore IV,
@@ -28,7 +26,7 @@ function filtsig = nlfilter_median(sig,params)
 
 % initialize default parameters
 defaultParams.order = 100;
-defaultParams.abs = 0;
+
 % return default parameters if no input arguments are provided.
 if(nargin==0)
     filtsig = defaultParams;
