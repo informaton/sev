@@ -94,9 +94,6 @@ classdef CLASS_codec < handle
                     for k = 0:numel(STAGES.count)-1
                         STAGES.count(k+1) = sum(STAGES.line==k);
                     end
-                    %this may be unnecessary when the user does not care about sleep cycles.
-                    % STAGES.cycles = scoreSleepCycles(STAGES.line);
-                    STAGES.cycles = scoreSleepCycles_ver_REMweight(STAGES.line);
                     
                     firstNonWake = 1;
                     while( firstNonWake<=numel(STAGES.line) && (STAGES.line(firstNonWake)==7||STAGES.line(firstNonWake)==0))
@@ -122,6 +119,10 @@ classdef CLASS_codec < handle
                 fprintf('failed in %s\n\tMissing or empty filename argument for loadSTAGES',mfile);
                 % throw(MException('SEV:ARGERR','Missing or empty filename argument for loadSTAGES'));
             end
+            %this may be unnecessary when the user does not care about sleep cycles.
+            % STAGES.cycles = scoreSleepCycles(STAGES.line);
+            STAGES.cycles = scoreSleepCycles_ver_REMweight(STAGES.line);
+                    
         end
         
         
