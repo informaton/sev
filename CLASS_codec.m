@@ -118,13 +118,13 @@ classdef CLASS_codec < handle
                 else
                     
                     mfile =  strcat(mfilename('fullpath'),'.m');
-                    fprintf('failed in %s\n\tFilename argument for loadSTAGES could not be found',mfile);
+                    fprintf('failed in %s\n\tFilename argument for loadSTAGES could not be found.\n',mfile);
                     %  throw(MException('SEV:ARGERR','Filename argument for loadSTAGES could not be found'));
                     
                 end
             else
                 mfile =  strcat(mfilename('fullpath'),'.m');
-                fprintf('failed in %s\n\tMissing or empty filename argument for loadSTAGES',mfile);
+                fprintf('failed in %s\n\tMissing or empty filename argument for loadSTAGES\n',mfile);
                 % throw(MException('SEV:ARGERR','Missing or empty filename argument for loadSTAGES'));
             end
             %this may be unnecessary when the user does not care about sleep cycles.
