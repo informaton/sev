@@ -21,10 +21,17 @@ classdef CLASS_codec < handle
         %> @param unknown_stage_label (Optional) Integer number to use for
         %> unclassified/unknown hypnogram stages.  Default is 7.
         %> @retval STAGES A struct with the following fields
-        %> -@c line = the second column of stages_filename - the scored sleep stages
-        %> -@c count = the number of stages for each one
-        %> -@c cycle - the nrem/rem cycle
-        %> -@c firstNonWake - index of first non-Wake(0) and non-unknown(7) staged epoch      
+        %> - @c line = the second column of stages_filename - the scored sleep stages
+        %> - @c count = the number of stages for each one
+        %> - @c cycle - the nrem/rem cycle
+        %> - @c firstNonWake - index of first non-Wake(0) and non-unknown(7) staged epoch      
+        %> - @c standard_epoch_sec 30 seconds
+        %> - @c filename Name of the staging filename
+        %> - @c study_duration_in_seconds How long the study is measured in
+        %> seconds based on the number of epochs entered and the
+        %> standard_epoch_sec duration (i.e. 30 seconds)
+        
+        
         %> @note Author: Hyatt Moore IV
         %> Written: 9.26.2012
         %> modified before 12.3.2012 to include scoreSleepCycles(.);
@@ -34,6 +41,8 @@ classdef CLASS_codec < handle
         %> modified 5.1.2013 - added .filename = stages_filename;
         function STAGES = loadSTAGES(stages_filename,num_epochs,unknown_stage_label)
             EPOCH_DURATION_SEC = 30; %30 second epcohs
+            STAGES.standard_epoch_sec = EPOCH_DURATION_SEC;
+            
             if(nargin<3)
                 default_unknown_stage = 7;
                 if(nargin<1)
@@ -45,7 +54,8 @@ classdef CLASS_codec < handle
             
             % Make a default line, regardless of what comes out of here.
             STAGES.line = repmat(default_unknown_stage,num_epochs,1);
-            
+            STAGES.filename = [];
+            STAGES.firstNonWake = [];
             
             if(~isempty(stages_filename))
                 [~,~,ext] = fileparts(stages_filename);
@@ -105,8 +115,6 @@ classdef CLASS_codec < handle
                     end
                     
                     STAGES.filename = stages_filename;
-                    STAGES.standard_epoch_sec = EPOCH_DURATION_SEC;
-                    STAGES.study_duration_in_seconds = STAGES.standard_epoch_sec*numel(STAGES.line);
                 else
                     
                     mfile =  strcat(mfilename('fullpath'),'.m');
@@ -122,6 +130,8 @@ classdef CLASS_codec < handle
             %this may be unnecessary when the user does not care about sleep cycles.
             % STAGES.cycles = scoreSleepCycles(STAGES.line);
             STAGES.cycles = scoreSleepCycles_ver_REMweight(STAGES.line);
+            STAGES.study_duration_in_seconds = STAGES.standard_epoch_sec*numel(STAGES.line);
+            
                     
         end
         
