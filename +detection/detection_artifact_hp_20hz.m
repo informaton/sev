@@ -1,4 +1,4 @@
-%> @file
+%> @file detection_artifact_hp_20hz.cpp
 %> @brief EEG detection of high frequency noise.
 %======================================================================
 %> @brief Determines high frequency noise in input signal (e.g. EEG).
@@ -27,7 +27,7 @@ function detectStruct = detection_artifact_hp_20hz(data,params,stageStruct)
 defaultParams.scale_factor=1.5;
 defaultParams.rms_short_sec=2;
 defaultParams.rms_long_min=5;
-defaultParams.additional_bufer_sec = 1; %add this to the left and right of each event.
+defaultParams.additional_buffer_sec = 1; %add this to the left and right of each event.
 
 defaultParams.merge_within_sec = 5;
 

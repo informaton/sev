@@ -53,6 +53,13 @@ try
         for r = 1:size(artifacts_per_periodogram_epoch,1)
             A_ind(artifacts_per_periodogram_epoch(r,1):artifacts_per_periodogram_epoch(r,2),k)=true; %ARTIFACT_CONTAINER.cell_of_events{k}.batch_mode_score;
         end;
+        
+        % Occassional a detector will get over zealous and mark artifact
+        % outside the actual data range!  Need to reign it back in here.
+        if(size(A_ind,1)>numel(E))
+            A_ind = A_ind(1:numel(E),:); 
+        end
+        
         ArtifactLabels(A_ind(:,k),k) = ARTIFACT_CONTAINER.cell_of_events{k}.batch_mode_label(1);
 %         ArtifactBool(A_ind(:,k)) = 1;
     end

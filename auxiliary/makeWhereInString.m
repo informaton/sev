@@ -1,4 +1,4 @@
-function string = makeWhereInString(data,dataType)
+function string = makeWhereInString(data,dataType, includeParenthesis)
 %------------------------------------------------------------
 % string = makeWhereInString(data,dataType)
 %
@@ -11,6 +11,9 @@ function string = makeWhereInString(data,dataType)
 
 % Hyatt Moore, IV (< June, 2013) - this is being moved to CLASS_database.m
 % as of 9/22/2015
+if(nargin<3)
+    includeParenthesis = true;
+end
 
 if(isempty(data))
     string = '';
@@ -26,6 +29,7 @@ else
         string = sprintf(strfmt,data(1));
     end
     
+
     strfmt = ['%s,',strfmt];
     
     if(iscell(data))
@@ -38,4 +42,6 @@ else
         end
     end;
 end
-string=['(',string,')'];
+if(includeParenthesis)
+    string=['(',string,')'];
+end

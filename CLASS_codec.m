@@ -58,9 +58,9 @@ classdef CLASS_codec < handle
                         if(strcmpi(ext,'.sta'))
                             stages = load(stages_filename,'-ASCII'); %for ASCII file type loading
                         else
-                            [evtStruct,stageVec] = CLASS_codec.parseSSCevtsFile(stages_filename,default_unknown_stage);
-                            epochs = evtStruct.startStopSamples(:,1)/evtStruct.samplerate/EPOCH_DURATION_SEC;
-                            stages = [epochs, stageVec];
+                            [~,stageVec] = CLASS_codec.parseSSCevtsFile(stages_filename,default_unknown_stage);
+                            epochs = 1:numel(stageVec);
+                            stages = [epochs(:), stageVec];
                         end
                         
                         if(nargin>1 && ~isempty(num_epochs) && floor(num_epochs)>0)
@@ -811,6 +811,12 @@ classdef CLASS_codec < handle
         %> @retval stageVec A hynpogram of scored sleep stages as parsed from filenameIn.       
         %> @note SSC .evts files give time and samples as elapsed values
         %> starting from 0 (for samples) and 00:00:00.000 (for time stamps)
+        %> @note The stageVec is ordered by epoch from 1:N sequentially, 1
+        %> epoch increase per row  (i.e. stageVec(2) is the stage for epoch
+        %> 2, and stageVec(N) is the stage for the Nth epoch.  It is
+        %> possible that the stageVec is shorter than the recorded file.  In
+        %> this case, it is necessary for the calling member to add 
+        %> addtional epochs as unknown (e.g. 7).
         % =================================================================
         function [SCOStruct, stageVec] = parseSSCevtsFile(filenameIn,unknown_stage_label)
             if(nargin<2)
@@ -841,6 +847,7 @@ classdef CLASS_codec < handle
                     
                     if(isempty(stageInd) || ~any(stageInd))
                         stageVec = [];
+                        
                         fsCell = regexp(headerLine1,'#\s*\w+=(?<samplerate>\d+(\.\d+)?)','names');
                         
                         SCOStruct.samplerate = str2double(fsCell.samplerate);

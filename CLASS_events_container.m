@@ -163,7 +163,7 @@ classdef CLASS_events_container < handle
         %> @retval paramStruct A structure containing the detectorFcn
         %> parameters as obtained from the .plist or .mat file.  
         % =================================================================        
-        function paramStruct = loadDetectionParams(obj,detectorFcn)
+        function paramStruct = loadDetectionParams(obj,detectorFcn, fevalReadyDetectorFcn)
             pfile = fullfile(obj.detection_path,strcat(strrep(detectorFcn,'.m',''),'.plist'));
             matfile = fullfile(obj.detection_path,strcat(strrep(detectorFcn,'.m',''),'.mat'));
             paramStruct = [];
@@ -182,6 +182,15 @@ classdef CLASS_events_container < handle
                     fprintf(1,'Could not load parameters from %s directly.\n',matfile);
                     showME(me);
                 end
+            else
+                try
+                    paramStruct = feval(fevalReadyDetectorFcn);
+                    fprintf(1,'Loading default parameters for %s\n',detectorFcn);
+                catch me
+                    fprintf(1,'Could not load default parameters for %s\n',detectorFcn);
+                    showME(me);
+                end
+
             end
         end
         
@@ -216,12 +225,13 @@ classdef CLASS_events_container < handle
                 source_indices = cell2mat(source_indices);
             end
             if(nargin<4 || isempty(params))
-                params = obj.loadDetectionParams(shortDetectorFcn);
+                localDetectorFcn = strcat(strrep(obj.detection_path,'+',''),'.',shortDetectorFcn);
+
+                params = obj.loadDetectionParams(shortDetectorFcn, localDetectorFcn);
                 
                 %no parameters available?
                 if(isempty(params))
                     disp('No parameters to load here - debug here and run detector with no arguments to generate params file');
-                    localDetectorFcn = strcat(strrep(obj.detection_path,'+',''),'.',shortDetectorFcn);
                     
                     %run an empty version once to generate the detection
                     %parameters file

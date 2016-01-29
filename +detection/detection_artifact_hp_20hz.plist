@@ -8,7 +8,7 @@
 	<real>2.000000</real>
 	<key>rms_long_min</key>
 	<real>5.000000</real>
-	<key>additional_bufer_sec</key>
+	<key>additional_buffer_sec</key>
 	<real>1.000000</real>
 	<key>merge_within_sec</key>
 	<real>5.000000</real>
