@@ -1,19 +1,10 @@
-function detectStruct = detection_dualthreshold(data, params, ~)
-%Generic detector that applies a dual threshold to the single channel
-%provide (source_indices(1)).
-% A detection begins when the signal rises above the first threshold and ends when
-% it drops below the second threshold.
-%
-%
-% Author Hyatt Moore IV
-% Date: 5/10/2012
-% Migrated in on 1/29/2016 by Hyatt Moore IV
-% return default parameters if no input arguments are provided.
-%> @note This relies on the method @c thresholdcrossings which is in sev's
-%> @c auxiliary/ folder
-%make it and save it for the future
-defaultParams.threshold_high_uv = 100;
-defaultParams.threshold_low_uv = 50;
+%> @file detection_peaks.cpp
+%> Generic peak detection algorithm.
+%> @brief Find peaks or valleys in a signal.
+%> @note Written 1/29/2016 copyright Hyatt Moore IV
+
+function detectStruct = detection_peaks(data, params, ~)
+
 defaultParams.merge_within_sec = 0.05;
 defaultParams.min_dur_sec = 0.05;
 
@@ -36,7 +27,8 @@ else
     end
     
     %merge events that are within 1/25th of a second of each other samples of each other
-    new_events = dualthresholdcrossings(data, params.threshold_high_uv,params.threshold_low_uv);
+    peaksVec = sev_findpeaks(data);
+    new_events = [peaksVec(:), peaksVec(:)];
     
     if(~isempty(new_events))
         if(params.merge_within_sec>0)
