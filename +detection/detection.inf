@@ -1,6 +1,6 @@
 #MATLAB_filename   Label Number_of_channels_required Dialog_name Batch_mode_score
-detection_findpeaks Find_peaks 1 plist_editor_dlg findPks
-detection_findvalleys Find_valleys 1 plist_editor_dlg findPks
+detection_peaks Find_peaks 1 plist_editor_dlg findPks
+detection_valleys Find_valleys 1 plist_editor_dlg findPks
 detection_threshold Single_threshold 1 plist_editor_dlg singThresh
 detection_dualthreshold dual_threshold 1 plist_editor_dlg dualThresh
 detection_plm_calculator plm_calculator 2 plist_editor_dlg plm_calc
@@ -30,4 +30,3 @@ detection_artifact_brunner ArtifactBrunner 1 plist_editor_dlg A
 detection_psd Power_spectral_density 1 plist_editor_dlg PSD
 detection_dummy  dummy 10 plist_editor_dlg dummy
 detection_nasalpres_amplitude_HK nasalpres_amplitude_HK 5 plist_editor_dlg nasalpres_amplitude_HK
-
