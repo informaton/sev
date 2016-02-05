@@ -902,8 +902,9 @@ classdef CLASS_codec < handle
                     SCOStruct.startStopSamples = [scanCell{1},scanCell{2}]+1;
                     
                     % MATLAB starts indices at 1, while the rest of the
-                    % programming world starts at 0.
+                    % programming world starts at 0.               
                     SCOStruct.startStopDatenums =  [datenum(scanCell{3},'HH:MM:SS.FFF'),datenum(scanCell{4},'HH:MM:SS.FFF')];
+               
                     SCOStruct.durationSeconds = datevec(diff(SCOStruct.startStopDatenums,1,2))*[0;0;24*60;60;1;1/60]*60;
                     
                 end

@@ -1260,6 +1260,43 @@ classdef CLASS_events < handle
             end;
         end
         
+        % =================================================================
+        %> @brief Finds locations where adjacent events are separated by at least min_interval_samples and at most max_interval_samples.
+        %> @param
+        %> @retval
+        % =================================================================
+        function interval_events = find_intervals(event_mat_in, min_interval_samples, max_interval_samples)
+            
+            if(size(event_mat_in,1)<2)
+                interval_events = [];
+            else
+                
+                % just in case we had the samples entered in reverse order.
+                if(min_interval_samples>max_interval_samples)
+                    tmp = min_interval_samples;
+                    min_interval_samples = max_interval_samples;
+                    max_interval_samples = tmp;
+                end
+                dist_samples = event_mat_in(2:end,1)-event_mat_in(1:end-1,2);  %start of next event minus stop of current event.  
+                good_interval_indices = dist_samples>=min_interval_samples&dist_samles<=max_interval_samples; % 
+                
+                %the last row does not have a follow-on interval, so hard
+                %code a false there at the end.  (i.e. if we have 5
+                %events/rows, there will only be 4 intervals, but we don't
+                %want to confuse matlab and index into our data with a
+                %vector of length 4.
+                good_start_interval_indices = [good_interval_indices(:);false];
+                good_stop_interval_indices = [false; good_interval_indices(:)];
+                interval_events = [event_mat_in(good_start_interval_indices,2),event_mat_in(good_stop_interval_indices,1)];                    
+            end
+        end
+        % =================================================================
+        %> @brief Creates a signal vector by using the parameter value
+        %> identified in the input eventStruct and resampling via
+        %> convolution.
+        %> @param
+        %> @retval
+        % =================================================================
         function signalVector = eventParam2DeltaSignal(eventStruct, paramName, signalLength, sampleRate, resampleOrder)
             try
                 eventVector = zeros(signalLength,1);
@@ -1277,6 +1314,12 @@ classdef CLASS_events < handle
             end            
         end
         
+        % =================================================================
+        %> @brief Creates a signal vector by using the parameter value
+        %> identified in the input eventStruct and a cubic spline.
+        %> @param
+        %> @retval
+        % =================================================================
         function signalVector = eventParam2Signal(eventStruct, paramName, signalLength, sampleRate, resampleOrder)
             try
                 %                 resampledX = 1:resampleOrder:signalLength;
