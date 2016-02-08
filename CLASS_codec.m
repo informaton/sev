@@ -56,6 +56,7 @@ classdef CLASS_codec < handle
             STAGES.line = repmat(default_unknown_stage,num_epochs,1);
             STAGES.filename = [];
             STAGES.firstNonWake = [];
+            STAGES.count = zeros(8,1);
             
             if(~isempty(stages_filename))
                 [~,~,ext] = fileparts(stages_filename);
@@ -100,7 +101,6 @@ classdef CLASS_codec < handle
                         num_epochs = numel(STAGES.line);
                     end
                     %calculate number of epochs in each stage
-                    STAGES.count = zeros(8,1);
                     for k = 0:numel(STAGES.count)-1
                         STAGES.count(k+1) = sum(STAGES.line==k);
                     end
