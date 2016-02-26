@@ -576,6 +576,9 @@ classdef CLASS_UI_marking < handle
             if(~isempty(fullfile) && fs>0)
                 obj.SETTINGS.VIEW.text_channels_filename = fullfile;
                 obj.SETTINGS.VIEW.text_channels_samplerate = fs;
+                %      fid = fopen(fullfile,'r');
+                %      data = textscan(fid,'%f','commentstyle','#','delimiter',',');
+                %      fclose(fid);
                 data = load(fullfile,'ascii');                
                 [~,filename,~]= fileparts(fullfile);
                 for ch=1:size(data,2)
