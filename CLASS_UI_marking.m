@@ -318,7 +318,7 @@ classdef CLASS_UI_marking < handle
             
                %import section
             set(handles.menu_file_load_sco,'callback',@obj.menu_file_load_sco_callback);
-            set(handles.menu_file_load_Evt_File,'callback',@obj.menu_file_load_evt_file_callback);
+            set(handles.menu_file_import_txt_eventsFile,'callback',@obj.menu_file_import_txt_eventsFile_callback);
             set(handles.menu_file_import_evtsFile,'callback',@obj.menu_file_import_evtsFile_callback);
                         
             set(handles.menu_file_load_text_channel,'callback',@obj.menu_file_load_text_channel_callback);
@@ -574,8 +574,13 @@ classdef CLASS_UI_marking < handle
             end
                 
             if(~isempty(fullfile) && fs>0)
+                
+                
                 obj.SETTINGS.VIEW.text_channels_filename = fullfile;
                 obj.SETTINGS.VIEW.text_channels_samplerate = fs;
+                %      fid = fopen(fullfile,'r');
+                %      data = textscan(fid,'%f','commentstyle','#','delimiter',',');
+                %      fclose(fid);
                 data = load(fullfile,'ascii');                
                 [~,filename,~]= fileparts(fullfile);
                 for ch=1:size(data,2)
@@ -593,7 +598,7 @@ classdef CLASS_UI_marking < handle
                 CHANNELS_CONTAINER.setChannelSettings();
                     
                 enableFigureHandles(obj.figurehandle.sev);
-                set(obj.texthandle.src_filename,'string',obj.SETTINGS.VIEW.src_edf_filename);
+                set(obj.texthandle.src_filename,'string',filename);
                 obj.STATE.single_study_running = true;
             end
             obj.sev_loading_file_flag = false;        
@@ -604,12 +609,12 @@ classdef CLASS_UI_marking < handle
         %> @brief update the SEV with a range of events that were previously saved
         %> using the save to evt menu item (.txt or .mat).
         %> @param obj instance of CLASS_events class.
-        %> @param hObject handle to menu_file_load_evt_file_callback (see GCBO)
+        %> @param hObject handle to menu_file_import_txt_eventsFile_callback (see GCBO)
         %> @param eventdata  reserved - to be defined in a future version
         %> of MATLAB           
         %> @retval obj instance of CLASS_events class.
         % =================================================================
-        function menu_file_load_evt_file_callback(obj,hObject, eventdata)
+        function menu_file_import_txt_eventsFile_callback(obj,hObject, eventdata)
             global EVENT_CONTAINER;            
             suggested_filename = fullfile(['evt.',obj.SETTINGS.VIEW.src_edf_filename(1:end-4),'.*']);
             if(obj.SETTINGS.VIEW.src_event_pathname_is_edf_pathname)
@@ -643,7 +648,7 @@ classdef CLASS_UI_marking < handle
         %> @brief update the SEV with a range of events that were previously saved
         %> using the save to evt menu item (.txt or .mat).
         %> @param obj instance of CLASS_events class.
-        %> @param hObject handle to menu_file_load_evt_file_callback (see GCBO)
+        %> @param hObject handle to menu_file_import_txt_eventsFile_callback (see GCBO)
         %> @param eventdata  reserved - to be defined in a future version
         %> of MATLAB
         %> @retval obj instance of CLASS_events class.
@@ -651,14 +656,21 @@ classdef CLASS_UI_marking < handle
         function menu_file_import_evtsFile_callback(obj,hObject, eventdata)
             global EVENT_CONTAINER;
             
-            suggested_filename = strcat(obj.SETTINGS.VIEW.src_edf_filename(1:end-4),'.EVTS');
-            if(obj.SETTINGS.VIEW.src_event_pathname_is_edf_pathname)
-                suggested_pathname = obj.SETTINGS.VIEW.src_edf_pathname;                
+            if(exist(obj.SETTINGS.VIEW.text_channels_filename,'file'))
+                suggestion = strcat(obj.SETTINGS.VIEW.text_channels_filename(1:end-4),'.evts');
+                suggested_pathname = fileparts(suggestion);
             else
-                suggested_pathname = obj.SETTINGS.VIEW.src_event_pathname;                
+                suggested_filename = strcat(obj.SETTINGS.VIEW.src_edf_filename(1:end-4),'.EVTS');
+                
+                if(obj.SETTINGS.VIEW.src_event_pathname_is_edf_pathname)
+                    suggested_pathname = obj.SETTINGS.VIEW.src_edf_pathname;
+                else
+                    suggested_pathname = obj.SETTINGS.VIEW.src_event_pathname;
+                end                
+                suggestion = fullfile(suggested_pathname,suggested_filename);
+
             end
-            
-            suggestion = fullfile(suggested_pathname,suggested_filename);
+                
             if(~exist(suggestion,'file'))
                 
                 suggested_file = getFilenamesi(suggested_pathname,'.EVTS');
