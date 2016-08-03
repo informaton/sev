@@ -232,11 +232,19 @@ classdef CLASS_database < handle
             end
         end  
         
-        function resultStruct = query(this,queryStr)
+        function resultStruct = query(this,queryStr,varargin)
             if(mym())
                 this.open();
             end
+            if(nargin>2)
+                queryStr = sprintf(queryStr, varargin{:});
+            end
             resultStruct = mym(queryStr);
+        end
+        
+        function columnNames = getColumnNames(this, tableName)
+            resultStruct = this.query('describe %s',tableName);
+            columnNames = resultStruct.Field;
         end
     end
     
@@ -801,6 +809,8 @@ classdef CLASS_database < handle
             end
             string=['(',string,')'];
         end
+        
+        
         
     end
     

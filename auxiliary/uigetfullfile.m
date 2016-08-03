@@ -8,7 +8,8 @@ function fullfilename = uigetfullfile(filter_cell,display_message,multiselect_op
 if(nargin<4 || isempty(file))
     file = pwd;
 end
-if(nargin<3 || (~strcmpi(multiselect_option,'on') || ~strcmpi(multiselect_option,'off')))
+
+if(nargin<3 || isempty(intersect(lower(multiselect_option),{'on','off'})))
     [filename, pathname, ~] = uigetfile(filter_cell,display_message,file);
 else
     [filename, pathname, ~] = uigetfile(filter_cell,display_message,file,'MultiSelect',multiselect_option);    

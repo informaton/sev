@@ -1,4 +1,4 @@
-function [psd freq_vec nfft] = calcPSD(signal_x,Fs,PSD_settings,ZeroPad)
+function [psd, freq_vec, nfft] = calcPSD(signal_x,Fs,PSD_settings,ZeroPad)
 %PSD_settings has the following fields
 % PSD.wintype = handles.user.wintype;
 % PSD.modified = handles.user.modified;
@@ -20,12 +20,13 @@ function [psd freq_vec nfft] = calcPSD(signal_x,Fs,PSD_settings,ZeroPad)
 %
 %Calculates the psd using periodogram method more or less . . .
 
-%Written by Hyatt Moore, IV (sometime before 14october2010)
-%modified 14october2010 to remove the waitbar screen
-%modified 5Aug2011 to update PSD global variable usage and change to
-%passing a PSD_settings struct instead of individual variable names
-%Modified November 27, 2012 - zeropad signal_x when it is smaller than
-%PSD_settings.win_len*Fs
+%> Written by Hyatt Moore, IV (sometime before 14october2010)
+%> modified 14october2010 to remove the waitbar screen
+%> modified 5Aug2011 to update PSD global variable usage and change to
+%> passing a PSD_settings struct instead of individual variable names
+%> Modified November 27, 2012 - zeropad signal_x when it is smaller than
+%> PSD_settings.win_len*Fs
+
 
 if(nargin<4)
     ZeroPad = false;

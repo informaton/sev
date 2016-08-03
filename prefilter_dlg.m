@@ -380,8 +380,15 @@ for cur_row = 1:handles.user.num_rows
     else
         %check if there are parameters for this one...
         if(strcmpi(get(handles.(['push_settings_',cur_row_str]),'enable'),'on') && isempty(handles.user.filterInf.params{cur_row}))
-            
-            handles.output(cur_row).params = handles.user.paramCell{cur_row}; %CLASS_events.loadXMLparams(handles.output(cur_row).m_file); %the .m gets stripped and replaced with .pfile in the loadXMLparams function
+            handles.output(cur_row).params = handles.user.paramCell{cur_row}; % often true when we come in with a value already
+            if(isempty(handles.output(cur_row).params))
+                try
+                    handles.output(cur_row).params = CLASS_events.loadXMLparams(handles.output(cur_row).m_file); %the .m gets stripped and replaced with .pfile in the loadXMLparams function
+                catch me
+                    showME(me);
+                    % just leave it empty
+                end
+            end
         else
             handles.output(cur_row).params = handles.user.filterInf.params{cur_row}; %empty
         end

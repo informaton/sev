@@ -909,7 +909,7 @@ classdef CLASS_events < handle
         end
         
         % =================================================================
-        %> @brief Tis function requires filename to meet OS file naming requirements
+        %> @brief This function requires filename to meet OS file naming requirements
         %> or it will crash - it appends to the file if filename already
         %> exists, otherwise a new one is created.  The file is closed at
         %> the end of this function call
@@ -1278,7 +1278,7 @@ classdef CLASS_events < handle
                     max_interval_samples = tmp;
                 end
                 dist_samples = event_mat_in(2:end,1)-event_mat_in(1:end-1,2);  %start of next event minus stop of current event.  
-                good_interval_indices = dist_samples>=min_interval_samples&dist_samles<=max_interval_samples; % 
+                good_interval_indices = dist_samples>=min_interval_samples&dist_samples<=max_interval_samples; % 
                 
                 %the last row does not have a follow-on interval, so hard
                 %code a false there at the end.  (i.e. if we have 5
