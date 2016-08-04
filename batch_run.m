@@ -219,19 +219,19 @@ function push_directory_Callback(hObject, eventdata, handles)
 % hObject    handle to push_directory (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-    global MARKING;
+    
     path = get(handles.edit_edf_directory,'string');
     if(~exist(path,'file'))
-        path = MARKING.SETTINGS.BATCH_PROCESS.edf_folder;
+        path = handles.user.BATCH_PROCESS.edf_folder;
     end;
     pathname = uigetdir(path,'Select the directory containing EDF files to process');
     
     if(isempty(pathname)||(isnumeric(pathname)&&pathname==0))
         pathname = path;
-    else
-        MARKING.SETTINGS.BATCH_PROCESS.edf_folder = pathname; %update for the next time..
-    end;
+    end
     
+    handles.user.BATCH_PROCESS.edf_folder = pathname;
+    guidata(hObject,handles);
     set(handles.edit_edf_directory,'string',pathname);
     checkPathForEDFs(handles);
 end
@@ -1023,6 +1023,8 @@ if(new_settings.modified)
     set(hObject,'userdata',new_settings);
 end;
 end
+
+
 function cancel_batch_Callback(hObject,eventdata)
 % userdata = get(hObject,'userdata');
 user_cancelled = true;
@@ -1975,7 +1977,7 @@ try
     MARKING.SETTINGS.BATCH_PROCESS = handles.user.BATCH_PROCESS; %need to return this to the global for now 
 
     if(ishandle(MARKING.figurehandle.sev))
-        MARKING.initializeSEV(); %this currently deletes any other MATLAB figures that are up.
+        MARKING.initializeView(); %this currently deletes any other MATLAB figures that are up.
     else
         delete(hObject);
     end

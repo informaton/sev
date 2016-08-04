@@ -28,8 +28,9 @@ try
     E = floor(0:channelObj.PSD.interval/StagingStruct.standard_epoch_sec:(study_duration_in_seconds-channelObj.PSD.FFT_window_sec)/StagingStruct.standard_epoch_sec)'+1;
     S = StagingStruct.line(E);
 
+    numPeriodograms = numel(E);
 %     no_artifact_label = '-';
-    A_ind = false(numel(E),ARTIFACT_CONTAINER.num_events);
+    A_ind = false(numPeriodograms,ARTIFACT_CONTAINER.num_events);
     ArtifactLabels=repmat('_',size(A_ind)); %initialize to blanks
 %     ArtifactBool = zeros(numel(E),1);
     for k = 1:ARTIFACT_CONTAINER.num_events
@@ -38,7 +39,9 @@ try
         %periodogram_epoch refers to an epoch that is measured in terms of
         %the periodogram length and not a 30-second length
         artifacts_per_periodogram_epoch = sample2epoch(artifact_indices,channelObj.PSD.interval,channelObj.samplerate);
-                
+        
+        artifacts_per_periodogram_epoch = min(artifacts_per_periodogram_epoch,numPeriodograms);
+        
         %need to handle the overlapping case differently here...
         if(channelObj.PSD.FFT_window_sec~=channelObj.PSD.interval)
             %window_sec must be greater than interval_sec if they are not
@@ -46,7 +49,14 @@ try
             %adjusting the parametes externally may cause trouble!
             overlap_sec = ceil(channelObj.PSD.FFT_window_sec-channelObj.PSD.interval);
             artifacts_per_periodogram_epoch(2:end,1) = artifacts_per_periodogram_epoch(2:end,1)-overlap_sec;
+            
+            % Avoid going to far early
+            artifacts_per_periodogram_epoch = max(artifacts_per_periodogram_epoch,1);
+        
         end;
+        
+        
+        
 
         %assign the corresponding column of A to the artifacts indices
         %found in the current artifact method
@@ -54,7 +64,7 @@ try
             A_ind(artifacts_per_periodogram_epoch(r,1):artifacts_per_periodogram_epoch(r,2),k)=true; %ARTIFACT_CONTAINER.cell_of_events{k}.batch_mode_score;
         end;
         
-        % Occassional a detector will get over zealous and mark artifact
+        % Occassionally a detector will get over zealous and mark artifact
         % outside the actual data range!  Need to reign it back in here.
         if(size(A_ind,1)>numel(E))
             A_ind = A_ind(1:numel(E),:); 

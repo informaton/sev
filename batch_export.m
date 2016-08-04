@@ -112,9 +112,6 @@ function initializeSettings(hObject)
     % Start
     set(handles.push_start,'enable','off');
     
-    
-    
-    
 end
 
 function initializeCallbacks(hObject)

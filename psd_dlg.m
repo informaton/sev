@@ -100,6 +100,12 @@ if(nargin>3 && ~isempty(PSDstruct))
     for f=1:numel(fnames)
         handles.user.(fnames{f}) = PSDstruct.(fnames{f});
     end
+    
+    % Quick fix, but long term solution is to refactor these variable
+    % names.
+    handles.user.winlen = PSDstruct.FFT_window_sec;
+    handles.user.fftint = PSDstruct.interval;
+    
 end
 
 handles.user.modified = false;
