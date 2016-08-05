@@ -419,7 +419,7 @@ classdef CLASS_channel < handle
             end
             
             obj.PSD = PSD_settings;
-            [obj.PSD.magnitude obj.PSD.x obj.PSD.nfft] = calcPSD(obj.getData(psd_range),obj.samplerate,obj.PSD);
+            [obj.PSD.magnitude, obj.PSD.x, obj.PSD.nfft, obj.PSD.U_psd, obj.PSD.U_power] = calcPSD(obj.getData(psd_range),obj.samplerate,obj.PSD);
             if(nargout>0)
                 S = obj.PSD.magnitude;
                 if(nargout>1)

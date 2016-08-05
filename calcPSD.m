@@ -1,10 +1,11 @@
-function [psd, freq_vec, nfft] = calcPSD(signal_x,Fs,PSD_settings,ZeroPad)
+function [psd, freq_vec, nfft, U_psd, U_power] = calcPSD(signal_x,Fs,PSD_settings,ZeroPad)
 %PSD_settings has the following fields
 % PSD.wintype = handles.user.wintype;
 % PSD.modified = handles.user.modified;
 % PSD.FFT_window_sec = handles.user.winlen;
 % PSD.interval = handles.user.fftint;
 % PSD.removemean = true;
+% PSD.spectrum_type = {'psd','power','none'}
 %
 %calculate the power spectral density of signal_x with sampling rate of FS,
 %over a winlen second segments done every interval seconds
@@ -27,6 +28,8 @@ function [psd, freq_vec, nfft] = calcPSD(signal_x,Fs,PSD_settings,ZeroPad)
 %> Modified November 27, 2012 - zeropad signal_x when it is smaller than
 %> PSD_settings.win_len*Fs
 
+%> Modified 8/5/2016 to allow for calculation of power as well as psd
+%> (normalized by sampling frequency)
 
 if(nargin<4)
     ZeroPad = false;
@@ -36,6 +39,12 @@ winlen = PSD_settings.FFT_window_sec;
 interval = PSD_settings.interval;
 wintype = PSD_settings.wintype;
 RemoveMean = PSD_settings.removemean;
+
+if(~isfield(PSD_settings.spectrum_type))
+    PSD_settings.spectrum_type = 'psd';
+end
+
+spectrum_type = PSD_settings.spectrum_type;
 
 % h = waitbar(0,'Calculating Power Spectal Density');
 
@@ -61,7 +70,24 @@ if(rows==0)
 end
 % win = window(eval(['@' wintype]),nfft);
 win = eval([wintype '(' num2str(nfft) ')']);
-U = win'*win;  %Window normalization
+
+
+% PSD window normalization
+U_psd = win'*win;  %Window normalization
+
+
+% Mean square or power normalization
+U_power = sum(win)^2; 
+
+if(strcmpi(spectrum_type,'power')
+    U = U_power;
+elseif(strcmpi(spectrum_type,'psd')
+    U = U_psd;
+elseif(strcmpi(spectrum_type,'none')
+    U = U_none;
+else
+    U = U_psd;
+end
 
 % Calculate the numberof unique points
 NumUniquePts = ceil((nfft+1)/2); 
@@ -100,6 +126,7 @@ for r = 1:rows
     
     %see MATLAB's computePSD function
     fft_x= fft(x,nfft);
+    
     Sxx = fft_x.*conj(fft_x)/U;
     
     if isODD
@@ -109,15 +136,21 @@ for r = 1:rows
     else        
         select = 1:nfft/2+1;    % EVEN
         Sxx_unscaled = Sxx(select,:); % Take only [0,pi] or [0,pi)
-        Sxx = [Sxx_unscaled(1,:); 2*Sxx_unscaled(2:end-1,:); Sxx_unscaled(end,:)]; % Don't double unique Nyquist point
+        Sxx = [Sxx_unscaled(1,:); 2*Sxx_unscaled(2:end-1,:); Sxx_unscaled(end,:)]; % Nyquist point also unique
     end
-    
-    psd(r,:) = Sxx./nfft;
+   
+    psd(r,:) = Sxx;
+
+    %     psd(r,:) = Sxx./nfft;
     
     if(RemoveMean)
         psd(r,1) = mx;
     end;
     
 end;
+
+if(strcmpi(spectrum_type,'psd'))
+    psd = psd/Fs;
+end
 
 

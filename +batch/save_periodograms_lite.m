@@ -5,7 +5,8 @@ function save_periodograms_lite(channel_ref,filename_out,optional_PSD_settings)
 
 %Written by Hyatt Moore IV 
 % (date created is likely 2010-2011)
-% lite version added July, 29, 2013
+% lite version added July, 29, 2013 - 
+% save_periodograms_lite uses globals whereas save_periodograms does not.
 global CHANNELS_CONTAINER;
 global MARKING;
 global BATCH_PROCESS;
