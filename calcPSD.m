@@ -40,7 +40,7 @@ interval = PSD_settings.interval;
 wintype = PSD_settings.wintype;
 RemoveMean = PSD_settings.removemean;
 
-if(~isfield(PSD_settings.spectrum_type))
+if(~isfield(PSD_settings,'spectrum_type'))
     PSD_settings.spectrum_type = 'psd';
 end
 
@@ -79,11 +79,13 @@ U_psd = win'*win;  %Window normalization
 % Mean square or power normalization
 U_power = sum(win)^2; 
 
-if(strcmpi(spectrum_type,'power')
+U_none = 1;  % No normalization.
+
+if(strcmpi(spectrum_type,'power'))
     U = U_power;
-elseif(strcmpi(spectrum_type,'psd')
+elseif(strcmpi(spectrum_type,'psd'))
     U = U_psd;
-elseif(strcmpi(spectrum_type,'none')
+elseif(strcmpi(spectrum_type,'none'))
     U = U_none;
 else
     U = U_psd;

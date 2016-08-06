@@ -15,6 +15,7 @@ function save_periodograms(channelObj,StagingStruct,PSD_settings,filename_out,AR
 
 % Updated 8/5/2016 To account for modifiction to calcPSD: now returns U_psd
 % and U_power which is helpful in the case of 'none' estimate.
+% - Also increase number of digits presented in the frequency header line
 try
     
     if(isempty(PSD_settings))
@@ -106,7 +107,7 @@ try
         ,'%s\tSlow\tDelta\tTheta\tAlpha\tSigma\tBeta\tGamma\tMean0_30\tSum0_30\tA\tA_type\tS\tE\r\n'],batchID,analysis_CHANNEL_label,channelObj.PSD.FFT_window_sec,channelObj.PSD.nfft,channelObj.PSD.interval...
         , channelObj.src_samplerate, channelObj.samplerate...
         , channelObj.PSD.spectrum_type, channelObj.PSD.U_psd, channelObj.PSD.U_power...    
-        , num2str(channelObj.PSD.x,'\t%0.001f'));%'\t%0.1f'
+        , num2str(channelObj.PSD.x,'\t%0.4f'));%'\t%0.1f'
     
     %psd.x is a row vector, delivered by calcPSD
     freqs = channelObj.PSD.x;
