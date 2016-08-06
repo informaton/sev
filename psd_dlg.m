@@ -106,6 +106,8 @@ if(nargin>3 && ~isempty(PSDstruct))
     end
 end
 
+handles.original = handles.user;
+
 handles.user.modified = false;
 
 
@@ -168,26 +170,44 @@ function varargout = psd_dlg_OutputFcn(hObject, eventdata, handles)
 
 % Get default command line output from handles structure
 % varargout{1} = handles.output;
+
 handles.user.wintype = deblank(handles.user.wintype);
-PSD.wintype = handles.user.wintype;
-PSD.modified = handles.user.modified;
-PSD.FFT_window_sec = handles.user.FFT_window_sec;
 
-PSD.interval = handles.user.interval;
+fnames = fieldnames(handles.original);
+PSD.modified = false;
 
+handles.user.spectrum_type = getMenuUserData(handles.menu_spectrumType);
 
-if(~isfield(handles.user,'channel_ind'))
-    PSD.channel_ind = 0;
-else    
-    PSD.channel_ind = handles.user.channel_ind;
+for f=1:numel(fnames)
+    curName = fnames{f};
+    curValue = handles.user.(curName);
+    originalValue = handles.original.(curName);
+    if(ischar(curValue))
+        if(~strcmpi(originalValue,curValue))
+            PSD.modified = true;
+        end
+    elseif(originalValue~=curValue)
+        PSD.modified = true;
+    end        
+    PSD.(curName) = curValue;
 end
+
+% PSD.wintype = handles.user.wintype;
+% PSD.modified = handles.user.modified;
+% PSD.FFT_window_sec = handles.user.FFT_window_sec;
+% PSD.interval = handles.user.interval;
+% if(~isfield(handles.user,'channel_ind'))
+%     PSD.channel_ind = 0;
+% else    
+%     PSD.channel_ind = handles.user.channel_ind;
+% end
     
-PSD.freq_min = handles.user.freq_min;
-PSD.freq_max = handles.user.freq_max;
+% PSD.freq_min = handles.user.freq_min;
+% PSD.freq_max = handles.user.freq_max;
 
 PSD.removemean = true;
 
-PSD.spectrum_type = getMenuUserData(handles.menu_spectrumType);
+% PSD.spectrum_type = getMenuUserData(handles.menu_spectrumType);
 varargout{1} = PSD;
 
 delete(handles.psd_figure);
