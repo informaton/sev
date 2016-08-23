@@ -68,12 +68,8 @@ function sev_OpeningFcn(hObject, eventdata, handles, varargin)
 clear global;
 global MARKING;
 
-import plist.*; %struct to xml plist format conversions and such
-import detection.*; %detection algorithms and such
-import filter.*;
+sev_pathname = sev_pathsetup();
 
-sev_pathname = fileparts(mfilename('fullpath'));
-addpath(fullfile(sev_pathname,'auxiliary'));
 % filter_inf = fullfile(DEFAULTS.filter_path,'filter.inf');
 % if(exist(filter_inf,'file'))
 %     [mfile, evt_label, num_reqd_indices, unused_param_gui, unused_batch_mode_label] = textread(filter_inf,'%s%s%n%s%c','commentstyle','shell');
@@ -99,7 +95,6 @@ handles.user.annotationH = -1;
 handles.user.axes1_H = handles.axes1;
 handles.user.axes2_H = handles.axes2;
 
-sev_pathname = fileparts(mfilename('fullpath'));
 
 guidata(hObject, handles);
 try
