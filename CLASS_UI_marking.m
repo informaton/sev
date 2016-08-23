@@ -1524,10 +1524,9 @@ classdef CLASS_UI_marking < handle
             obj.updateUtilityAxes();
         end
         % --------------------------------------------------------------------
-        function contextmenu_axesutility_psd_autoscale_callback(obj,hObject, eventdata, handles)
+        function contextmenu_axesutility_psd_autoscale_callback(obj,hObject, eventdata)
             % hObject    handle to psd_context_menu_auto_scale (see GCBO)
             % eventdata  reserved - to be defined in a future version of MATLAB
-            % handles    structure with handles and user data (see GUIDATA)
             
             if(strcmp(get(hObject,'Checked'),'off'))
                 set(hObject,'checked','on');
@@ -1536,7 +1535,6 @@ classdef CLASS_UI_marking < handle
                 set(hObject,'checked','off');
                 set(obj.axeshandle.utility,'ylimmode','manual');%,'ylim',get(handles.axes3,'ylim'));
             end;
-            guidata(hObject,handles);
         end
         
                 

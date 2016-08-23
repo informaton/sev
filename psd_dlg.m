@@ -75,21 +75,26 @@ function psd_dlg_OpeningFcn(hObject, eventdata, handles, PSDstruct)
 %      spectrum_type: 'psd'  {'psd','power','none'}
 global CHANNELS_CONTAINER;
 
-channel_list_value = 1;
+
+handles.user.modified = false;
 
 if(isa(CHANNELS_CONTAINER,'CLASS_channels_container')&& CHANNELS_CONTAINER.num_channels>0)
     channel_labels = CHANNELS_CONTAINER.get_labels();
     if(~isempty(CHANNELS_CONTAINER.current_spectrum_channel_index) && CHANNELS_CONTAINER.current_spectrum_channel_index~=0)
         handles.user.channel_ind = CHANNELS_CONTAINER.current_spectrum_channel_index;
-        channel_list_value = handles.user.channel_ind;
+    else
+        handles.user.channel_ind = 1;
+        handles.user.modified = true;
+
     end
+    
 else
     channel_labels = 'No Channels Loaded';
     set(handles.list_psg_channels,'enable','off');
     handles.user.channel_ind = 0;
 end
 
-set(handles.list_psg_channels,'string',channel_labels,'value',channel_list_value);
+set(handles.list_psg_channels,'string',channel_labels,'value',handles.user.channel_ind,'callback',@list_psg_channels_Callback);
 
 handles.user.wintype = 'hanning';
 handles.user.FFT_window_sec = 2.0;  % updated to FFT_window_sec from 'winlen'
@@ -108,7 +113,6 @@ end
 
 handles.original = handles.user;
 
-handles.user.modified = false;
 
 
 spectrumStrings = {'PSD','Power','None'};
