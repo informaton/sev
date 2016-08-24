@@ -874,11 +874,19 @@ classdef CLASS_codec < handle
                         lastStageSample  = stageStartStopSamples(end);
                         numEpochs = lastStageSample/epochDurSamples;  %or stageStartStopSamples(end,1)/epochDurSamples+1;
                         stageStr = strrep(strrep(strrep(strrep(scanCell{5}(stageInd),'"',''),'Stage ',''),'REM','5'),'Wake','0');
+                        
+                        %                         stageStr(cellfun(@isempty,stageStr))={num2str(missingStageValue)};
+
                         %fill in any missing stages with 7.
                         missingStageValue = default_unknown_stage;
                         stageVec = repmat(missingStageValue,numEpochs,1);
                         stageStartEpochs = stageStartStopSamples(:,1)/epochDurSamples+1;  %evts file's start samples begin at 0; 0-based nubmer, but MATLAB indexing starts at 1.
                         stageVec(stageStartEpochs) = str2double(stageStr);  % or, equivalently, str2num(cell2mat(stageStr));
+                        
+                        % Sometimes we get '' as a stage value, and these
+                        % are converted to nan by str2double.
+                        
+                        stageVec(isnan(stageVec)) = missingStageValue;
                         %                 y = [eventStruct.epoch,eventStruct.stage];
                         %                 staFilename = fullfile(outPath,strcat(studyID,'STA'));
                         %                 save(staFilename,'y','-ascii');

@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>win_length_sec</key>
-	<real>3.000000</real>
+	<real>6.000000</real>
 	<key>win_interval_sec</key>
 	<real>3.000000</real>
 </dict>
