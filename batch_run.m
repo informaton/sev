@@ -726,6 +726,14 @@ function push_run_Callback(hObject, eventdata, handles)
             for key_ind=1:numel(pBatchStruct);
                 params.(pBatchStruct{key_ind}.key)=pBatchStruct{key_ind}.start;
             end
+        else
+            pfile = ['+detection/',artifactStruct.method_function,'.plist'];
+            if(exist(pfile,'file'))
+                params =plist.loadXMLPlist(pfile);
+            else
+                mfile = ['detection.',artifactStruct.method_function];
+                params = feval(mfile);
+            end            
         end
         
         %left overs fromn April 9, 2012 - which may not be necessary anymore...

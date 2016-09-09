@@ -46,18 +46,25 @@ try
         
         artifacts_per_periodogram_epoch = min(artifacts_per_periodogram_epoch,numPeriodograms);
         
-        %need to handle the overlapping case differently here...
-        if(channelObj.PSD.FFT_window_sec~=channelObj.PSD.interval)
-            %window_sec must be greater than interval_sec if they are not
-            %equal - this is ensured in the PSD settings GUI - though
-            %adjusting the parametes externally may cause trouble!
-            overlap_sec = ceil(channelObj.PSD.FFT_window_sec-channelObj.PSD.interval);
-            artifacts_per_periodogram_epoch(2:end,1) = artifacts_per_periodogram_epoch(2:end,1)-overlap_sec;
-            
-            % Avoid going to far early
-            artifacts_per_periodogram_epoch = max(artifacts_per_periodogram_epoch,1);
         
-        end;
+        % 8/30/2016 Dropped this aspect as I can no longer see how it is
+        % useful to shring the periodogram window here.
+        % Begin section to drop:  
+
+        %need to handle the overlapping case differently here...
+        %         if(channelObj.PSD.FFT_window_sec~=channelObj.PSD.interval)
+        %             %window_sec must be greater than interval_sec if they are not
+        %             %equal - this is ensured in the PSD settings GUI - though
+        %             %adjusting the parametes externally may cause trouble!
+        %             overlap_sec = ceil(channelObj.PSD.FFT_window_sec-channelObj.PSD.interval);
+        %             artifacts_per_periodogram_epoch(2:end,1) = artifacts_per_periodogram_epoch(2:end,1)-overlap_sec;
+        %
+        %             % Avoid going too early
+        %             artifacts_per_periodogram_epoch = max(artifacts_per_periodogram_epoch,1);
+        %
+        %         end;
+        
+        % 8/30/2016 End of section to drop.
         
         
         

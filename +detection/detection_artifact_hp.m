@@ -2,7 +2,7 @@
 %> @brief EEG detection of high frequency noise.
 %======================================================================
 %> @brief Determines high frequency noise in input signal (e.g. EEG).
-%> @param data Signal data vector.  
+%> @param data Signal data vector.
 %> @param params A structure for variable parameters passed in
 %> with following fields
 %> @li @c highfreq_hz = 35;
@@ -20,65 +20,65 @@
 %> electrode pop detections, ordered consecutively by occurrence
 %> @li @c .paramStruct Empty value returned (i.e. []).
 function detectStruct = detection_artifact_hp(data,params,stageStruct)
-% Author Hyatt Moore IV
-% modified 3/1/2013 - remove global references and use varargin
-% modified 9/15/2014 - streamline default parameter behavior.
-
-% initialize default parameters
-defaultParams.highfreq_hz = 35;
-defaultParams.scale_factor=2.5;
-defaultParams.rms_short_sec=3;
-defaultParams.rms_long_min=5;
-defaultParams.additional_buffer_sec = 1; %add this to the left and right of each event.
-defaultParams.merge_within_sec = 5;
-
-% return default parameters if no input arguments are provided.
-if(nargin==0)
-    detectStruct = defaultParams;
-else
+    % Author Hyatt Moore IV
+    % modified 3/1/2013 - remove global references and use varargin
+    % modified 9/15/2014 - streamline default parameter behavior.
     
-    if(nargin<2 || isempty(params))
+    % initialize default parameters
+    defaultParams.highfreq_hz = 35;
+    defaultParams.scale_factor=2.5;
+    defaultParams.rms_short_sec=3;
+    defaultParams.rms_long_min=5;
+    defaultParams.additional_buffer_sec = 1; %add this to the left and right of each event.
+    defaultParams.merge_within_sec = 5;
+    
+    % return default parameters if no input arguments are provided.
+    if(nargin==0)
+        detectStruct = defaultParams;
+    else
         
-        pfile =  strcat(mfilename('fullpath'),'.plist');
-        
-        if(exist(pfile,'file'))
-            %load it
-            params = plist.loadXMLPlist(pfile);
-        else
-            %make it and save it for the future            
-            params = defaultParams;
-            plist.saveXMLPlist(pfile,params);
+        if(nargin<2 || isempty(params))
+            
+            pfile =  strcat(mfilename('fullpath'),'.plist');
+            
+            if(exist(pfile,'file'))
+                %load it
+                params = plist.loadXMLPlist(pfile);
+            else
+                %make it and save it for the future
+                params = defaultParams;
+                plist.saveXMLPlist(pfile,params);
+            end
         end
+        
+        
+        samplerate = params.samplerate;
+        
+        n = samplerate;
+        delay = (n)/2;
+        
+        start = params.highfreq_hz;
+        b = fir1(n,start/samplerate*2,'high');
+        
+        hp_Hz_data = filter(b,1,data);
+        %account for the delay...
+        hp_Hz_data = [hp_Hz_data((delay+1):end); zeros(delay,1)];
+        
+        longparams.win_length_samples = params.rms_long_min*60*samplerate;
+        hp_Hz_rms_long = filter.nlfilter_quickrms(hp_Hz_data,longparams);
+        
+        shortparams.win_length_samples = params.rms_short_sec*samplerate;
+        hp_Hz_rms_short = filter.nlfilter_quickrms(hp_Hz_data,shortparams);
+        
+        %initialize variables here, to make sure we don't run into problems later
+        %with repeat file loads and not resetting these values...
+        hp_Hz_crossings = thresholdcrossings(hp_Hz_rms_short,hp_Hz_rms_long*params.scale_factor);
+        buffer_samples = params.additional_buffer_sec*samplerate;  %tack on extra buffer to the edges.
+        
+        
+        detectStruct.new_data = hp_Hz_data;
+        detectStruct.new_events = CLASS_events.buffer_then_merge_nearby_events(hp_Hz_crossings,samplerate,buffer_samples,numel(data));
+        detectStruct.paramStruct = [];
     end
-    
-  
-    samplerate = params.samplerate;
-    
-    n = samplerate;
-    delay = (n)/2;
-    
-    start = params.highfreq_hz;
-    b = fir1(n,start/samplerate*2,'high');
-    
-    hp_Hz_data = filter(b,1,data);
-    %account for the delay...
-    hp_Hz_data = [hp_Hz_data((delay+1):end); zeros(delay,1)];
-    
-    longparams.win_length_samples = params.rms_long_min*60*samplerate;
-    hp_Hz_rms_long = filter.nlfilter_quickrms(hp_Hz_data,longparams);
-    
-    shortparams.win_length_samples = params.rms_short_sec*samplerate;
-    hp_Hz_rms_short = filter.nlfilter_quickrms(hp_Hz_data,shortparams);
-    
-    %initialize variables here, to make sure we don't run into problems later
-    %with repeat file loads and not resetting these values...
-    hp_Hz_crossings = thresholdcrossings(hp_Hz_rms_short,hp_Hz_rms_long*params.scale_factor);
-    buffer_samples = params.additional_buffer_sec*samplerate;  %tack on extra buffer to the edges.
-    
-    
-    detectStruct.new_data = hp_Hz_data;
-    detectStruct.new_events = CLASS_events.buffer_then_merge_nearby_events(hp_Hz_crossings,samplerate,buffer_samples,numel(data));
-    detectStruct.paramStruct = [];
-end
 end
 

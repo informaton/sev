@@ -159,9 +159,12 @@ function [psd, freq_vec, nfft, U_psd, U_power] = calcPSD(signal_x,Fs,PSD_setting
             Sxx = [Sxx_unscaled(1,:); 2*Sxx_unscaled(2:end-1,:); Sxx_unscaled(end,:)]; % Nyquist point also unique
         end
         
-        psd(r,:) = Sxx;
+        %         psd(r,:) = Sxx;
         
-        %     psd(r,:) = Sxx./nfft;
+        
+        % Otherwise we are biasing more towards those who have additional
+        % power.  It appears that they are larger.
+        psd(r,:) = Sxx./nfft;
         
         if(RemoveMean)
             %         psd(r,1) = mx;
