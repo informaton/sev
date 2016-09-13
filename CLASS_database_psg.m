@@ -135,7 +135,7 @@ classdef CLASS_database_psg < CLASS_database
         % created 7/9/2014
         function create_snp_map_t(obj, plinkBimFullFilename)
             if(nargin<2 || ~exist(plinkBimFullFilename,'file'))                
-                plinkBimFullFilename        = uigetfullfile({'*.bim','Extended MAP file (*.bim)'},'Select a PLINK SNP mapping file (e.g. plink.bim)','MultiSelect','off');
+                plinkBimFullFilename = uigetfullfile({'*.bim','Extended MAP file (*.bim)'},'Select a PLINK SNP mapping file (e.g. plink.bim)');
             
             end
             

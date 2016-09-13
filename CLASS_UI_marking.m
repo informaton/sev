@@ -558,11 +558,10 @@ classdef CLASS_UI_marking < handle
             msg = 'Select a text file with channel data (column format) to be loaded into SEV';
             fileFilter = {'*.txt;*.TXT','Text files';'*.*','All files'};
             
-            multiselectOption = 'off';
             if(~exist(candidateFilename,'file'))
                 candidateFilename = pwd;
             end
-            fullfile = uigetfullfile(fileFilter,msg,multiselectOption, candidateFilename);
+            fullfile = uigetfullfile(fileFilter,msg, candidateFilename);
             if(~isempty(fullfile))
                 try
                     defaultAnswer = {num2str(obj.SETTINGS.VIEW.text_channels_samplerate)};
