@@ -532,6 +532,9 @@ classdef CLASS_codec < handle
             %a 30 second epoch.
             
             seconds_per_epoch = 30;
+            if(nargin<2)
+                embla_samplerate = [];
+            end
             embla_samplerate_out = embla_samplerate;
             
             if(~exist(evtFilename,'file'))
@@ -555,8 +558,10 @@ classdef CLASS_codec < handle
                 start_stop_matrix = [];
                 description = [];
                 
+                remainder = [];
                 eventType = name;
-                
+                bytes_per_uint16 = 2;
+
                 if(HDR.num_records>0 && strncmpi(deblank(HDR.label),'event',5))
                     fseek(fid,0,'eof');
                     file_size = ftell(fid);
@@ -595,16 +600,22 @@ classdef CLASS_codec < handle
                             %4 bytes
                             remainder(r,:) = fread(fid,remainder_size,'uint8');
                         end
-                    elseif(strcmpi(eventType,'resp'))
-                        %80 byte blocks
-                        
+                    elseif(strcmpi(eventType,'resp') || strcmpi(eventType,'custom'))
+                        %80 byte blocks 
+                        %  1       5       9        13       14     15        16               17       25       30            31       32     33       38            39             40     41        42       45     46     47       49        53      57             58       61        77     78     79     80  
+                        % [uint32][uint32][uint8*4][ uint8] [uint8][uint8   ][uint8]          [uint8*8][uint8*5][uint8       ][uint8  ][uint8][uint8*5][uint8       ][uint8        ][uint8][uint8   ][uint8*3][uint8][uint8][uint8*2][uint32  ][uint32][uint8        ][uint8*3][uint32*4][uint8][uint8][uint8][uint8]          
+                        % [start ][stop  ][7 2 3 0][1/32/33][ 0   ][0-248   ][0/63/64/191/192][  255  ][   0   ][0/64/128/192][0/86/87][0/64 ][0      ][0/64/128/192][0/84/85/86/87][ 0/64][ 44/46  ][ 0     ][0-255][0/1/2][ 0     ][? or 255][ 255  ][counter++/255][0/255  ][   255  ][42   ][0/128][0-248][0/63/64/191/192]
+                        %                                                                                                                                                                                                          i                      
                         intro_size = 8;
-                        remainder = zeros(HDR.num_records,bytes_per_record-intro_size,'uint8');                        
+                        %                         remainder_byte_count = (bytes_per_record-intro_size)/bytes_per_uint16;
+                        remainder_byte_count = (bytes_per_record-intro_size);
+
+                        remainder = zeros(HDR.num_records,remainder_byte_count,'uint8');                        
                         
                         for r=1:HDR.num_records
                             start_sample(r) = fread(fid,1,'uint32');
                             stop_sample(r) = fread(fid,1,'uint32');
-                            remainder(r,:) = fread(fid,bytes_per_record-intro_size,'uint8');
+                            remainder(r,:) = fread(fid,remainder_byte_count,'uint8');
                         end
                         
                     elseif(strcmpi(eventType,'stage'))
@@ -683,7 +694,6 @@ classdef CLASS_codec < handle
                         remainder = cell(HDR.num_records,1); % --> varies in size because description is not always the same length.
                         tag = zeros(1,6); %6 bytes                        
                         intro_size = 10; % 6 + 4
-                        bytes_per_uint16 = 2;
 %                         intro_size = 34;
 %                         remainder = zeros(HDR.num_records,bytes_per_record-intro_size,'uint8');
                         
@@ -705,6 +715,9 @@ classdef CLASS_codec < handle
                         
                     elseif(strcmpi(eventType,'numeric'))
                         disp('numeric');
+                    elseif(strcmpi(eventType,'custom'))
+                        disp('custom');
+                        
                     elseif(strcmpi(eventType,'tag'))
                         intro_size = 4;
                         remainder = zeros(HDR.num_records,bytes_per_record-intro_size,'uint8');
@@ -776,6 +789,9 @@ classdef CLASS_codec < handle
                 
                 if(~isempty(description))
                     embla_evt_Struct.description = description;
+                end
+                if(~isempty(remainder))
+                    embla_evt_Struct.unknown = remainder;
                 end
 
                 fclose(fid);

@@ -3,9 +3,9 @@
 <plist version="1.0">
 <dict>
 	<key>order</key>
-	<real>10.000000</real>
+	<real>4.000000</real>
 	<key>sigma</key>
-	<real>0.011000</real>
+	<real>0.010000</real>
 	<key>lambda</key>
 	<real>0.995000</real>
 	<key>samples2delay</key>

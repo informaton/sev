@@ -211,7 +211,6 @@ else
 end
 
 num_properties = min(numel(fieldnames(settings)),handles.user.MAX_NUM_PROPERTIES);
-% handles = resizePanelAndParentForUIControls(handles.pan_properties,num_properties,handles);
 handles = resizePanelAndFigureForUIControls(handles.pan_properties,num_properties,handles);
 
 handles = set_method_fields(handles,settings);

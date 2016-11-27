@@ -18,7 +18,7 @@ filter_movsum filter_sum 0 plist_editor_dlg FilterSum
 filter_modulate_channel modulate_channel 1 none ModulateChannel
 filter_add_channel add_channel 1 none AddAChannel
 filter_subtract_channel substract_channel 1 none SubtractAChannel
-inverter inverter 0 none Inverted
+filter_invert inverter 0 none Inverted
 iir_bp_butter butterworth_bandpass 0 plist_editor_dlg BwBP
 nlfilter_delay nlfilter_delay 0 plist_editor_dlg Delay
 nlfilter_min_past nlfilter_min_past 0 plist_editor_dlg NLFilterMinPast

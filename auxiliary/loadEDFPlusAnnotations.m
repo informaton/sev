@@ -1,26 +1,18 @@
-function [HDR, signal] = loadEDF(filename,channels)
-%[HDR, signal] = loadEDF(filename,channels)
-%Loads EDF files (not EDF+ format), if only one output is specified then
-%only the header information (HDR) is loaded.
-%channels is a vector of the numeric signals to be loaded.  If channels is not included,
-%is empty, or equals 0 then all of the channels in the EDF will be loaded
-%(i.e. returned in signal output argument).
-%Written by Hyatt Moore
-%last modified: October, 8, 2012
-%July 13, 2013: fixed a bug which could cause incorrect visual scaling in
-%cases where the channel units of measurement did not match up with the
-%index k.  
-% May 12, 2015: Modified so that channels argument included as empty 
-% (i.e. []) is treated the same as if it were not included.  
+function annotations = loadEDFPlusAnnotations(filename)
+% [HDR, signal] = loadEDFPlusAnnotations(filename)
+% Loads EDF+ formatted file annotations.
+% Written by Hyatt Moore
+% 11/14/2016
+
+% test: loadEDFPlusAnnotations('~/Data/sleep/EDF+-selected/INN003 N1.EDF')
+
 if(nargin==0)
     disp 'No input filename given; aborting';
     return;
 end;
-if(nargin==1 || isempty(channels))
-    channels = 0;
-end;
-if(nargin>2)
-    disp('Too many input arguments in loadEDF.  Extra input arguments are ignored');
+
+if(nargin>1)
+    disp('Too many input arguments in loadEDFPlusAnnotations.  Extra input arguments are ignored');
 end;
 
 %handle filenames with unicode characters in them
@@ -36,9 +28,13 @@ HDR.starttime = char(fread(fid,8,precision)');% 8 ascii : starttime of recording
 HDR.HDR_size_in_bytes = str2double(char(fread(fid,8,precision)'));% 8 ascii : number of bytes in header record 
 HDR.reserved = char(fread(fid,44,precision)');% 44 ascii : reserved 
 HDR.number_of_data_records = str2double(char(fread(fid,8,precision)'));% 8 ascii : number of data records (-1 if unknown, obey item 10 of the additional EDF+ specs)')  %236
-    % 'EDF+C' means continuous recording
-    % 'EDF+D' means interrupted recording
-    % See EDF+ spec at http://www.edfplus.info/specs/edfplus.html
+
+% 'EDF+C' means continuous recording
+% 'EDF+D' means interrupted recording
+% See EDF+ spec at http://www.edfplus.info/specs/edfplus.html
+if(~(strncmpi('EDF+C',HDR.reserved,5)||strncmpi('EDF+D',HDR.reserved,5)))
+    throw(MException('INFORMATON:EDFPlus','Reserved field must begin with ''EDF+C'' or ''EDF+D'''));
+end
 HDR.duration_of_data_record_in_seconds = str2double(char(fread(fid,8,precision)'));% 8 ascii : duration of a data record, in seconds 
 HDR.num_signals = str2double(char(fread(fid,4,precision)'));% 4 ascii : number of signals (ns)') in data record 
 ns = HDR.num_signals;
@@ -75,54 +71,48 @@ HDR.digital_minimum = str2double(cellstr(char(fread(fid,[8,ns],precision)')));% 
 HDR.digital_maximum = str2double(cellstr(char(fread(fid,[8,ns],precision)')));% ns * 8 ascii : ns * digital maximum (e.g. 2047)')
 HDR.prefiltering = cellstr(char(fread(fid,[80,ns],precision)'));% ns * 80 ascii : ns * prefiltering (e.g. HP:0.1Hz LP:75Hz)')
 HDR.number_samples_in_each_data_record = str2double(cellstr(char(fread(fid,[8,ns],precision)')));% ns * 8 ascii : ns * nr of samples in each data record
-HDR.reserved = cellstr(char(fread(fid,[32,ns],precision)'));% ns * 32 ascii : ns * reserved
+HDR.reserved2 = cellstr(char(fread(fid,[32,ns],precision)'));% ns * 32 ascii : ns * reserved
 
 HDR.fs = HDR.number_samples_in_each_data_record/HDR.duration_of_data_record_in_seconds; %sample rate
 HDR.samplerate = HDR.fs;
 HDR.duration_sec = HDR.duration_of_data_record_in_seconds*HDR.number_of_data_records;
 HDR.duration_samples = HDR.duration_sec*HDR.fs;
 
-if(nargout>1)
+cur_channel = 1;
+bytesPerSample = 2;
 
-    if(channels == 0) %requesting all channels then
-        channels = 1:HDR.num_signals;
-    end;
+samplesPerDataRecord = HDR.number_samples_in_each_data_record(cur_channel);
+numDataRecords = HDR.number_of_data_records;  %HDR.duration_samples(cur_channel)*bytesPerSample;
+bytesPerDataRecord = samplesPerDataRecord*bytesPerSample;
+precision = [num2str(bytesPerDataRecord),'*uint8=>char']; % *2 here because we are now using uint8's instead of uint16's.  And we are using uint8's so we can get at the annotations which contain characters.
+skip = (sum(HDR.number_samples_in_each_data_record)-samplesPerDataRecord)*bytesPerSample; %*2 because there are two bytes used for each integer
 
-    signal = cell(numel(channels),1);
-    bytes_per_sample = 2;
-    for k = 1:numel(channels)        
-        cur_channel = channels(k);
-        if(cur_channel>0 && cur_channel<=HDR.num_signals)
-            physical_dimension = HDR.physical_dimension{cur_channel};% ns * 8 ascii : ns * physical dimension (e.g. uV or degreeC)')
-            if(strcmpi(physical_dimension,'mv'))
-                scale = 1e3;
-            elseif(strcmpi(physical_dimension,'v'))
-                scale = 1e6;
-            else
-                scale = 1;
-            end
+cur_channel_offset = sum(HDR.number_samples_in_each_data_record(1:cur_channel-1))*bytesPerSample; %*2 because there are two bytes used for each integer
+offset = HDR.HDR_size_in_bytes+cur_channel_offset;
+fseek(fid,offset,'bof');
 
-            num_samples_in_cur_data_record = HDR.number_samples_in_each_data_record(cur_channel);
-            precision = [num2str(num_samples_in_cur_data_record),'*int16'];
-            skip = (sum(HDR.number_samples_in_each_data_record)-num_samples_in_cur_data_record)*bytes_per_sample; %*2 because there are two bytes used for each integer
+% Store as column vector
+annotations_signal = fread(fid,[bytesPerDataRecord,numDataRecords],precision,skip)'; % fills columns first (all rows of first column, then all rows of send column, etc)
+annotations = parseAnnotationsSignal(annotations_signal,bytesPerDataRecord);
 
-            cur_channel_offset = sum(HDR.number_samples_in_each_data_record(1:cur_channel-1))*bytes_per_sample; %*2 because there are two bytes used for each integer
-            offset = HDR.HDR_size_in_bytes+cur_channel_offset;
-            fseek(fid,offset,'bof');
-            signal{k} = fread(fid,HDR.duration_samples(cur_channel),precision,skip);
-            signal{k} = scale*(HDR.physical_minimum(cur_channel)+(signal{k}(:)-HDR.digital_minimum(cur_channel))...
-                *(HDR.physical_maximum(cur_channel)-HDR.physical_minimum(cur_channel))...
-                /(HDR.digital_maximum(cur_channel)-HDR.digital_minimum(cur_channel)));
-        end;
-    end;
-end;
+fclose(fid);
+
+end
+
+function annotations = parseAnnotationsSignal(annotations_signal,frame_size)
+    % The first TAL in the first data record always starts with +0.X2020, indicating that the first data record starts a fraction, X, of a second after the startdate/time that is specified in the EDF+ header. If X=0, then the .X may be omitted.
+    if(annotations_signal(1)~='+')
+        throw(MException('INFORMATON:EDFPlus','The first TAL in the first data record does not start with +0.x2020'));
+    end
+    
+end
 
 % The voltage (i.e. signal) in the file by definition equals
 % [(physical miniumum)
 % + (digital value in the data record - digital minimum) 
 % x (physical maximum - physical minimum) 
 % / (digital maximum - digital minimum)].
-fclose(fid);
+
 
 % HEADER Specs...
 % 8 ascii : version of this data format (0)') 
@@ -148,20 +138,4 @@ fclose(fid);
 
 
 
-%ALL of this can be improved to all for a directory name to be passed
-%the function will need to check if the last char is a '/' or not though
-%which is simple enough using the 'end' parameter of the matrix
-% DIRECTORY_NAME = 'EE Training Set'; %this is relative to the directory
-% DIRECTORY_NAME = '/Users/hyatt4/Documents/Sleep Project/EE Training Set/'; %this is absolute
-% DIRECTORY_NAME = '/Users/hyatt4/Documents/Sleep Project/EE Training Set/'; %this is absolute
-% file_list = dir([DIRECTORY_NAME '*.EDF'])');  
-% 
-% for i = 1:length(file_list)')
-%     if(~file_list(i)').isdir)')
-%         file_name = [DIRECTORY_NAME file_list(i)').name]
-%     end;
-% end;
 
-%[s,HDR]=sload('EE Training Set/A0097_4 174733.EDF')'); %107 seconds..
-% [s,HDR] = loadEDF(filename); 5.9 seconds
-%[s,HDR]=sload('EE Training Set/A0097_4 174733.EDF','r',3)'); %26.2%seconds..
