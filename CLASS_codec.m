@@ -7,6 +7,10 @@
 %> methods.
 % ======================================================================
 classdef CLASS_codec < handle
+    properties(Constant)
+       SECONDS_PER_EPOCH = 30;
+       EDF_ANNOTATIONS_CHANNEL = 1;
+    end
     methods(Static)
         
         % ======================================================================
@@ -531,7 +535,7 @@ classdef CLASS_codec < handle
             %the stage .evt file processing as determined by adjusting for
             %a 30 second epoch.
             
-            seconds_per_epoch = 30;
+            
             if(nargin<2)
                 embla_samplerate = [];
             end
@@ -634,7 +638,7 @@ classdef CLASS_codec < handle
                         %  5 = Stage 4
                         %  7 = REM
                         intro_size = 6;
-                        stage = zeros(-1,HDR.num_records,1);
+                        stage = zeros(HDR.num_records,1);  %had been zeros(-1, HDR.num_records,1); on 12/6/2016
                         for r=1:HDR.num_records
                             start_sample(r) = fread(fid,1,'uint32');
                             fseek(fid,1,'cof');
@@ -645,7 +649,7 @@ classdef CLASS_codec < handle
                         stage(stage==6)=5;
                         stage(stage==-1)=7;
                         samples_per_epoch = median(diff(start_sample));
-                        embla_samplerate = samples_per_epoch/seconds_per_epoch;
+                        embla_samplerate = samples_per_epoch/CLASS_codec.SECONDS__PER_EPOCH;
                         embla_samplerate_out = embla_samplerate;
                         stop_sample = start_sample+samples_per_epoch;
                         description = cell(HDR.num_records,1);
@@ -770,14 +774,14 @@ classdef CLASS_codec < handle
                                         
                     start_stop_matrix = [start_sample(:)+1,stop_sample(:)+1]; %add 1 because MATLAB is one based
                     dur_sec = (start_stop_matrix(:,2)-start_stop_matrix(:,1))/embla_samplerate;
-                    epoch = ceil(start_stop_matrix(:,1)/embla_samplerate/seconds_per_epoch);
+                    epoch = ceil(start_stop_matrix(:,1)/embla_samplerate/CLASS_codec.SAMPLES_PER_EPOCH);
                     
                     if(desired_samplerate>0)
                         start_stop_matrix = ceil(start_stop_matrix*(desired_samplerate/embla_samplerate));
                     end
                     
                 end
-                
+                embla_evt_Struct = CLASS_codec.makeEventStruct();
                 embla_evt_Struct.HDR = HDR;
                 embla_evt_Struct.type = eventType;
                 embla_evt_Struct.start_stop_matrix = start_stop_matrix;
@@ -796,6 +800,92 @@ classdef CLASS_codec < handle
 
                 fclose(fid);
             end
+        end
+        
+        
+        % =================================================================
+        %> @brief Returns a stage event struct using input arguments.
+        %> @param stage Row vector of staging values
+        %> @param sampleRate
+        %> @param HDR (optional) Header of corresponding EDF study.  If HDR
+        %> is included the duration of the entire study will be taken from
+        %> the HDR.duration_sec field and be used as the final/last stop
+        %> value of the @c stop_sec field (and corresponding value of
+        %> start_stop_matrix(end).  Otherwise, these values will be
+        %> determined by assuming the last epoch is complete and lasts
+        %> SECONDS_PER_EPOCH.
+        %> @retval evt_Struct Struct for holding hynogram/staging data.
+        %> Fields include:
+        %> - @c HDR (optionally filled)
+        %> - @c type = 'stage'
+        %> - @c start_stop_matrix
+        %> - @c start_sec
+        %> - @c stop_sec
+        %> - @c dur_sec
+        %> - @c epoch
+        %> - @c stage
+        %> - @c description (empty)
+        %> - @c unknown (empty)
+        %> - @c channel (empty)       
+        % =================================================================        
+        function evt_Struct = makeStageEventStruct(stage, sampleRate,HDR)
+            if(nargin<3)
+                HDR = [];
+            end            
+            evt_Struct = CLASS_codec.makeEventStruct();
+            evt_Struct.HDR = HDR;
+            evt_Struct.type = 'stage';
+            evt_Struct.epoch = (1:numel(stage))';
+            evt_Struct.stage = stage(:);
+
+            if(~isempty(HDR) && isfield(HDR,'duration_sec'))
+                duration_sec = HDR.duration_sec;
+            else
+                duration_sec = CLASS_codec.SECONDS_PER_EPOCH*evt_Struct.epoch(end);
+            end
+            
+            evt_Struct.start_sec = (0:CLASS_codec.SECONDS_PER_EPOCH:duration_sec)';
+            evt_Struct.stop_sec = evt_Struct.start_sec+CLASS_codec.SECONDS_PER_EPOCH;
+            evt_Struct.stop_sec(end) = duration_sec;
+            evt_Struct.dur_sec = repmat(CLASS_codec.SECONDS_PER_EPOCH,size(evt_Struct.epoch));
+
+            evt_Struct.start_stop_matrix = [evt_Struct.start_sec,evt_Struct.stop_sec]*sampleRate;
+            evt_Struct.start_stop_matrix(:,1) = evt_Struct.start_stop_matrix(:,1)+1; % MATLAB starts indexing at 1.
+        end
+            
+        % =================================================================
+        %> @brief Returns an empty event struct
+        %> @retval evt_Struct Struct for holding event data.  Fields are empty and 
+        %> include:
+        %> - @c HDR
+        %> - @c type
+        %> - @c start_stop_matrix
+        %> - @c start_sec
+        %> - @c stop_sec
+        %> - @c dur_sec
+        %> - @c epoch
+        %> - @c stage
+        %> - @c description
+        %> - @c unknown
+        %> - @c channel        
+        % =================================================================
+        function evt_Struct = makeEventStruct()
+            evt_Struct.HDR = [];
+            evt_Struct.type = [];
+            evt_Struct.start_stop_matrix = [];
+            evt_Struct.start_sec = [];
+            evt_Struct.stop_sec = [];
+            evt_Struct.dur_sec = [];
+            evt_Struct.epoch = [];
+            evt_Struct.stage = [];
+            evt_Struct.description = [];
+            evt_Struct.unknown = [];
+            evt_Struct.channel = [];
+        end
+        
+        function annotationsCell = parseEDFPlusAnnotations(fileName)
+            
+            
         end
 
         % =================================================================
@@ -816,6 +906,63 @@ classdef CLASS_codec < handle
         end
         
         
+        % =================================================================
+        %> @brief Parses the hypnogram from an annotations cell, as obtained
+        %> from call to getEDFAnnotations with an EDF Plus file, and returns
+        %> it in a struct.
+        %> @param annotations Cell of EDF Annotation data obtained from getEDFAnnotations.
+        %> @param HDR Struct containing EDF Plus header data.
+        %> @retval stageStruct Struct containing the parsed hypnogram.
+        %> @note See @makeStageEventStruct for stageStruct field names.
+        % =================================================================
+        function stageStruct = getStageStructFromEDFAnnotations(annotations, HDR)
+            
+            num_epochs = ceil(HDR.duration_sec/CLASS_codec.SECONDS_PER_EPOCH);
+            stage = repmat(7,num_epochs,1);
+            % stageStartTime = zeros(size(stage));
+            num_records = size(annotations,1);
+            stageStrPrefixCount = numel('Sleep stage ');
+            for r=1:num_records
+                num_tals = size(annotations{r},1);
+                for t=1:num_tals;
+                    tal = annotations{r}(t);
+                    if(strncmpi(tal.annotation,'Sleep stage ',stageStrPrefixCount))
+                        stageStr = tal.annotation(stageStrPrefixCount+1:end);
+                        startTime = str2double(tal.tal_start);
+                        duration = str2double(tal.duration);
+                        
+                        switch stageStr
+                            case 'W'
+                                stageVal = 0;
+                            case 'N1'
+                                stageVal = 1;
+                            case 'N2'
+                                stageVal = 2;
+                            case 'N3'
+                                stageVal = 3;
+                            case 'N4'
+                                stageVal = 4;
+                            case 'R'
+                                stageVal = 5;
+                            otherwise
+                                stageVal = 7;
+                        end
+                        
+                        cur_epoch = ceil(startTime/CLASS_codec.SECONDS_PER_EPOCH);
+                        
+                        dur_epochs = ceil(duration/CLASS_codec.SECONDS_PER_EPOCH);
+                        stage(cur_epoch:cur_epoch+dur_epochs-1) = stageVal;
+                        fprintf('%u\n',stage);
+                    else
+                        
+                    end
+                end
+            end
+            
+            stageStruct = CLASS_codec.makeStageEventStruct(stage,HDR.samplerate(CLASS_codec.EDF_ANNOTATIONS_CHANNEL),HDR);
+
+            
+        end
         
         % =================================================================
         %> @brief This function takes an event file of Stanford Sleep Cohort's .evts

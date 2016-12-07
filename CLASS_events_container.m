@@ -1533,7 +1533,7 @@ classdef CLASS_events_container < handle
         %> @param embla_samplerate Sampling rate used in the Embla files.
         %> @note The embla samplerate can often be determined from the
         %> stage.evt file.
-        %> @retval embla_evt_Struct Result of internal parseEmblaEvent call
+        %> @retval embla_evt_Struct Result of internal CLASS_codec.parseEmblaEvent call
         % =================================================================
         function embla_evt_Struct = loadEmblaEvent(obj,evtFilename,embla_samplerate)
             embla_evt_Struct = CLASS_codec.parseEmblaEvent(evtFilename,embla_samplerate,obj.defaults.parent_channel_samplerate);
