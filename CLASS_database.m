@@ -78,8 +78,7 @@ classdef CLASS_database < handle
             mym(sprintf('alter table %s add column %s %s',tableName,fieldName,fieldDefinition));
             % This fails on some types of work
             % mym('alter table {S} add column {S} {S}',tableName,fieldName,fieldDefinition); 
-            
-        end        
+        end
         
         % ======================================================================
         %> @brief Rename a table column in the database associated with the
@@ -199,6 +198,49 @@ classdef CLASS_database < handle
             mym(createTableStr);
             this.close();
         end
+        
+        % ======================================================================
+        %> @brief Imports data from a .csv file into a table.
+        %> @param this Instance of CLASS_database
+        %> @param Name of the table to import data into
+        %> @param csv_filename Absolute path of csv file to import.
+        %> @param table description Optional string to show users when
+        %> requesting a file be selected from a UI slection tool
+        %> @note Fields enclosed by double quotes (") ignore commas (,) as field separators.
+        % ======================================================================        
+        function importCSV(this,tableName,csv_filename, optional_prompt)
+            
+            if(nargin<3 || ~exist(csv_filename,'file'))
+                if(nargin==4 && ~isempty(optional_prompt))
+                    promptStr = optional_prompt;
+                else
+                    promptStr = sprintf('Select .csv file to import to %s table',tableName);
+                end
+                csv_filename = uigetfullfile({'*.csv','Comma separated values (*.csv)'},...
+                    promptStr);
+                
+            end
+                        
+            if(exist(csv_filename,'file'))
+                
+                fid = fopen(csv_filename,'r');
+                [~,lineTerminator] = fgets(fid);
+                fclose(fid);
+                loadStr = sprintf([
+                    'LOAD DATA LOCAL INFILE ''%s'' INTO TABLE %s ',...
+                    ' FIELDS TERMINATED BY '','' ENCLOSED BY ''"''',...
+                    ' LINES TERMINATED BY ''%s''',...
+                    ' IGNORE 1 LINES'],csv_filename,tableName,char(lineTerminator));
+                
+                this.open();                
+                mym(loadStr);
+                this.selectSome(tableName);
+                this.close();
+                %                     'set visitNum=%u'],subjectinfo_csv_filename,tableName,visitNum);
+            else
+                throw(MException('CLASS_database','Invalid arguments for importCSV'));
+            end
+        end        
         
         function dropTable(this,tableName)
             closeOnExit = false;

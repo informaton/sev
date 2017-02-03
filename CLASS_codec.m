@@ -43,9 +43,8 @@ classdef CLASS_codec < handle
         %> modified 2/2/2013 - added .standard_epoch_sec = 30
         %>                           .study_duration_in_seconds
         %> modified 5.1.2013 - added .filename = stages_filename;
-        function STAGES = loadSTAGES(stages_filename,num_epochs,unknown_stage_label)
-            EPOCH_DURATION_SEC = 30; %30 second epcohs
-            STAGES.standard_epoch_sec = EPOCH_DURATION_SEC;
+        function STAGES = loadSTAGES(stages_filename,num_epochs,unknown_stage_label)            
+            STAGES.standard_epoch_sec = CLASS_codec.SECONDS_PER_EPOCH; %30 second epochs
             
             if(nargin<3)
                 default_unknown_stage = 7;
@@ -832,11 +831,8 @@ classdef CLASS_codec < handle
             if(nargin<3)
                 HDR = [];
             end            
-            evt_Struct = CLASS_codec.makeEventStruct();
-            evt_Struct.HDR = HDR;
-            evt_Struct.type = 'stage';
+            evt_Struct = CLASS_codec.makeEventStruct('HDR',HDR,'type','stage','stage',stage(:));
             evt_Struct.epoch = (1:numel(stage))';
-            evt_Struct.stage = stage(:);
 
             if(~isempty(HDR) && isfield(HDR,'duration_sec'))
                 duration_sec = HDR.duration_sec;
@@ -867,22 +863,61 @@ classdef CLASS_codec < handle
         %> - @c stage
         %> - @c description
         %> - @c unknown
-        %> - @c channel        
+        %> - @c channel
+        %> - @c samplerate
+        %> - @c start_vec start time as a datevec
+        %> - @c stop_vec stop time as a datevec
         % =================================================================
-        function evt_Struct = makeEventStruct()
-            evt_Struct.HDR = [];
-            evt_Struct.type = [];
-            evt_Struct.start_stop_matrix = [];
-            evt_Struct.start_sec = [];
-            evt_Struct.stop_sec = [];
-            evt_Struct.dur_sec = [];
-            evt_Struct.epoch = [];
-            evt_Struct.stage = [];
-            evt_Struct.description = [];
-            evt_Struct.unknown = [];
-            evt_Struct.channel = [];
+        function evt_Struct = makeEventStruct(varargin)
+            names = {'HDR','type','start_stop_matrix','start_sec','stop_sec',...
+                'dur_sec','epoch','stage','description','unknown','channel',...
+                'samplerate','start_vec','stop_vec'};
+
+            defaults = cell(size(names));
+            values = defaults;
+            [values{:}] = parsepvpairs(names,defaults,varargin{:});
+            
+            for n=1:numel(names)
+                evt_Struct.(names{n}) = values{n};
+            end
+            
+            if( ~isempty(evt_Struct.start_sec) && (~isempty(evt_Struct.stop_sec)||~isempty(evt_Struct.dur_sec)) )
+                if(isempty(evt_Struct.dur_sec))
+                    evt_Struct.dur_sec = evt_Struct.stop_sec-evt_Struct.start_sec;
+                end
+                if(isempty(evt_Struct.stop_sec))
+                    evt_Struct.stop_sec = evt_Struct.start_sec+evt_Struct.dur_sec;
+                end
+                
+                if(~isempty(evt_Struct.HDR) && isfield(evt_Struct.HDR,'T0'))
+                    numEvents = numel(evt_Struct.dur_sec);
+                    t0_notSec = evt_Struct.HDR.T0(1:end-1);
+                    t0_sec = evt_Struct.HDR.T0(end);
+                    evt_Struct.start_vec = [repmat(t0_notSec,numEvents,1),t0_sec+evt_Struct.start_sec];
+                    evt_Struct.stop_vec = [repmat(t0_notSec,numEvents,1),t0_sec+evt_Struct.stop_sec];
+                end
+            end
+                
+            hasStartStopSec = ~isempty(evt_Struct.start_sec) && ~isempty(evt_Struct.stop_sec);
+            if(~isempty(evt_Struct.samplerate))
+                if(~isempty(evt_Struct.start_stop_matrix) || hasStartStopSec)
+                    if(~hasStartStopSec)
+                        evt_Struct.start_sec = max(0,(evt_Struct.start_stop_matrix(:,1)-1)/evt_Struct.samplerate); % -1 b/c MATLAB is 1-based
+                        evt_Struct.stop_sec = evt_Struct.start_stop_matrix(:,2)/evt_Struct.samplerate;
+                        
+                        % Or perhaps do nothing if it already exists.  But
+                        % what if it exists and is incorrect??? Enough.
+                        evt_Struct.dur_sec = evt_Struct.stop_sec-evt_Struct.start_sec;                        
+                    end
+                    if(isempty(evt_Struct.start_stop_matrix))
+                        evt_Struct.start_stop_matrix = [evt_Struct.start_sec(:), evt_Struct.stop_sec(:)]*evt_Struct.samplerate;
+                        evt_Struct.start_stop_matrix(:,1) = evt_Struct.start_stop_matrix(:,1)+ 1; % +1 b/c MATLAB is 1-based
+                    end 
+                end
+            end
+            
         end
-        
+                
         function annotationsCell = parseEDFPlusAnnotations(fileName)
             
             
@@ -905,6 +940,101 @@ classdef CLASS_codec < handle
             HDR.num_records = fread(fid,1,'int32'); %32 bytes read
         end
         
+        % =================================================================
+        %> @brief Parses time annotated lists (TALs) as events from a 
+        %> a single EDF annotation record.
+        %> @param annRecord Struct containing one or more TALs as obtained
+        %> from cell of EDF Annotation data obtained from getEDFAnnotations.
+        %> @param HDR Struct containing EDF Plus header data.  This is used
+        %> to obtain sampling rate.
+        %> @retval eventStructs Nx1 vector of structs.  See CLASS_codec.makeEventStruct
+        %> for field names.
+        % =================================================================
+        function eventStructs = getEventsFromEDFAnnotationRecord(annRecord, HDR)
+            if(numel(annRecord)==1)
+                eventStructs = CLASS_codec.tal2evt(annRecord,HDR);
+            else
+                numTals = numel(annRecord);
+                eventStructs = repmat(CLASS_codec.makeEventStruct(),numTals,1);
+                for t=1:numTals
+                    eventStructs(t) = CLASS_codec.tal2evt(annRecord(t),HDR);
+                end
+            end
+        end
+        
+        % =================================================================
+        %> @brief Translate one item of time annotated lists (TALs) to an event struct.
+        %> @param tal A TAL item in a struct.  See getEDFAnnotations.m
+        %> @param HDR Struct containing EDF Plus header data.  This is used
+        %> to obtain sampling rate.
+        %> @retval eventStruct A struct with tal information.  See CLASS_codec.makeEventStruct
+        %> for field names.
+        % =================================================================
+        function eventStruct = tal2evt(tal,HDR)
+            startSec = str2double(tal.tal_start);            
+            durationSec = str2double(tal.duration);
+            fs = max(HDR.samplerate);  %use the highest sampling rate available in the signal.  Otherwise you may run into issues of decimal precision sample indices.
+            stageStrPrefixCount = numel('Sleep stage ');            
+            if(strncmpi(tal.annotation,'Sleep stage ',stageStrPrefixCount))
+                stageStr = tal.annotation(stageStrPrefixCount+1:end);                
+                switch stageStr
+                    case 'W'
+                        stageVal = 0;
+                    case 'N1'
+                        stageVal = 1;
+                    case 'N2'
+                        stageVal = 2;
+                    case 'N3'
+                        stageVal = 3;
+                    case 'N4'
+                        stageVal = 4;
+                    case 'R'
+                        stageVal = 5;
+                    otherwise
+                        stageVal = 7;
+                end
+                
+                cur_epoch = ceil(startSec/CLASS_codec.SECONDS_PER_EPOCH);
+                %dur_epochs = ceil(durationSec/CLASS_codec.SECONDS_PER_EPOCH);
+                % removed ('HDR',HDR,...) because the event struct here is
+                % so small, perhaps containing 3 or 4 events at most, per
+                % tal.  Repeated calls to tal2evt to get all tals parsed
+                % results in multiple HDR fields with the same information,
+                % which is a waste.
+                eventStruct = CLASS_codec.makeEventStruct('samplerate',fs,...
+                    'start_sec',startSec,'dur_sec',durationSec,'epoch',cur_epoch,...
+                    'description',stageStr,'type','stage','stage',stageVal);
+            else
+                description = strtrim(strsplit(tal.annotation,':'));
+                
+                if(numel(description)>1)
+                    channelStr = description{1};
+                    description = description{2};
+                else
+                    
+                    description = description{1};
+%                     if(strncmpi(description,'<EDF_XML',8))
+%                         description = 'XML note';
+%                         channelStr = []
+%                     else
+%                         channelStr = [];
+%                     end
+                        
+                        %<EDF_XMLnote>
+                        %                     <Sauerstoffsättigungsabfall>
+                        %                     <Value unit="%">3</Value>
+                        %                     </Sauerstoffsättigungsabfall>
+                        %                     </EDF_XMLnote>",
+
+                    channelStr = 'unspecified';
+                end
+                description = strrep(description,'"','''');
+                eventStruct = CLASS_codec.makeEventStruct('HDR',HDR,'samplerate',fs,...
+                    'start_sec',startSec,'dur_sec',durationSec,...
+                    'description',description,'type',channelStr);
+            end
+            
+        end
         
         % =================================================================
         %> @brief Parses the hypnogram from an annotations cell, as obtained
@@ -948,7 +1078,7 @@ classdef CLASS_codec < handle
                                 stageVal = 7;
                         end
                         
-                        cur_epoch = ceil(startTime/CLASS_codec.SECONDS_PER_EPOCH);
+                        cur_epoch = floor(startTime/CLASS_codec.SECONDS_PER_EPOCH + 1);
                         
                         dur_epochs = ceil(duration/CLASS_codec.SECONDS_PER_EPOCH);
                         stage(cur_epoch:cur_epoch+dur_epochs-1) = stageVal;
@@ -958,8 +1088,8 @@ classdef CLASS_codec < handle
                     end
                 end
             end
-            
-            stageStruct = CLASS_codec.makeStageEventStruct(stage,HDR.samplerate(CLASS_codec.EDF_ANNOTATIONS_CHANNEL),HDR);
+            fs = max(HDR.samplerate);
+            stageStruct = CLASS_codec.makeStageEventStruct(stage,fs,HDR);
 
             
         end
@@ -1006,7 +1136,9 @@ classdef CLASS_codec < handle
                 %Start Sample,End Sample,Start Time (elapsed),End Time (elapsed),Event,File Name
                 %0,58240,00:00:00.000,00:01:53.750,"Bad Data (SaO2)",BadData.evt
                 %----------------------------------------------/
+                
                 headerLine1 = fgetl(fid);
+                    
                 scanCell = textscan(fid,'%f %f %s %s %q %s','delimiter',',','commentstyle','#','headerlines',1);  %used to be 2, but now I retrieve the first line in case there is additional information there.
                 fclose(fid);
                 
@@ -1014,37 +1146,71 @@ classdef CLASS_codec < handle
                     fprintf('Warning!  The file ''%s'' could not be parsed!\nAn empty struct will be returned.',filenameIn);
                     SCOStruct = [];
                     stageVec = [];
-                else 
+                else
                     
+                    fsCell = regexp(headerLine1,'#\s*\w+=(?<samplerate>\d+(\.\d+)?)','names');                    
+                    if(~isempty(fsCell))
+                        SCOStruct.samplerate = str2double(fsCell.samplerate);
+                    else
+                        SCOStruct.samplerate = [];
+                    end
+
                     % parse the stages first
-                    stageInd = strcmp(scanCell{6},'stage.evt');
+                    stageInd = strncmpi(scanCell{6},'stage',5);
                     
                     if(isempty(stageInd) || ~any(stageInd))
                         stageVec = [];
                         
-                        fsCell = regexp(headerLine1,'#\s*\w+=(?<samplerate>\d+(\.\d+)?)','names');
-                        
-                        SCOStruct.samplerate = str2double(fsCell.samplerate);
-                        if(isempty(fsCell.samplerate))
+                        if(isempty(SCOStruct.samplerate))
                            SCOStruct.samplerate = getSamplerateDlg();
                         end
                     else
                         stageStartStopSamples = [scanCell{1}(stageInd),scanCell{2}(stageInd)];
                         stageStartStopDatenums =  [datenum(scanCell{3}(stageInd),'HH:MM:SS.FFF'),datenum(scanCell{4}(stageInd),'HH:MM:SS.FFF')];
-                        epochDurSec = datevec(diff(stageStartStopDatenums(1,:)))*[0;0;24*60;60;1;1/60]*60;
-                        epochDurSamples = diff(stageStartStopSamples(1,:));
-                        SCOStruct.samplerate = epochDurSamples/epochDurSec;
-                        lastStageSample  = stageStartStopSamples(end);
-                        numEpochs = lastStageSample/epochDurSamples;  %or stageStartStopSamples(end,1)/epochDurSamples+1;
+                        stageDurSecs = datevec(stageStartStopDatenums(:,2)-stageStartStopDatenums(:,1))*[0;0;24*60;60;1;1/60]*60;
+                        %epochDurSec = datevec(diff(stageStartStopDatenums(1,:)))*[0;0;24*60;60;1;1/60]*60;
+                        stageDurSamples = stageStartStopSamples(:,2)-stageStartStopSamples(:,1)+1;
+                        if(isempty(SCOStruct.samplerate))
+                            
+                            % Sometimes that stop sample extends to the next start sample
+                            % due to a systematic conversion problem in
+                            % events files received from Huneo.
+                            if(size(stageStartStopSamples,1)>1)
+                                
+                                if(stageStartStopSamples(1,2)==stageStartStopSamples(2,1))
+                                    stageStartStopSamples(:,2) = stageStartStopSamples(:,2) -1;
+                                    stageDurSamples = stageDurSamples - 1;
+                                end
+                            end
+                            SCOStruct.samplerate = stageDurSamples(1)/stageDurSecs(1);
+                        end
+                        
+                        % Sort the stages just to be sure now.
+                        [lastStageSample, finalStopIndex] = max(stageStartStopSamples(:,2));
+                        stageStartStopEpochs = floor(stageStartStopSamples/SCOStruct.samplerate/CLASS_codec.SECONDS_PER_EPOCH)+1;
+                        numEpochs = stageStartStopEpochs(finalStopIndex,end);
+                        
+                        %numStagedEpochs =  (finalStartValue+stageDurSamples(finalStartIndex))/SCOStruct.samplerate/CLASS_codec.SECONDS_PER_EPOCH; %30 second epcohs
+                        
+                        %numEpochs = ceil(lastStageSample/SCOStruct.samplerate/CLASS_codec.SECONDS_PER_EPOCH);
                         stageStr = strrep(strrep(strrep(strrep(scanCell{5}(stageInd),'"',''),'Stage ',''),'REM','5'),'Wake','0');
+                        stageStr = strrep(stageStr,'N','');  %These were added with Innsbruck files
+                        stageStr = strrep(stageStr,'W','0');
+                        stageStr = strrep(stageStr,'R','5');
+                        
+                        stageNum = str2double(stageStr);
                         
                         %                         stageStr(cellfun(@isempty,stageStr))={num2str(missingStageValue)};
 
                         %fill in any missing stages with 7.
                         missingStageValue = default_unknown_stage;
                         stageVec = repmat(missingStageValue,numEpochs,1);
-                        stageStartEpochs = stageStartStopSamples(:,1)/epochDurSamples+1;  %evts file's start samples begin at 0; 0-based nubmer, but MATLAB indexing starts at 1.
-                        stageVec(stageStartEpochs) = str2double(stageStr);  % or, equivalently, str2num(cell2mat(stageStr));
+                        
+                        for s=1:size(stageStartStopEpochs)
+                            stageVec(stageStartStopEpochs(s,1):stageStartStopEpochs(s,2)) = stageNum(s);
+                        end
+                        %stageStartEpochs = stageStartStopSamples(:,1)/epochDurSamples+1;  %evts file's start samples begin at 0; 0-based nubmer, but MATLAB indexing starts at 1.
+                        %stageVec(stageStartEpochs) = str2double(stageStr);  % or, equivalently, str2num(cell2mat(stageStr));
                         
                         % Sometimes we get '' as a stage value, and these
                         % are converted to nan by str2double.

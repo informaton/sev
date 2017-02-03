@@ -620,7 +620,6 @@ classdef CLASS_events_container < handle
         
         % =================================================================
         %> @brief Renames an event.
-        %
         %> changes the label of the event specified by event_index to
         %> event_label if event_label is of type char. 
         %> @param obj instance of CLASS_events_container class.

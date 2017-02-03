@@ -1207,31 +1207,45 @@ classdef CLASS_events < handle
         %> @param min_samples is a scalar value
         %> @retval merged_events The output of merging event_mat's events 
         %> that are separated by less than min_samples.
-        %> @retval merged_indices is a logical vector of the row indices that
+        %> @retval merged_from_indices is a logical vector of the row indices that
         %> were merged from event_mat_in. - these are the indices of the
         %> in event_mat_in that are removed/replaced
+        %> @retval merged_to_indices is an Nx1 matrix containing the numerical indices of merged_events that
+        %> the rows in event_mat_in were merged to.
         % =================================================================
-        function [merged_events, merged_indices] = merge_nearby_events(event_mat_in,min_samples)
+        function [merged_events, merged_from_indices, merged_to_indices] = merge_nearby_events(event_mat_in,min_samples)
          
             if(nargin==1)
                 min_samples = 100;
             end
+
+            num_events_in = size(event_mat_in,1);
+            merged_from_indices = false(num_events_in,1);
             
-            merged_indices = false(size(event_mat_in,1),1);
+            % The default case is that nothing is changed.  And the events
+            % in are matched directly across to the events out.
+            merged_to_indices = 1:num_events_in;  
 
             if(~isempty(event_mat_in))
+
                 merged_events = zeros(size(event_mat_in));
                 num_events_out = 1;
-                num_events_in = size(event_mat_in,1);
                 merged_events(num_events_out,:) = event_mat_in(1,:);
                 for k = 2:num_events_in
                     if(event_mat_in(k,1)-merged_events(num_events_out,2)<min_samples)
-                        merged_events(num_events_out,2) = event_mat_in(k,2);
-                        merged_indices(k) = true;
+                        % merged_events(num_events_out,2) = event_mat_in(k,2); % @12/20/2016: This assumes that the event_mat_in(k,2) is greater than merged_events(num_events_out,2) = however, this may not always be true.
+                        if(event_mat_in(k,2)>merged_events(num_events_out,2))
+                            merged_events(num_events_out,2) = event_mat_in(k,2);
+                        end
+                        % Or, in 1 line:
+                        % merged_events(num_events_out,2) = max(merged_events(num_events_out,2),event_mat_in(k,2));
+                        merged_from_indices(k) = true;
                     else
+                        % Skip to the next row and populate it.
                         num_events_out = num_events_out + 1;
                         merged_events(num_events_out,:) = event_mat_in(k,:);
-                    end                    
+                    end
+                    merged_to_indices(k) = num_events_out;
                 end;
                 merged_events = merged_events(1:num_events_out,:);
             else
