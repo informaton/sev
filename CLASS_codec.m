@@ -45,17 +45,22 @@ classdef CLASS_codec < handle
         %> modified 5.1.2013 - added .filename = stages_filename;
         function STAGES = loadSTAGES(stages_filename,num_epochs,unknown_stage_label)            
             STAGES.standard_epoch_sec = CLASS_codec.SECONDS_PER_EPOCH; %30 second epochs
+            STAGES.standard_epoch_min = CLASS_codec.SECONDS_PER_EPOCH/60; %30 second epochs
             
             if(nargin<3)
                 default_unknown_stage = 7;
-                if(nargin<1)
-                    stages_filename = [];
+                if(nargin<2)
+                    num_epochs = -1;                    
+                    if(nargin<1)
+                        stages_filename = [];
+                    end
                 end
             else
                 default_unknown_stage = unknown_stage_label;
             end
             
             % Make a default line, regardless of what comes out of here.
+            
             STAGES.line = repmat(default_unknown_stage,num_epochs,1);
             STAGES.filename = [];
             STAGES.firstNonWake = [];
@@ -67,7 +72,6 @@ classdef CLASS_codec < handle
                 %load stages information if the file exists and we know its
                 %extension.
                 if(exist(stages_filename,'file') && (strcmpi(ext,'.sta')||strcmpi(ext,'.evts')))
-                    
                     if(strcmpi(ext,'.sta') || strcmpi(ext,'.evts'))
                         if(strcmpi(ext,'.sta'))
                             stages = load(stages_filename,'-ASCII'); %for ASCII file type loading
@@ -75,6 +79,12 @@ classdef CLASS_codec < handle
                             [~,stageVec] = CLASS_codec.parseSSCevtsFile(stages_filename,default_unknown_stage);
                             epochs = 1:numel(stageVec);
                             stages = [epochs(:), stageVec];
+                        end
+                        
+                        % stages is Mx2 matrix with column 1 being the
+                        % epochs and column 2 being the stage
+                        if(num_epochs<0)
+                           num_epochs = size(stages,2);
                         end
                         
                         if(nargin>1 && ~isempty(num_epochs) && floor(num_epochs)>0)
@@ -1034,6 +1044,10 @@ classdef CLASS_codec < handle
                     'description',description,'type',channelStr);
             end
             
+        end
+        function  stageStruct = getStageStructFromEDFPlusFile(edfPlusFile)                    
+            [annotationRecords, HDR] = getEDFAnnotations(edfPlusFile);
+            stageStruct = CLASS_codec.getStageStructFromEDFAnnotations(annotationRecords,HDR);
         end
         
         % =================================================================
