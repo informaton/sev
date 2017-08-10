@@ -85,7 +85,6 @@ if(isa(CHANNELS_CONTAINER,'CLASS_channels_container')&& CHANNELS_CONTAINER.num_c
     else
         handles.user.channel_ind = 1;
         handles.user.modified = true;
-
     end
     
 else

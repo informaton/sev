@@ -3,7 +3,7 @@ function [psd, freq_vec, nfft, U_psd, U_power] = calcPSD(signal_x,Fs,PSD_setting
 % PSD.wintype = handles.user.wintype;
 % PSD.modified = handles.user.modified;
 % PSD.FFT_window_sec = handles.user.winlen;
-% PSD.interval = handles.user.fftint;
+% PSD.interval_sec = handles.user.fftint;
 % PSD.removemean = true;
 % PSD.spectrum_type = {'psd','power','none'}
 %
@@ -31,7 +31,8 @@ function [psd, freq_vec, nfft, U_psd, U_power] = calcPSD(signal_x,Fs,PSD_setting
 %> Modified 8/5/2016 to allow for calculation of power as well as psd
 %> (normalized by sampling frequency)
 
-
+    % Ensure we are dealing with row vectors here;
+    signal_x = signal_x(:);
     
     if(nargin<4)
         ZeroPad = false;
@@ -44,7 +45,7 @@ function [psd, freq_vec, nfft, U_psd, U_power] = calcPSD(signal_x,Fs,PSD_setting
             len_sec = floor(numel(signal_x)/Fs);
             defaultSettings.FFT_window_sec = len_sec;
             signal_x = signal_x(1:len_sec*Fs);
-            defaultSettings.interval = len_sec;
+            defaultSettings.interval_sec = len_sec;
             defaultSettings.wintype = 'rectwin';
             defaultSettings.removemean = true;
             defaultSettings.spectrum_type = 'psd';
@@ -54,7 +55,7 @@ function [psd, freq_vec, nfft, U_psd, U_power] = calcPSD(signal_x,Fs,PSD_setting
     end;
     
     winlen = PSD_settings.FFT_window_sec;
-    interval = PSD_settings.interval;
+    interval = PSD_settings.interval_sec;
     wintype = PSD_settings.wintype;
     RemoveMean = PSD_settings.removemean;
     
