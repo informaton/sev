@@ -928,9 +928,8 @@ classdef CLASS_codec < handle
             
         end
                 
-        function annotationsCell = parseEDFPlusAnnotations(fileName)
-            
-            
+        function [annotationsCell, header] = parseEDFPlusAnnotations(fileName)
+            [annotationsCell, header ] =  loadEDFPlusAnnotations(fileName);  % currently in ~/git/matlab/sleep            
         end
 
         % =================================================================
@@ -954,7 +953,7 @@ classdef CLASS_codec < handle
         %> @brief Parses time annotated lists (TALs) as events from a 
         %> a single EDF annotation record.
         %> @param annRecord Struct containing one or more TALs as obtained
-        %> from cell of EDF Annotation data obtained from getEDFAnnotations.
+        %> from cell of EDF Annotation data obtained from loadEDFPlusAnnotations.
         %> @param HDR Struct containing EDF Plus header data.  This is used
         %> to obtain sampling rate.
         %> @retval eventStructs Nx1 vector of structs.  See CLASS_codec.makeEventStruct
@@ -974,7 +973,7 @@ classdef CLASS_codec < handle
         
         % =================================================================
         %> @brief Translate one item of time annotated lists (TALs) to an event struct.
-        %> @param tal A TAL item in a struct.  See getEDFAnnotations.m
+        %> @param tal A TAL item in a struct.  See loadEDFPlusAnnotations.m
         %> @param HDR Struct containing EDF Plus header data.  This is used
         %> to obtain sampling rate.
         %> @retval eventStruct A struct with tal information.  See CLASS_codec.makeEventStruct
@@ -1045,21 +1044,22 @@ classdef CLASS_codec < handle
             end
             
         end
-        function  stageStruct = getStageStructFromEDFPlusFile(edfPlusFile)                    
-            [annotationRecords, HDR] = getEDFAnnotations(edfPlusFile);
-            stageStruct = CLASS_codec.getStageStructFromEDFAnnotations(annotationRecords,HDR);
+        
+        function  stageStruct = getStageStructFromEDFPlusFile(edfPlusFile)
+            [annotationRecords, HDR] = loadEDFPlusAnnotations(edfPlusFile);
+            stageStruct = CLASS_codec.getStageStructFromEDFPlusAnnotations(annotationRecords,HDR);
         end
         
         % =================================================================
         %> @brief Parses the hypnogram from an annotations cell, as obtained
-        %> from call to getEDFAnnotations with an EDF Plus file, and returns
+        %> from call to loadEDFPlusAnnotations with an EDF Plus file, and returns
         %> it in a struct.
-        %> @param annotations Cell of EDF Annotation data obtained from getEDFAnnotations.
+        %> @param annotations Cell of EDF Annotation data obtained from loadEDFPlusAnnotations.
         %> @param HDR Struct containing EDF Plus header data.
         %> @retval stageStruct Struct containing the parsed hypnogram.
         %> @note See @makeStageEventStruct for stageStruct field names.
         % =================================================================
-        function stageStruct = getStageStructFromEDFAnnotations(annotations, HDR)
+        function stageStruct = getStageStructFromEDFPlusAnnotations(annotations, HDR)
             
             num_epochs = ceil(HDR.duration_sec/CLASS_codec.SECONDS_PER_EPOCH);
             stage = repmat(7,num_epochs,1);
@@ -1068,7 +1068,7 @@ classdef CLASS_codec < handle
             stageStrPrefixCount = numel('Sleep stage ');
             for r=1:num_records
                 num_tals = size(annotations{r},1);
-                for t=1:num_tals;
+                for t=1:num_tals
                     tal = annotations{r}(t);
                     if(strncmpi(tal.annotation,'Sleep stage ',stageStrPrefixCount))
                         stageStr = tal.annotation(stageStrPrefixCount+1:end);
@@ -1096,7 +1096,7 @@ classdef CLASS_codec < handle
                         
                         dur_epochs = ceil(duration/CLASS_codec.SECONDS_PER_EPOCH);
                         stage(cur_epoch:cur_epoch+dur_epochs-1) = stageVal;
-                        fprintf('%u\n',stage);
+                        % fprintf('%u\n',stage);
                     else
                         
                     end
