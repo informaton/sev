@@ -1905,25 +1905,21 @@ classdef CLASS_events_container < handle
         function save2evts(obj,optional_filename)
             if(nargin>1 && ~isempty(optional_filename))
                 start_stop_matrix = [];
-                evt_labels = cell(obj.num_events,1);
-                evt_filenames = evt_labels;
+                evt_labels = {};
+                evt_filenames = {};
                 for k =1:obj.num_events                    
                     evtObj = obj.getEventObj(k);
                     numRows = size(evtObj.start_stop_matrix,1);
                     evtFilename = cellstr(repmat(evtObj.source.algorithm,numRows,1));
-                    if(any(strcmpi('description',evtObj.paramFieldNames)))
+                    if(any(strcmpi('description',evtObj.paramFieldNames))&&~isempty(evtObj.paramStruct.description))
                         labels = evtObj.paramStruct.description;
                     else
                         labels = cellstr(repmat(evtObj.label,numRows,1));                        
                     end
-                    start_stop_matrix = [start_stop_matrix;evtObj.start_stop_matrix];                    
-                    evt_filenames = [evt_filenames;evtFilename];
+                    start_stop_matrix = [start_stop_matrix; evtObj.start_stop_matrix];                    
+                    evt_filenames = [evt_filenames; evtFilename];
                     evt_labels = [evt_labels; labels];
                 end
-                
-                
-                % Now handle the sleep stages
-                
                 
                 [~,i] = sort(start_stop_matrix(:,1));
                 event_start_stop_matrix = start_stop_matrix(i,:);
@@ -2592,7 +2588,7 @@ classdef CLASS_events_container < handle
         %> @retval obj Instance of CLASS_events_container
         function obj = importEmblaEvtDir(embla_path,embla_samplerate,desired_samplerate)
             obj = CLASS_events_container();
-            import_types = {'biocals','resp','desat','plm'}; 
+            import_types = {'biocals','resp','desat','plm','BadData','arousal','snore','tag','user'}; 
             if(nargin<2 || isempty(embla_samplerate))
                 stage_evt_file = fullfile(embla_path,'stage.evt');
                 if(exist(stage_evt_file,'file'))
@@ -2604,7 +2600,7 @@ classdef CLASS_events_container < handle
             end
             if(~isempty(embla_samplerate))
                 if(nargin<3)
-                    desired_samplerate = 100;
+                    desired_samplerate = embla_samplerate;% leave as is for now.
                 end
                 obj.setDefaultSamplerate(desired_samplerate);
                 
@@ -2616,6 +2612,8 @@ classdef CLASS_events_container < handle
                     end
                     if(exist(event_file,'file'))
                         obj.loadEmblaEvent(event_file,embla_samplerate);
+                    else
+                        fprintf(1,'Warning: %s event file not found!\n',event_file);
                     end
                 end
             end

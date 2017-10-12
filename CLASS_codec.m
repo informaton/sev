@@ -575,7 +575,7 @@ classdef CLASS_codec < handle
                 eventType = name;
                 bytes_per_uint16 = 2;
 
-                if(HDR.num_records>0 && strncmpi(deblank(HDR.label),'event',5))
+                if(HDR.num_records>0 && strncmpi(deblank(HDR.label),'event',5))                    
                     fseek(fid,0,'eof');
                     file_size = ftell(fid);
                     fseek(fid,32,'bof');
@@ -594,23 +594,34 @@ classdef CLASS_codec < handle
                         if(false)
                             fseek(fid,32,'bof');
                             a=fread(fid,[bytes_per_record,inf],'uint8')';
-                            a(:,9:end)                            
+                            a                       
                             fseek(fid,32,'bof');                            
-                        end                        
+                        end                                                 
                         
-                        
-                        intro_size = 12;
-
-                        remainder_byte_count = (bytes_per_record-intro_size);
-
-                        remainder = zeros(HDR.num_records,remainder_byte_count,'uint8');                        
-                        
-                        for r=1:HDR.num_records
-                            start_sample(r) = fread(fid,1,'uint32');
-                            stop_sample(r) = fread(fid,1,'uint32');
-                            evtID(r,:) = fread(fid,2,'uint8'); % [6,1]
-                            remainder(r,:) = fread(fid,remainder_byte_count,'uint8');
-                        end 
+                        if(bytes_per_record==52)
+                            unknownID = zeros(HDR.num_records,3);
+                            remainder = zeros(HDR.num_records,4,'uint8');
+                            orderPlaced = start_sample;
+                            for r=1:HDR.num_records
+                                start_sample(r) = fread(fid,1,'uint32');%[0-3
+                                stop_sample(r) = fread(fid,1,'uint32');%[4-7
+                                evtID(r,:) = fread(fid,2,'uint8'); % [8- [6,1]
+                                unknownID(r,:) = fread(fid,3,'uint16');%[10-15
+                                orderPlaced(r) = fread(fid,1,'uint32');%[16-
+                                fseek(fid,28,'cof');% [20
+                                remainder(r,:) = fread(fid,4,'uint8');%[440
+                            end
+                        elseif(bytes_per_record==16)
+                            unknownID = zeros(HDR.num_records,2);
+                            remainder = zeros(HDR.num_records,2,'uint8');
+                            for r=1:HDR.num_records
+                                start_sample(r) = fread(fid,1,'uint32');
+                                stop_sample(r) = fread(fid,1,'uint32');
+                                evtID(r,:) = fread(fid,2,'uint8'); % [6,1]
+                                unknownID(r,:) = fread(fid,2,'uint16');
+                                remainder(r,:) = fread(fid,2,'uint8');
+                            end
+                        end
                     elseif(strcmpi(eventType,'baddata'))
                         if(false)
                             fseek(fid,32,'bof');
@@ -626,10 +637,11 @@ classdef CLASS_codec < handle
                         for r=1:HDR.num_records
                             start_sample(r) = fread(fid,1,'uint32');
                             stop_sample(r) = fread(fid,1,'uint32');
-                            evtID(r,:) = fread(fid,2,'uint8'); % [5,1]
-                            
+                            evtID(r,:) = fread(fid,2,'uint8'); % [5,1]                            
                             remainder(r,:) = fread(fid,bytes_per_record-intro_size,'uint8');
-                        end                        
+                        end
+                        
+                        
                     elseif(strcmpi(eventType,'biocals'))
                         if(false)
                             fseek(fid,32,'bof');
@@ -659,8 +671,7 @@ classdef CLASS_codec < handle
                             start_sample(r) = fread(fid,1,'uint32');  % 4 bytes
                             evtID(r,:) = fread(fid,2,'uint8'); % [13,1]
                             
-                            padding = fread(fid,1,'uint32')'; %[13 1 0 0 0 0]  % 6 bytes
-                            
+                            padding = fread(fid,1,'uint32')'; %[0 0 0 0]  % 4 bytes                            
                             curRecord = fread(fid,(bytes_per_record-intro_size)/bytes_per_uint16,'uint16')';
                             descriptionStop = find(curRecord==0,1,'first');
                             description{r} = char(curRecord(1:descriptionStop-1));
@@ -716,52 +727,93 @@ classdef CLASS_codec < handle
                             fseek(fid,32,'bof');
                         end
                         
-                        % 48 byte record
+                       
                         desatType = stop_sample;
                         
                         desatHigh = stop_sample;
                         desatLow = stop_sample;
+                      
                         respRelated = stop_sample;
                         optionalDouble = desatHigh;
                         
+                        % 48 byte record
+                        if(bytes_per_record ==48)
+                            intro_size = 44;
+                            remainder_size = bytes_per_record-intro_size;
+                            remainder = zeros(HDR.num_records,remainder_size,'uint8');
+                            unknown = zeros(HDR.num_records,1,'uint32');
+                            for r=1:HDR.num_records
+                                
+                                start_sample(r) = fread(fid,1,'uint32'); % 04
+                                stop_sample(r) = fread(fid,1,'uint32');  % 08
+                                %  description = fread(fid,remainder_size/2,'uint16=>char')';
+                                %desats - (come in pairs?)
+                                % [8 1 2 0] [0/4 0 ? ?]  [255 255 255 255] [255 255 255 255] [84 16 13 164]
+                                
+                                % [? ? 88/86/87 64] [? ? ? ?] [? ? 86/87/85 64] [8/10 ? ? ?] [? ? ? ?]
+                                %
+                                %1 byte [224] = ?
+                                %4 bytes 224  106   99  104] [186  131   88   64]  [87   27   67  211]  [29 108   87   64]   [9  144   98    0  228  151    98  0]
+                                %4 bytes
+                                evtID(r,:) = fread(fid,2,'uint8'); % 10
+                                desatType(r) = fread(fid,1,'uint16'); %12
+                                % Arousal (No,Yes: 0,1) 2 bytes
+                                respRelated(r) = fread(fid,1,'uint16'); %14
+                                fseek(fid,2,'cof'); %16 (padding, 255,255) %16
+                                optionalDouble(r) = fread(fid,1,'double'); % 24
+                                unknown(r) = fread(fid,1,'uint32'); % 28
+                                % Signal# (##) 2 bytes
+                                %                             signal(r) = fread(fid,1,'uint16'); %16
+                                % Order of events placed (##) 2 bytes
+                                % placementOrder(r) = fread(fid,1,'uint16'); %18
+                                
+                                % skip 6 bytes
+                                % unknown(r,:) = fread(fid,3,'uint16'); % 24
+                                
+                                desatHigh(r) = fread(fid,1,'double'); % 36
+                                desatLow(r) = fread(fid,1,'double');  % 44
+                                
+                                % last 4 bytes: checksum
+                                remainder(r,:) = fread(fid,4,'uint8');
+                            end
+                        elseif(bytes_per_record ==80)
+                            remainder = zeros(HDR.num_records,4,'uint8');
+                            for r=1:HDR.num_records
+                                start_sample(r) = fread(fid,1,'uint32'); % 04
+                                stop_sample(r) = fread(fid,1,'uint32');  % 08
+                                evtID(r,:) = fread(fid,2,'uint8'); % 10
+                                desatType(r) = fread(fid,1,'uint16'); %12
+                                respRelated(r) = fread(fid,1,'uint16'); %14
+                                fseek(fid,10,'cof'); %24 [0x2 255x8]                                
+                                desatHigh(r) = fread(fid,1,'double'); % 32
+                                desatLow(r) = fread(fid,1,'double');  % 40
+                                fseek(fid,2,'cof'); % 42 [255x2]
+                                fseek(fid,4,'cof'); %46 
+                                fseek(fid,2,'cof'); % 48 [0x2]
+                                fseek(fid,28,'cof'); % 76 [255x28]
+                                % last 4 bytes: checksum
+                                remainder(r,:) = fread(fid,4,'uint8');% 80 [41,108,0,0]
+                            end
+                        end
                         
-                        intro_size = 44;
-                        remainder_size = bytes_per_record-intro_size;
-                        remainder = zeros(HDR.num_records,remainder_size,'uint8');                        
-                        unknown = zeros(HDR.num_records,1,'uint32');
+                        description = cell(HDR.num_records,1);
                         for r=1:HDR.num_records
-                            
-                            start_sample(r) = fread(fid,1,'uint32'); % 04
-                            stop_sample(r) = fread(fid,1,'uint32');  % 08
-                            %  description = fread(fid,remainder_size/2,'uint16=>char')';
-                            %desats - (come in pairs?)
-                            % [8 1 2 0] [0/4 0 ? ?]  [255 255 255 255] [255 255 255 255] [84 16 13 164]
-                            
-                            % [? ? 88/86/87 64] [? ? ? ?] [? ? 86/87/85 64] [8/10 ? ? ?] [? ? ? ?]
-                            %
-                            %1 byte [224] = ?
-                            %4 bytes 224  106   99  104] [186  131   88   64]  [87   27   67  211]  [29 108   87   64]   [9  144   98    0  228  151    98  0]
-                            %4 bytes
-                            evtID(r,:) = fread(fid,2,'uint8'); % 10
-                            desatType(r) = fread(fid,1,'uint16'); %12
-                            % Arousal (No,Yes: 0,1) 2 bytes
-                            respRelated(r) = fread(fid,1,'uint16'); %14
-                            fseek(fid,2,'cof'); %16 (padding, 255,255) %16
-                            optionalDouble(r) = fread(fid,1,'double'); % 24
-                            unknown(r) = fread(fid,1,'uint32'); % 28
-                            % Signal# (##) 2 bytes
-                            %                             signal(r) = fread(fid,1,'uint16'); %16                            
-                            % Order of events placed (##) 2 bytes
-                            % placementOrder(r) = fread(fid,1,'uint16'); %18
-                            
-                            % skip 6 bytes
-                            % unknown(r,:) = fread(fid,3,'uint16'); % 24
-                            
-                            desatHigh(r) = fread(fid,1,'double'); % 36
-                            desatLow(r) = fread(fid,1,'double');  % 44
-                                                        
-                            % last 4 bytes: checksum                                                        
-                            remainder(r,:) = fread(fid,4,'uint8');
+                            subIDStr = '';
+                            if(evtID(r,2)~=1)
+                                subIDStr = sprintf(' SubID(%d)',evtID(r,2));
+                            end
+                            desatStr = '';
+                            if(desatType(r)~=2)
+                                desatStr = sprintf(' DesatType(%d)',desatType(r));
+                            end                                
+                            if(respRelated(r)==4)
+                                respStr = ' w/Respiratory';
+                            elseif(respRelated(r)==0)
+                                respStr = '';
+                            else
+                                respStr = sprintf(' w/%d',respRelated(r));
+                            end                            
+                           description{r} = strtrim(sprintf('High=%s Low=%s%s%s%',desatHigh(r), desatLow(r),subIDStr,desatStr,respStr));
                         end
 
                     elseif strcmpi(eventType,'filesect')
@@ -825,46 +877,99 @@ classdef CLASS_codec < handle
                             fseek(fid,32,'bof');
                         end
                         description = cell(HDR.num_records,1); 
-                        numType = start_sample;
-                        dub1 = numType;
-                        dub2 = numType;
-                        intro_size = 4;
+                        studyType = start_sample;
+                        readLevels = zeros(HDR.num_records,2);
+                        remainder = zeros(HDR.num_records,8,'uint8');
 
                         for r=1:HDR.num_records
                             start_sample(r) = fread(fid,1,'uint32');
-                            %  evtID(r,:) = fread(fid,2,'uint8'); % [??]
-                            
-                            fread(fid,bytes_per_record-intro_size,'uint8');
+                            stop_sample(r) = fread(fid,1,'uint32'); % duration?
+                            evtID(r,:) = fread(fid,2,'uint8');   %10
+                            studyType(r) = evtID(r,2);                            
+                            fseek(fid,4,'cof');  %unused. %14
+                            fread(fid,1,'uint16'); % used but unknown %16
+                            readLevels(r,:) = fread(fid,2,'double'); %32
+                            remainder(r,:) = fread(fid,8,'uint8');
                         end
-                        stop_sample = start_sample;                        
+                        stop_sample = start_sample;
                         
                     %sometimes these have the extension .nvt
                     elseif(strcmpi(eventType,'plm'))
-                        lm_type = stop_sample;
+                        if(false)
+                            fseek(fid,32,'bof');
+                            a=fread(fid,[bytes_per_record,inf],'uint8')';
+                            a(1:4,:)
+                            fseek(fid,32,'bof');
+
+                        end
                         leg = stop_sample;
                         arousal = stop_sample;
-                        signal = stop_sample;
-                        tag = signal;
-                        intro_size = 18;
-                        remainder = zeros(HDR.num_records,bytes_per_record-intro_size,'uint8');
+                        %                         signal = stop_sample;
+                        %                         tag = signal;
+                        %                         intro_size = 18;
+                        arousalField = arousal;
+                        if(bytes_per_record==52)
+                            remainder = zeros(HDR.num_records,4,'uint8');
+                            eventNumber = arousalField;
+                            for r=1:HDR.num_records
+                                start_sample(r) = fread(fid,1,'uint32'); % 4
+                                stop_sample(r) = fread(fid,1,'uint32');  % 8
+                                
+                                evtID(r,:) = fread(fid,2,'uint8'); % 10
+                                leg(r) = fread(fid,1,'uint16'); %12 % From Oscar - Legs (L,R,Both: 1,2,3) 2 bytes
+                                arousal(r) = fread(fid,1,'uint16'); %14 - % Arousal (No,Yes: 0,1) 2 bytes                                
+                                % if there is an aroual
+                                arousalField(r) = fread(fid,1,'uint16'); % Then this might be the channel associated with it, or the event associated with it. % 7 is a respiratory event
+                                eventNumber(r) = fread(fid,1,'uint32'); % This is the event record number.  If there are no associated events, it is the current records value.  Otherwise, it is the number of associated events for that type.
+                                fseek(fid,28,'cof');                                
+                                remainder(r,:) = fread(fid,4,'uint8');
+                            end
+                        elseif(bytes_per_record==16)
+                            remainder = zeros(HDR.num_records,2,'uint8');
+                            for r=1:HDR.num_records
+                                start_sample(r) = fread(fid,1,'uint32'); % 4
+                                stop_sample(r) = fread(fid,1,'uint32');  % 8
+                                
+                                evtID(r,:) = fread(fid,2,'uint8'); % 10
+                                leg(r) = fread(fid,1,'uint16'); %12 % From Oscar - Legs (L,R,Both: 1,2,3) 2 bytes
+                                arousal(r) = fread(fid,1,'uint16'); %14 - % Arousal (No,Yes: 0,1) 2 bytes
+                                remainder(r,:) = fread(fid,2,'uint8');
+                                
+                                % Signal# (##) 2 bytes
+                                %                             signal(r) = fread(fid,1,'uint16'); %16
+                                % Tag# entered? (##) 2 bytes
+                                %                             tag(r) = fread(fid,1,'uint16'); %18
+                                % skip 30 bytes
+                                % last 4 bytes: checksum?
+                                %                             remainder(r,:) = fread(fid,bytes_per_record-intro_size,'uint8');
+                            end
+                        end
+                        
+                        description = cell(HDR.num_records,1);
                         for r=1:HDR.num_records
-                            start_sample(r) = fread(fid,1,'uint32'); % 4
-                            stop_sample(r) = fread(fid,1,'uint32');  % 8                           
-                            
-                            lm_type(r) = fread(fid,1,'uint16'); % 10
-                            % From Oscar
-                            % Legs (L,R,Both: 1,2,3) 2 bytes
-                            leg(r) = fread(fid,1,'uint16'); %12
-                            % Arousal (No,Yes: 0,1) 2 bytes
-                            arousal(r) = fread(fid,1,'uint16'); %14
-                            % Signal# (##) 2 bytes
-                            signal(r) = fread(fid,1,'uint16'); %16
-                            % Tag# entered? (##) 2 bytes
-                            tag(r) = fread(fid,1,'uint16'); %18
-                            % skip 30 bytes
-                            % last 4 bytes: checksum?
-                            remainder(r,:) = fread(fid,bytes_per_record-intro_size,'uint8');
-                        end                        
+                            subIDStr = '';
+                            if(evtID(r,2)~=2)
+                                subIDStr = sprintf(' SubID(%d)',evtID(r,2));
+                            end
+                            legStr = '';
+                            if(leg(r)==1)
+                                legStr = 'Left leg';
+                            elseif(leg(r)==2)
+                                legStr = 'Right leg';
+                            elseif(leg(r)==3)
+                                legStr = 'Both legs';
+                            end
+                            if(arousal(r)==1)
+                                arousalStr = ' w/Arousal';
+                            elseif(arousal(r)==0)
+                                arousalStr = '';
+                            else
+                                arousalStr = sprintf(' w/%d',arousal(r));
+                            end                            
+                           description{r} = strtrim(sprintf('%s%s%',subIDStr,legStr,arousalStr));
+                        end
+                        
+                        
                     elseif strcmpi(eventType,'resp')
                         
                         respType = stop_sample;
@@ -872,7 +977,7 @@ classdef CLASS_codec < handle
                         arousal = stop_sample;
                         signal = stop_sample;
                         placementOrder = signal;
-                        description = cell(HDR.num_records,1);
+                       
                         if(false)
                             fseek(fid,32,'bof');
                             a=fread(fid,[bytes_per_record,inf],'uint8')';
@@ -888,18 +993,15 @@ classdef CLASS_codec < handle
                             for r=1:HDR.num_records
                                 start_sample(r) = fread(fid,1,'uint32'); % [0,3]
                                 stop_sample(r) = fread(fid,1,'uint32'); % [4,7]                                
-                                unknown(r) = fread(fid,1,'uint8'); % [8] 7:
-                                %                                 evtID(r,:) = fread(fid,1,'uint8'); % 10
-                                respType(r) = fread(fid,1,'uint8'); % [9] 1: Apnea; 2: Hypopne; 5: RERA
+                                evtID(r,:) = fread(fid,2,'uint8'); % [8] 7:
+                                respType(r) = evtID(r,2); % [9] 1: Apnea; 2: Hypopne; 5: RERA
                                 mediatedType(r) = fread(fid,1,'uint16'); % [10,11]  1: Central; 2: Mixed; 3: Obstructive; 0: ''
                                 arousal(r) = fread(fid,1,'uint16'); % [12,13] 1: w/Arousal 32: w/Desat
                                 signal(r) = fread(fid,1,'uint16'); % [14,15] => Signal# (##) 2 bytes?
                                 fread(fid,8,'uint8'); % [18,25] 8 bytes of 1 bits set
                                 fread(fid,16,'uint8'); %[26, 41] 16 bytes of 1 bits set
                                 fread(fid,1,'uint8'); % [42] The number 10
-                                fread(fid,7,'uint8'); % [43, 49] ?
-                                description{r} = strtrim(sprintf('%s %s %s',CLASS_codec.getRespMediatedType(mediatedType(r)),...
-                                    CLASS_codec.getRespType(respType(r)),CLASS_codec.getRespAssociation(arousal(r))));
+                                fread(fid,7,'uint8'); % [43, 49] ?                              
                             end                            
                         elseif(bytes_per_record==80)   % found this in resp.nvt                         
                             
@@ -918,23 +1020,101 @@ classdef CLASS_codec < handle
                             for r=1:HDR.num_records
                                 start_sample(r) = fread(fid,1,'uint32'); % [0,3]
                                 stop_sample(r) = fread(fid,1,'uint32'); % [4,7]
-                                unknown(r) = fread(fid,1,'uint8'); % [8] 7:
-                                respType(r) = fread(fid,1,'uint8'); % [9] 1: Apnea; 2: Hypopne; 5: RERA
+                                evtID(r,:) = fread(fid,2,'uint8'); % [8] 7:
+                                respType(r) = evtID(r,2); % [9] 1: Apnea; 2: Hypopne; 5: RERA
                                 mediatedType(r) = fread(fid,1,'uint16'); % [10,11]  1: Central; 2: Mixed; 3: Obstructive; 0: ''
                                 arousal(r) = fread(fid,1,'uint16'); % [12,13] 1: w/Arousal 32: w/Desat
                                 signal(r) = fread(fid,1,'uint16'); % [14,15] => Signal# (##) 2 bytes
                                 placementOrder(r) = fread(fid,1,'uint16'); % [16,17] => Order of events placed (##) 2 bytes
                                 remainder(r,:) = fread(fid,remainder_byte_count,'uint8');
-                                description{r} = strtrim(sprintf('%s %s %s',CLASS_codec.getRespMediatedType(mediatedType(r)),...
-                                    CLASS_codec.getRespType(respType(r)),CLASS_codec.getRespAssociation(arousal(r))));
+                                
                             end
                         else
                             fprintf(1,'Unknown block size (%d) for respiratory events\n',bytes_per_record);
                         end
-
+                        description = cell(HDR.num_records,1);
+                        for r=1:HDR.num_records
+                        description{r} = strtrim(sprintf('%s %s %s',CLASS_codec.getRespMediatedType(mediatedType(r)),...
+                                    CLASS_codec.getRespType(respType(r)),CLASS_codec.getRespAssociation(arousal(r))));
+                        end
                     elseif(strcmpi(eventType,'snapshot'))
-                                           
+                        if(false)
+                            fseek(fid,32,'bof');
+                            a=fread(fid,[bytes_per_record,inf],'uint8')';
+                            a                         
+                            fseek(fid,32,'bof');
+                        end                        
+                        
+                    elseif strcmpi(eventType,'snore')      
+                        if(false)
+                            fseek(fid,32,'bof');
+                            a=fread(fid,[bytes_per_record,inf],'uint8')';
+                            a
+                            fseek(fid,32,'bof');
+                        end
+                        arousal = stop_sample;
+                        respRelated = arousal;
+                        snoreType = zeros(HDR.num_records,1);
+
+                        if(bytes_per_record==16)
+                            remainder = zeros(HDR.num_records,2,'uint8');
+                            for r=1:HDR.num_records
+                                start_sample(r) = fread(fid,1,'uint32'); % 4
+                                stop_sample(r) = fread(fid,1,'uint32');  % 8
+                                
+                                evtID(r,:) = fread(fid,2,'uint8'); % 10
+                                %                                 snoreType(r) = fread(fid,1,'uint16'); %12 % ?
+                                respRelated(r) = fread(fid,1,'uint16'); %14 
+                                arousal(r) = fread(fid,1,'uint16'); %14 - % Arousal (No,Yes: 0,1) 2 bytes
+                                remainder(r,:) = fread(fid,2,'uint8');
+                            end
+                        elseif(bytes_per_record==52)
+                            remainder = zeros(HDR.num_records,4,'uint8');
+                            
+                            secondSignal = arousal; % related to respiratory 4 signal.  
+                            
+                            for r=1:HDR.num_records
+                                start_sample(r) = fread(fid,1,'uint32'); % 4
+                                stop_sample(r) = fread(fid,1,'uint32');  % 8
+                                
+                                evtID(r,:) = fread(fid,2,'uint8'); % 10
+                                snoreType(r) = fread(fid,1,'uint16'); %12 % ?
+                                respRelated(r) = fread(fid,1,'uint16'); %14 
+                                arousal(r) = fread(fid,1,'uint16'); %16 - % Arousal (No,Yes: 0,1) 2 bytes
+                                counter = fread(fid,1,'uint32');                                
+                                padding = fread(fid,1,'uint32');
+                                secondSignal(r) = fread(fid,1,'uint32');  % seen a three                              
+                                fseek(fid,20,'cof');
+                                remainder(r,:) = fread(fid,4,'uint8');
+                            end                            
+                        end
+                        description = cell(HDR.num_records,1);
+                        for r=1:HDR.num_records
+                            subIDStr = '';
+                            if(evtID(r,2)~=1)
+                                subIDStr = sprintf(' SubID(%d)',evtID(r,2));
+                            end
+                            snoreStr = '';
+                            if(snoreType(r)~=0)
+                                snoreStr = sprintf(' SnoreType(%d)',snoreType(r));
+                            end                                
+                            if(respRelated(r)==4)
+                                respStr = ' w/Respiratory';
+                            elseif(respRelated(r)==0)
+                                respStr = '';
+                            else
+                                respStr = sprintf(' w/%d',respRelated(r));
+                            end                            
+                           description{r} = strtrim(sprintf('%s%s%',subIDStr,snoreStr,respStr));
+                        end
+                        
                     elseif(strcmpi(eventType,'stage'))
+                         if(false)
+                            fseek(fid,32,'bof');
+                            a=fread(fid,[bytes_per_record,inf],'uint8')';
+                            a
+                            fseek(fid,32,'bof');
+                        end
                         %   stage_mat = fread(fid,[12,HDR.num_records],'uint8');
                         %   x=reshape(stage_mat,12,[])';
                         %  stage records are produced in 12 byte sections
@@ -953,7 +1133,7 @@ classdef CLASS_codec < handle
                         stage = zeros(HDR.num_records,1);  %had been zeros(-1, HDR.num_records,1); on 12/6/2016
                         for r=1:HDR.num_records
                             start_sample(r) = fread(fid,1,'uint32');
-                            fseek(fid,1,'cof');
+                            evtID(r,1) = fread(fid,1,'uint8');
                             stage(r) = fread(fid,1,'uint8');
                             fseek(fid,bytes_per_record-intro_size,'cof');
                         end
@@ -961,7 +1141,7 @@ classdef CLASS_codec < handle
                         stage(stage==6)=5;
                         stage(stage==-1)=7;
                         samples_per_epoch = median(diff(start_sample));
-                        embla_samplerate = samples_per_epoch/CLASS_codec.SECONDS__PER_EPOCH;
+                        embla_samplerate = samples_per_epoch/CLASS_codec.SECONDS_PER_EPOCH;
                         embla_samplerate_out = embla_samplerate;
                         stop_sample = start_sample+samples_per_epoch;
                         description = cell(HDR.num_records,1);
@@ -973,7 +1153,6 @@ classdef CLASS_codec < handle
                         description(stage==4) = {'Stage 4'};
                         description(stage==5) = {'REM'};
                         description(stage==7) = {'Unknown'};
-                        
                         
                                                 %   stage_mat = fread(fid,[12,HDR.num_records],'uint8');
                         %   x=reshape(stage_mat,12,[])';
@@ -993,10 +1172,8 @@ classdef CLASS_codec < handle
                         % start_sample = stage_mat(:,1);
                         % stage = (stage_mat(:,2)-1)/256;  %bitshifting will also work readily;
                         
-                    
-                        
                     elseif(strcmpi(eventType,'tag'))
-                         if(false)
+                        if(false)
                             fseek(fid,32,'bof');
                             a=fread(fid,[bytes_per_record,inf],'uint8')';
                             fseek(fid,32,'bof');
@@ -1016,9 +1193,7 @@ classdef CLASS_codec < handle
                         
                         for r=1:HDR.num_records
                             start_sample(r) = fread(fid,1,'uint32');
-                            % evtID(r,:) = fread(fid,2,'uint8'); % [13,1]
-                            
-                            evtType = fread(fid,1,'uint8');  % 2
+                            evtID(r,1) = fread(fid,1,'uint8'); % 2,
                             tagType(r) = fread(fid,1,'uint8');
                             tagSubType(r) = fread(fid,1,'uint8');
                             tagSidePosition(r) = fread(fid,1,'uint8');  
@@ -1031,24 +1206,44 @@ classdef CLASS_codec < handle
                         stop_sample = start_sample;
                         
                     elseif(strcmpi(eventType,'user'))
+                        if(false)
+                            fseek(fid,32,'bof');
+                            a=fread(fid,[bytes_per_record,inf],'uint8')';
+                            fseek(fid,32,'bof');
+                            a=fread(fid,[bytes_per_record/2,inf],'uint16')';
+                            fseek(fid,32,'bof');
+                            fseek(fid,32,'bof');
+                            a=fread(fid,[bytes_per_record/4,inf],'uint32')';
+                            fseek(fid,32,'bof');
+                            a
+                        end
+                        
                         fseek(fid,32,'bof');
                         remainder = cell(HDR.num_records,1);
                         description = cell(HDR.num_records,1);
+                        intro_size = 10;
                         for r=1:HDR.num_records
                             start_sample(r) = fread(fid,1,'uint32');
-                            evtID(r,:) = fread(fid,2,'uint8'); % [13,1]
-                            padding = fread(fid,1,'uint32');
-                            %read until double 00 are encountered
-                            cur_loc = ftell(fid);
-                            curValue = 1;
-                            while(~feof(fid) && curValue~=0)
-                                curValue = fread(fid,1,'uint16');
-                            end
-                            description_size = ftell(fid)-cur_loc;
-                            intro_size = 4+6+description_size;
-                            fseek(fid,-description_size,'cof'); %or fseek(fid,cur_loc,'bof');
-                            description{r} = fread(fid,description_size/2,'uint16=>char')';
-                            remainder{r} = fread(fid,bytes_per_record-intro_size,'uint8=>char')';
+                            evtID(r,:) = fread(fid,2,'uint8'); % [4,1]
+                            padding = fread(fid,1,'uint32'); % [0,0,0,0]
+                            
+                            curRecord = fread(fid,(bytes_per_record-intro_size)/bytes_per_uint16,'uint16')';
+                            descriptionStop = find(curRecord==0,1,'first');
+                            description{r} = char(curRecord(1:descriptionStop-1));
+                            remainder{r}=curRecord(descriptionStop:end);
+                            
+                            % Old way
+                            %                             %read until double 00 are encountered
+                            %                             cur_loc = ftell(fid);
+                            %                             curValue = 1;
+                            %                             while(~feof(fid) && curValue~=0)
+                            %                                 curValue = fread(fid,1,'uint16');
+                            %                             end
+                            %                             description_size = ftell(fid)-cur_loc;
+                            %                             intro_size = 4+6+description_size;
+                            %                             fseek(fid,-description_size,'cof'); %or fseek(fid,cur_loc,'bof');
+                            %                             description{r} = fread(fid,description_size/2,'uint16=>char')';
+                            %                             remainder{r} = fread(fid,bytes_per_record-intro_size,'uint8=>char')';
                             %remainder is divided into sections  with
                             %tokens of  [0    17     0   153     0     3
                             %1     9     0 ]
@@ -2009,14 +2204,16 @@ classdef CLASS_codec < handle
         
         function assocStr = getRespAssociation(rint)
             switch(rint)
+                case 0
+                    assocStr = '';
                 case 1
                     assocStr = 'w/Arousal';
                 case 32
                     assocStr = 'w/Desat';
                 case 33
-                    assocStr = 'w/33';
+                    assocStr = 'w/Arousal w/Desat';
                 otherwise
-                    assocStr = '';
+                    assocStr = sprintf('w/%d',rint);
             end
         end   
 
