@@ -16,6 +16,5 @@ if(~isempty(sev_h) && sev_h~=0)
     this_path = fileparts(mfilename('fullpath'));
     save_filename =  fullfile(this_path,strcat(fig_tag,ext));
     
-    print(sev_h,strcat('-d',fmt),save_filename);
-    
+    print(sev_h,strcat('-d',fmt),save_filename);   
 end

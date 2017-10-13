@@ -91,7 +91,10 @@ classdef CLASS_events < handle
         hidden; 
         
         %> @brief this is the parameters of interest for this event that will
-        %> likely be saved later for post analysis
+        %> likely be saved later for post analysis.  These include
+        %> additional information related to detected events, and should not
+        %> be confused with setting parameters used by the source
+        %> detection algorithm to obtain events (see 'source' field).
         paramStruct;
         
         %> handle to textbox that displays paramStruct values
@@ -237,10 +240,15 @@ classdef CLASS_events < handle
                     'color',obj.cur_color,'string',obj.label,...
                     'uicontextmenu',[],'interpreter','none');
 
-                enterFcn = @(figHandle, currentPoint)...
-                    set(figHandle, 'Pointer', 'crosshair');
-                iptSetPointerBehavior(obj.evt_patch_h, enterFcn);
-                iptPointerManager(obj.parent_fig);
+                try
+                    enterFcn = @(figHandle, currentPoint)...
+                        set(figHandle, 'Pointer', 'crosshair');
+                    iptSetPointerBehavior(obj.evt_patch_h, enterFcn);
+                    iptPointerManager(obj.parent_fig);
+                catch me
+                    % iptSetPointerBehavior requires
+                    % toolbox/shared/imageslib
+                end
             else
                 obj.label_h = [];
             end
@@ -442,7 +450,11 @@ classdef CLASS_events < handle
             art_ind = find(y_art);
             x = [art_ind;art_ind;art_ind];
             y = [zeros(size(art_ind)); y_art(art_ind); nan(size(art_ind))];
-            line(x(:),y(:)+y_offset,'color',obj.cur_color,'linestyle',style,'parent',parentH,'erasemode','normal','linewidth',1,'hittest','off');
+            if(verLessThan('matlab','7.14'))
+                line(x(:),y(:)+y_offset ,'color',obj.cur_color,'linestyle',style,'parent',parentH,'erasemode','normal','linewidth',1,'hittest','off');
+            else
+                line(x(:),y(:)+y_offset ,'color',obj.cur_color,'linestyle',style,'parent',parentH,'linewidth',1,'hittest','off');
+            end
             h = text('parent',parentH,'fontsize',7,'string',[obj.channel_name,' ',obj.label],'units','data','horizontalalignment','left','verticalalignment','baseline','interpreter','none');
             text_extent = get(h,'extent');
             label_position = [-text_extent(3), y_offset, 0];
@@ -897,7 +909,7 @@ classdef CLASS_events < handle
         end
         
         % =================================================================
-        %> @brief Tis function requires filename to meet OS file naming requirements
+        %> @brief This function requires filename to meet OS file naming requirements
         %> or it will crash - it appends to the file if filename already
         %> exists, otherwise a new one is created.  The file is closed at
         %> the end of this function call
@@ -955,7 +967,13 @@ classdef CLASS_events < handle
                         paramValues = zeros(size(y,1),numel(paramNames));
                         for k = 1:numel(paramNames)
                             fprintf(fid,'\t%s',paramNames{k});
-                            paramValues(:,k) = obj.paramStruct.(paramNames{k})(:);
+                            try
+                                paramValues(:,k) = obj.paramStruct.(paramNames{k})(:);
+                            catch me
+                                showME(me);
+                                fprintf(1,'Likely encountered a cell to double conversion problem, which can happen with biocal description field.\nThe parameter values will be replaced with ''NaN'' in order to continue.\n');
+                                paramValues(:,k) = nan;
+                            end                                
                         end
                         
                         y = [y,paramValues];
@@ -1189,31 +1207,45 @@ classdef CLASS_events < handle
         %> @param min_samples is a scalar value
         %> @retval merged_events The output of merging event_mat's events 
         %> that are separated by less than min_samples.
-        %> @retval merged_indices is a logical vector of the row indices that
+        %> @retval merged_from_indices is a logical vector of the row indices that
         %> were merged from event_mat_in. - these are the indices of the
         %> in event_mat_in that are removed/replaced
+        %> @retval merged_to_indices is an Nx1 matrix containing the numerical indices of merged_events that
+        %> the rows in event_mat_in were merged to.
         % =================================================================
-        function [merged_events, merged_indices] = merge_nearby_events(event_mat_in,min_samples)
+        function [merged_events, merged_from_indices, merged_to_indices] = merge_nearby_events(event_mat_in,min_samples)
          
             if(nargin==1)
                 min_samples = 100;
             end
+
+            num_events_in = size(event_mat_in,1);
+            merged_from_indices = false(num_events_in,1);
             
-            merged_indices = false(size(event_mat_in,1),1);
+            % The default case is that nothing is changed.  And the events
+            % in are matched directly across to the events out.
+            merged_to_indices = 1:num_events_in;  
 
             if(~isempty(event_mat_in))
+
                 merged_events = zeros(size(event_mat_in));
                 num_events_out = 1;
-                num_events_in = size(event_mat_in,1);
                 merged_events(num_events_out,:) = event_mat_in(1,:);
                 for k = 2:num_events_in
                     if(event_mat_in(k,1)-merged_events(num_events_out,2)<min_samples)
-                        merged_events(num_events_out,2) = event_mat_in(k,2);
-                        merged_indices(k) = true;
+                        % merged_events(num_events_out,2) = event_mat_in(k,2); % @12/20/2016: This assumes that the event_mat_in(k,2) is greater than merged_events(num_events_out,2) = however, this may not always be true.
+                        if(event_mat_in(k,2)>merged_events(num_events_out,2))
+                            merged_events(num_events_out,2) = event_mat_in(k,2);
+                        end
+                        % Or, in 1 line:
+                        % merged_events(num_events_out,2) = max(merged_events(num_events_out,2),event_mat_in(k,2));
+                        merged_from_indices(k) = true;
                     else
+                        % Skip to the next row and populate it.
                         num_events_out = num_events_out + 1;
                         merged_events(num_events_out,:) = event_mat_in(k,:);
-                    end                    
+                    end
+                    merged_to_indices(k) = num_events_out;
                 end;
                 merged_events = merged_events(1:num_events_out,:);
             else
@@ -1243,13 +1275,102 @@ classdef CLASS_events < handle
         end
         
         % =================================================================
+        %> @brief Finds locations where adjacent events are separated by at least min_interval_samples and at most max_interval_samples.
+        %> @param
+        %> @retval
+        % =================================================================
+        function interval_events = find_intervals(event_mat_in, min_interval_samples, max_interval_samples)
+            
+            if(size(event_mat_in,1)<2)
+                interval_events = [];
+            else
+                
+                % just in case we had the samples entered in reverse order.
+                if(min_interval_samples>max_interval_samples)
+                    tmp = min_interval_samples;
+                    min_interval_samples = max_interval_samples;
+                    max_interval_samples = tmp;
+                end
+                dist_samples = event_mat_in(2:end,1)-event_mat_in(1:end-1,2);  %start of next event minus stop of current event.  
+                good_interval_indices = dist_samples>=min_interval_samples&dist_samples<=max_interval_samples; % 
+                
+                %the last row does not have a follow-on interval, so hard
+                %code a false there at the end.  (i.e. if we have 5
+                %events/rows, there will only be 4 intervals, but we don't
+                %want to confuse matlab and index into our data with a
+                %vector of length 4.
+                good_start_interval_indices = [good_interval_indices(:);false];
+                good_stop_interval_indices = [false; good_interval_indices(:)];
+                interval_events = [event_mat_in(good_start_interval_indices,2),event_mat_in(good_stop_interval_indices,1)];                    
+            end
+        end
+        % =================================================================
+        %> @brief Creates a signal vector by using the parameter value
+        %> identified in the input eventStruct and resampling via
+        %> convolution.
+        %> @param
+        %> @retval
+        % =================================================================
+        function signalVector = eventParam2DeltaSignal(eventStruct, paramName, signalLength, sampleRate, resampleOrder)
+            try
+                eventVector = zeros(signalLength,1);
+                paramVector = eventStruct.paramStruct.(paramName);
+                for d=1:size(eventStruct.new_events,1)
+                    eventVector(eventStruct.new_events(d,1):eventStruct.new_events(d,2)) = paramVector(d);
+                end
+                resampleFilter = zeros(sampleRate,1);
+                resampleFilter(linspace(1,sampleRate,resampleOrder))=1;
+                signalVector = conv(eventVector, resampleFilter);
+                
+            catch me
+                showME(me);
+                signalVector = [];
+            end            
+        end
+        
+        % =================================================================
+        %> @brief Creates a signal vector by using the parameter value
+        %> identified in the input eventStruct and a cubic spline.
+        %> @param
+        %> @retval
+        % =================================================================
+        function signalVector = eventParam2Signal(eventStruct, paramName, signalLength, sampleRate, resampleOrder)
+            try
+                %                 resampledX = 1:resampleOrder:signalLength;
+                resampledX = 1:signalLength';
+                
+                controlPoints = [eventStruct.new_events(:,1), eventStruct.paramStruct.(paramName)];
+                signalVector = spline(controlPoints(:,1),controlPoints(:,2),resampledX);
+                
+
+                %                  tic;signalVector = hySpline(resampledX,controlPoints,1000);toc;
+                %                 eventVector = zeros(signalLength,1);
+                %                 paramVector = eventStruct.paramStruct.(paramName);
+                %
+                %                 eventVector(1:eventStruct.new_events(1,2))=paramVector(1);
+                %
+                %                 for d=2:size(eventStruct.new_events,1)
+                %                     eventVector(eventStruct.new_events(d-1,2):eventStruct.new_events(d,1)) = paramVector(d);
+                %                 end
+                
+                %                 resampleFilter = zeros(sampleRate,1);
+                %                 resampleFilter(linspace(1,sampleRate,resampleOrder))=1;
+                %                 signalVector = conv(eventVector, resampleFilter);
+                
+            catch me
+                showME(me);
+                signalVector = [];
+            end            
+        end
+        
+        % =================================================================
         %> @brief
         %> @param
         %> @retval 
         % =================================================================
         function filled_events = fill_bins_with_events(event_mat_start_stop, num_samples)
             %this function breaks a timeline into num_samples chunks, and fills the
-            %entire chunck with 1's if it contains at least one event that is not 0
+            %entire chunk with 1's if it contains at least one event that is not 0
             %event_mat_start_stop is a two column matrix of start and stop indices (columns 1 and 2)
             %for the event_mat_start_stop
             num_samples = floor(num_samples);            
