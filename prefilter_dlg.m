@@ -167,13 +167,12 @@ for k=1:nFilters
         channel_labl_index = filterArrayStruct(k).src_channel_index;
         ref_channel_index = filterArrayStruct(k).ref_channel_index;
         handles =push_add_row_Callback(handles.push_add_row, [], handles);
-
     end
 
     set(handles.(['menu_filter_',cur_row]),'string',handles.user.filterInf.evt_label,'value',evt_labl_index);
     set(handles.(['menu_src_channel_',cur_row]),'string',handles.user.channel_label,'value',channel_labl_index);
     
-    updateFilterSelection(handles,handles.user.num_rows); 
+    updateFilterSelection(handles,cur_row); 
     
     params = handles.user.paramCell{k};
     if(~isempty(params))
@@ -229,7 +228,9 @@ else
     if(exist(pFile,'file'))
         params = plist.loadXMLPlist(pFile);
     elseif(exist(mFullFilename,'file'))
-        params = feval(strcat(handles.user.filter_packageName,mFile));
+        % get rid of the '.m' we just added on earlier to actually evalute
+        % the filter
+        params = feval(strcat(handles.user.filter_packageName,mFile(1:end-2)));
         if(strcmpi(param_gui,'plist_editor_dlg'))
             plist.saveXMLPlist(pFile,params);
         end
@@ -296,14 +297,14 @@ fig_pos(4) = fig_pos(4)+handles.user.new_row_y_delta;
 fig_pos(2) = fig_pos(2)-handles.user.new_row_y_delta;
 set(handles.fig1,'position',fig_pos);
 
-props = rmfield(props,'Selected');
-props = rmfield(props,'Extent');
-props = rmfield(props,'Type');
+props = rmfieldSafe(props,'Selected');
+props = rmfieldSafe(props,'Extent');
+props = rmfieldSafe(props,'Type');
 
 pos = cell(numel(props),1);
 [pos{:}] = props.Position;
-props = rmfield(props,'Position');
-props = rmfield(props,'BeingDeleted');
+props = rmfieldSafe(props,'Position');
+props = rmfieldSafe(props,'BeingDeleted');
 new_tag_suffix = num2str(handles.user.num_rows);
 for k=1:numel(props)
     props(k).Position = pos{k};
@@ -379,8 +380,15 @@ for cur_row = 1:handles.user.num_rows
     else
         %check if there are parameters for this one...
         if(strcmpi(get(handles.(['push_settings_',cur_row_str]),'enable'),'on') && isempty(handles.user.filterInf.params{cur_row}))
-            
-            handles.output(cur_row).params = handles.user.paramCell{cur_row}; %CLASS_events.loadXMLparams(handles.output(cur_row).m_file); %the .m gets stripped and replaced with .pfile in the loadXMLparams function
+            handles.output(cur_row).params = handles.user.paramCell{cur_row}; % often true when we come in with a value already
+            if(isempty(handles.output(cur_row).params))
+                try
+                    handles.output(cur_row).params = CLASS_events.loadXMLparams(handles.output(cur_row).m_file); %the .m gets stripped and replaced with .pfile in the loadXMLparams function
+                catch me
+                    showME(me);
+                    % just leave it empty
+                end
+            end
         else
             handles.output(cur_row).params = handles.user.filterInf.params{cur_row}; %empty
         end

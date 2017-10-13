@@ -1,4 +1,4 @@
-%> @file CLASS_channel.m
+%> @file CLASS_channel.cpp
 %> @brief CLASS_channel used by SEV for handling polysomnogram channels.
 % ======================================================================
 %> @brief CLASS_channel used by SEV for handling polysomnogram channels.
@@ -106,70 +106,91 @@ classdef CLASS_channel < handle
         %> handle to the table which holds the summary_stats structure
         summary_stats_uitable_h; 
     end;
-    methods(Static)
+    
+    methods      
         
-        % ======================================================================
-        %> @brief obtain struct of statistics and characterization from input data vector.
-        %> Very useful for preparing data for description and presentation
-        %in a uitable.
-        %> @param data vector of values to calculate statistics over.
-        %> @retval stats struct of statistics for the input data.  Fieldnames are:
-        %> - table_row_names ({'Data', 'Abs(Data)'})
-        %> - table_data for storing in 'data' field of a uitable (cell with
-        %> stats taken from data as is and from absolute valued data.
-        %> - table_column_names column labels for describing statistics,
-        %which include:
-        %> - <b>median</b>
-        %> - <b>mean</b>
-        %> - <b>avg_power</b> average power
-        %> - <b>rms</b> root mean square
-        %> - <b>variance</b>
-        %> - <b>std</b> standard deviation
-        %> - <b>entropy</b>
         % =================================================================
-        function stats = data2stats(data)
-            %ROI is the region of interest
-            %stats is a struct with the fields
-            %table_data - for putting into a uitable
-            %table_row_names - string labels for each row
-            %table_column_names - column_names
-            table_column_names = {'median','mean','avg_power','rms','variance','std','entropy'};
-            stats.table_data = cell(1,numel(table_column_names));
-            stats.table_row_names = {'Data','Abs(Data)'};
-            for r=1:numel(stats.table_row_names)
-                
-                for c=1:numel(table_column_names)
-                    fname = table_column_names{c};
-                    switch(fname)
-                        case 'median'
-                            datum = median(data);
-                        case 'mean'
-                            datum = mean(data);
-                        case 'rms'
-                            datum = sqrt(mean(data.*data));
-                        case 'avg_power'                            
-                            datum = mean(data.*data);                        
-                        case 'variance'
-                            datum = var(data);
-                        case 'std'
-                            datum = std(data);
-                        case 'entropy'
-                            p = abs(data)/sum(abs(data));
-                            datum = sum(p.*log(p));
-                        otherwise
-                            fprintf(1,'%s unahndled\n',fname);
-                            datum = [];
-                    end
-                    stats.table_data{r,c} = datum;
-                end
-                data = abs(data);
-            end
-            stats.table_column_names = table_column_names;
+        %> @brief Constructor
+        %> @param raw_data Time series signal data for the channel (numeric vector)
+        %> @param src_title Name of the channel as obtained from a source file (e.g. .EDF) (string)
+        %> @param src_channel_index Index of the channel data as obtained
+        %> from the source file (e.g. an .EDF file is a multiplexed file with
+        %> many signals; src_channel_index is the index of the channel that raw_data is obtained from in that file)
+        %> @param src_samplerate Sample rate of data as determined/obtained
+        %> from the source file (e.g. .EDF).  Use 0 if the channel is synthesized and does not have a source file (numeric, unsigned integer)
+        %> @param desired_samplerate Sample rate that the channel should be
+        %> converted to (unsigned numeric)
+        %> @param container_index Index of channel instance as stored in a
+        %> container object (i.e. CLASS_events_container).
+        %> @param parent_fig MATLAB figure handle for displaying and interacting with the channel data
+        %> @param parent_axes MATLAB axes handle where the data is
+        %> displayed and interacted with (i.e. to hold the line handle and
+        %> context menus of the channel).
+        %> @retval obj instance of CLASS_channel class.
+        % =================================================================
+        % only first four parameters are required if not using graphics -
+        % i.e. just doing a batch mode processing and want a lite
+        % constructor
+        function obj = CLASS_channel(raw_data,...
+                src_title,src_channel_index,...
+                src_samplerate,desired_samplerate,...
+                container_index,...
+                parent_fig,parent_axes)
+            %userdata is a unique identifier (index) to an instantiation of this obj
+            %to be used with line and tex handles so that it can reference
+            %this object from other callbacks.
+            obj.repositioning = false; %the channel is not being repositioned by the user at time of construction
+            obj.draw_events = false; %don't need to draw any events at construction - no events associated at time of construction
+            obj.PSD = [];
+            obj.MUSIC = [];
+            obj.src_samplerate = src_samplerate;
             
+            [N,D] = rat(desired_samplerate/src_samplerate);
+            if(N~=D)
+                if(numel(raw_data)>0)
+                    %                     b = fir1(100,0.5);
+                    %                     raw_data2 = filtfilt(b,1,raw_data);
+                    raw_data = resample(raw_data,N,D); %resample to get the desired sample rate
+                end;
+            end;
+            
+            obj.title = src_title;
+            obj.EDF_label = src_title;
+            obj.EDF_index = src_channel_index;
+            obj.raw_data = raw_data;
+            obj.src_samplerate = src_samplerate;
+            obj.samplerate = desired_samplerate;
+            obj.filter_data = [];
+            obj.summary_stats_figure_h = [];
+            obj.summary_stats_uitable_h=[];
+            obj.channel_index = container_index;
+            obj.event_indices_vector = [];
+            obj.synth_src_container_indices = []; %if a channel is synthesized, I want to know from what/where
+            obj.show_filtered = false;
+
+            if(nargin>=8 && all(ishandle([parent_fig;parent_axes])))
+                obj.parent_fig = parent_fig;
+                obj.parent_axes = parent_axes;
+                
+                map = colormap(obj.parent_axes);
+                obj.color = map(obj.channel_index*2,:);
+                obj.line_offset = 0;
+                obj.reference_line_offsets = [0;0]; %these are little lines that you can draw next to the main signal to use as a reference value
+                obj.hidden = false;
+                obj.scale = 1;
+                obj.label_offset = 30;
+               
+                obj.reference_line_color = [0.23 0.44 0.34];
+
+                obj.text_handle = text('parent',obj.parent_axes,'visible','on',...
+                    'handlevisibility','on','ButtonDownFcn',@obj.text_buttonDownFcn,...
+                    'color',obj.color,'string',obj.title,'interpreter','none',...
+                    'userdata',obj.channel_index,'position',[0 0 0]);
+            end
         end
         
-    end
-    methods        
+        
+        
         % =================================================================
         %> @brief filter channel according to properties of filterStructIn.
         %> filtered data is stored in obj.filter_data
@@ -235,22 +256,21 @@ classdef CLASS_channel < handle
                             filterS = obj.filterStruct(k);
                             if(obj.channel_index==filterS.src_channel_index)
                                 
-                                %handle the case where parameters are passed in
-                                %from previous settings
-                                if(~isempty(filterS.params))
-                                    filterS.params.samplerate = obj.samplerate; %needed at times in filters where the data is sent directly - otherwise a blank argument is passed to the function which then loads the data itself
-                                    if(isempty(filterS.ref_channel_index))
-                                        obj.filter_data =feval([filterS.filter_path(2:end),'.',filterS.m_file],obj.getData(),filterS.params);
-                                    else
-                                        obj.filter_data =feval([filterS.filter_path(2:end),'.',filterS.m_file],obj.getData(),filterS.ref_data,filterS.params);
-                                    end
-                                else
-                                    if(isempty(filterS.ref_channel_index))
-                                        obj.filter_data =feval([filterS.filter_path(2:end),'.',filterS.m_file],obj.getData());
-                                    else
-                                        obj.filter_data =feval([filterS.filter_path(2:end),'.',filterS.m_file],obj.getData(),filterS.ref_data);
-                                    end
+                                filterFcn = [filterS.filter_path(2:end),'.',filterS.m_file];
+                                
+                                % handle case where parameters are not seen
+                                % or passed in yet.
+                                if(isempty(filterS.params))
+                                    filterS.params = feval(filterFcn);
                                 end
+                                filterS.params.samplerate = obj.samplerate; %needed at times in filters where the data is sent directly - otherwise a blank argument is passed to the function which then loads the data itself
+                                if(isempty(filterS.ref_channel_index))
+                                    obj.filter_data =feval(filterFcn,obj.getData(),filterS.params);
+                                else
+                                    obj.filter_data =feval(filterFcn,obj.getData(),filterS.ref_data,filterS.params);
+                                end
+                                    
+                                
                                 
                                 %make sure we stay with row vectors for
                                 %consistency throughout gsev
@@ -399,7 +419,7 @@ classdef CLASS_channel < handle
             end
             
             obj.PSD = PSD_settings;
-            [obj.PSD.magnitude obj.PSD.x obj.PSD.nfft] = calcPSD(obj.getData(psd_range),obj.samplerate,obj.PSD);
+            [obj.PSD.magnitude, obj.PSD.x, obj.PSD.nfft, obj.PSD.U_psd, obj.PSD.U_power] = calcPSD(obj.getData(psd_range),obj.samplerate,obj.PSD);
             if(nargout>0)
                 S = obj.PSD.magnitude;
                 if(nargout>1)
@@ -445,86 +465,6 @@ classdef CLASS_channel < handle
                         winlen = obj.MUSIC.winlen;
                     end
                 end
-            end
-        end
-        
-        % =================================================================
-        %> @brief Constructor
-        %> @param raw_data Time series signal data for the channel (numeric vector)
-        %> @param src_title Name of the channel as obtained from a source file (e.g. .EDF) (string)
-        %> @param src_channel_index Index of the channel data as obtained
-        %> from the source file (e.g. an .EDF file is a multiplexed file with
-        %> many signals; src_channel_index is the index of the channel that raw_data is obtained from in that file)
-        %> @param src_samplerate Sample rate of data as determined/obtained
-        %> from the source file (e.g. .EDF).  Use 0 if the channel is synthesized and does not have a source file (numeric, unsigned integer)
-        %> @param desired_samplerate Sample rate that the channel should be
-        %> converted to (unsigned numeric)
-        %> @param container_index Index of channel instance as stored in a
-        %> container object (i.e. CLASS_events_container).
-        %> @param parent_fig MATLAB figure handle for displaying and interacting with the channel data
-        %> @param parent_axes MATLAB axes handle where the data is
-        %> displayed and interacted with (i.e. to hold the line handle and
-        %context menus of the channel).
-        %> @retval obj instance of CLASS_channel class.
-        % =================================================================
-        %only first four parameters are required if not using graphics -
-        %i.e. just doing a batch mode processing and want a lite
-        %constructor
-        function obj = CLASS_channel(raw_data,...
-                src_title,src_channel_index,...
-                src_samplerate,desired_samplerate,...
-                container_index,...
-                parent_fig,parent_axes)
-            %userdata is a unique identifier (index) to an instantiation of this obj
-            %to be used with line and tex handles so that it can reference
-            %this object from other callbacks.
-            obj.repositioning = false; %the channel is not being repositioned by the user at time of construction
-            obj.draw_events = false; %don't need to draw any events at construction - no events associated at time of construction
-            obj.PSD = [];
-            obj.MUSIC = [];
-            obj.src_samplerate = src_samplerate;
-            
-            [N,D] = rat(desired_samplerate/src_samplerate);
-            if(N~=D)
-                if(numel(raw_data)>0)
-                    b = fir1(100,0.5);
-%                     raw_data2 = filtfilt(b,1,raw_data);
-                    raw_data = resample(raw_data,N,D); %resample to get the desired sample rate
-                end;
-            end;
-            
-            obj.title = src_title;
-            obj.EDF_label = src_title;
-            obj.EDF_index = src_channel_index;
-            obj.raw_data = raw_data;
-            obj.src_samplerate = src_samplerate;
-            obj.samplerate = desired_samplerate;
-            obj.filter_data = [];
-            obj.summary_stats_figure_h = [];
-            obj.summary_stats_uitable_h=[];
-            obj.channel_index = container_index;
-            obj.event_indices_vector = [];
-            obj.synth_src_container_indices = []; %if a channel is synthesized, I want to know from what/where
-            obj.show_filtered = false;
-
-            if(nargin>=8 && all(ishandle([parent_fig;parent_axes])))
-                obj.parent_fig = parent_fig;
-                obj.parent_axes = parent_axes;
-                
-                map = colormap(obj.parent_axes);
-                obj.color = map(obj.channel_index*2,:);
-                obj.line_offset = 0;
-                obj.reference_line_offsets = [0;0]; %these are little lines that you can draw next to the main signal to use as a reference value
-                obj.hidden = false;
-                obj.scale = 1;
-                obj.label_offset = 30;
-               
-                obj.reference_line_color = [0.23 0.44 0.34];
-
-                obj.text_handle = text('parent',obj.parent_axes,'visible','on',...
-                    'handlevisibility','on','ButtonDownFcn',@obj.text_buttonDownFcn,...
-                    'color',obj.color,'string',obj.title,'interpreter','none',...
-                    'userdata',obj.channel_index,'position',[nan nan 0]);
             end
         end
 
@@ -901,6 +841,72 @@ classdef CLASS_channel < handle
         
     
     end %end methods
+    
+    
+
+    methods(Static)
+        
+        % ======================================================================
+        %> @brief obtain struct of statistics and characterization from input data vector.
+        %> Very useful for preparing data for description and presentation
+        %in a uitable.
+        %> @param data vector of values to calculate statistics over.
+        %> @retval stats struct of statistics for the input data.  Fieldnames are:
+        %> - table_row_names ({'Data', 'Abs(Data)'})
+        %> - table_data for storing in 'data' field of a uitable (cell with
+        %> stats taken from data as is and from absolute valued data.
+        %> - table_column_names column labels for describing statistics,
+        %which include:
+        %> - <b>median</b>
+        %> - <b>mean</b>
+        %> - <b>avg_power</b> average power
+        %> - <b>rms</b> root mean square
+        %> - <b>variance</b>
+        %> - <b>std</b> standard deviation
+        %> - <b>entropy</b>
+        % =================================================================
+        function stats = data2stats(data)
+            %ROI is the region of interest
+            %stats is a struct with the fields
+            %table_data - for putting into a uitable
+            %table_row_names - string labels for each row
+            %table_column_names - column_names
+            table_column_names = {'median','mean','avg_power','rms','variance','std','entropy'};
+            stats.table_data = cell(1,numel(table_column_names));
+            stats.table_row_names = {'Data','Abs(Data)'};
+            for r=1:numel(stats.table_row_names)
+                
+                for c=1:numel(table_column_names)
+                    fname = table_column_names{c};
+                    switch(fname)
+                        case 'median'
+                            datum = median(data);
+                        case 'mean'
+                            datum = mean(data);
+                        case 'rms'
+                            datum = sqrt(mean(data.*data));
+                        case 'avg_power'                            
+                            datum = mean(data.*data);                        
+                        case 'variance'
+                            datum = var(data);
+                        case 'std'
+                            datum = std(data);
+                        case 'entropy'
+                            p = abs(data)/sum(abs(data));
+                            datum = sum(p.*log(p));
+                        otherwise
+                            fprintf(1,'%s unahndled\n',fname);
+                            datum = [];
+                    end
+                    stats.table_data{r,c} = datum;
+                end
+                data = abs(data);
+            end
+            stats.table_column_names = table_column_names;
+            
+        end
+        
+    end
     
 end%end class definition
 

@@ -318,7 +318,7 @@ classdef CLASS_UI_marking < handle
             
                %import section
             set(handles.menu_file_load_sco,'callback',@obj.menu_file_load_sco_callback);
-            set(handles.menu_file_load_Evt_File,'callback',@obj.menu_file_load_evt_file_callback);
+            %             set(handles.menu_file_import_txt_eventsFile,'callback',@obj.menu_file_import_txt_eventsFile_callback);
             set(handles.menu_file_import_evtsFile,'callback',@obj.menu_file_import_evtsFile_callback);
                         
             set(handles.menu_file_load_text_channel,'callback',@obj.menu_file_load_text_channel_callback);
@@ -551,13 +551,41 @@ classdef CLASS_UI_marking < handle
         % =================================================================
         function menu_file_load_text_channel_callback(obj, hObject, eventdata)
             global CHANNELS_CONTAINER;
+            
+            
+            candidateFilename = obj.SETTINGS.VIEW.text_channels_filename;
+            
             msg = 'Select a text file with channel data (column format) to be loaded into SEV';
-            fullfile = uigetfullfile({'*.txt','*.*'},msg);
+            fileFilter = {'*.txt;*.TXT','Text files';'*.*','All files'};
+            
+            if(~exist(candidateFilename,'file'))
+                candidateFilename = pwd;
+            end
+            fullfile = uigetfullfile(fileFilter,msg, candidateFilename);
             if(~isempty(fullfile))
-                data = load(fullfile,'ascii');
-                fs = 100;
+                try
+                    defaultAnswer = {num2str(obj.SETTINGS.VIEW.text_channels_samplerate)};
+                catch me
+                    showME(me);
+                    defaultAnswer = {'100'};
+                end
+                fs = getSamplerateDlg(defaultAnswer);
+            end
+                
+            if(~isempty(fullfile) && fs>0)
+                
+                
+                obj.SETTINGS.VIEW.text_channels_filename = fullfile;
+                obj.SETTINGS.VIEW.text_channels_samplerate = fs;
+                %      fid = fopen(fullfile,'r');
+                %      data = textscan(fid,'%f','commentstyle','#','delimiter',',');
+                %      fclose(fid);
+                data = load(fullfile,'ascii');                
                 [~,filename,~]= fileparts(fullfile);
-                HDR = CHANNELS_CONTAINER.loadGenericChannel(data,fs,filename);
+                for ch=1:size(data,2)
+                    channelName = sprintf('%s_channel_%d',filename,ch);
+                    HDR = CHANNELS_CONTAINER.loadGenericChannel(data(:,ch),fs,channelName);
+                end
                 
                 obj.setDateTimeFromHDR(HDR);
                 stages_filename = [];                
@@ -569,7 +597,7 @@ classdef CLASS_UI_marking < handle
                 CHANNELS_CONTAINER.setChannelSettings();
                     
                 enableFigureHandles(obj.figurehandle.sev);
-                set(obj.texthandle.src_filename,'string',obj.SETTINGS.VIEW.src_edf_filename);
+                set(obj.texthandle.src_filename,'string',filename);
                 obj.STATE.single_study_running = true;
             end
             obj.sev_loading_file_flag = false;        
@@ -580,12 +608,12 @@ classdef CLASS_UI_marking < handle
         %> @brief update the SEV with a range of events that were previously saved
         %> using the save to evt menu item (.txt or .mat).
         %> @param obj instance of CLASS_events class.
-        %> @param hObject handle to menu_file_load_evt_file_callback (see GCBO)
+        %> @param hObject handle to menu_file_import_txt_eventsFile_callback (see GCBO)
         %> @param eventdata  reserved - to be defined in a future version
         %> of MATLAB           
         %> @retval obj instance of CLASS_events class.
         % =================================================================
-        function menu_file_load_evt_file_callback(obj,hObject, eventdata)
+        function menu_file_import_txt_eventsFile_callback(obj,hObject, eventdata)
             global EVENT_CONTAINER;            
             suggested_filename = fullfile(['evt.',obj.SETTINGS.VIEW.src_edf_filename(1:end-4),'.*']);
             if(obj.SETTINGS.VIEW.src_event_pathname_is_edf_pathname)
@@ -619,7 +647,7 @@ classdef CLASS_UI_marking < handle
         %> @brief update the SEV with a range of events that were previously saved
         %> using the save to evt menu item (.txt or .mat).
         %> @param obj instance of CLASS_events class.
-        %> @param hObject handle to menu_file_load_evt_file_callback (see GCBO)
+        %> @param hObject handle to menu_file_import_txt_eventsFile_callback (see GCBO)
         %> @param eventdata  reserved - to be defined in a future version
         %> of MATLAB
         %> @retval obj instance of CLASS_events class.
@@ -627,14 +655,21 @@ classdef CLASS_UI_marking < handle
         function menu_file_import_evtsFile_callback(obj,hObject, eventdata)
             global EVENT_CONTAINER;
             
-            suggested_filename = strcat(obj.SETTINGS.VIEW.src_edf_filename(1:end-4),'.EVTS');
-            if(obj.SETTINGS.VIEW.src_event_pathname_is_edf_pathname)
-                suggested_pathname = obj.SETTINGS.VIEW.src_edf_pathname;                
+            if(exist(obj.SETTINGS.VIEW.text_channels_filename,'file'))
+                suggestion = strcat(obj.SETTINGS.VIEW.text_channels_filename(1:end-4),'.evts');
+                suggested_pathname = fileparts(suggestion);
             else
-                suggested_pathname = obj.SETTINGS.VIEW.src_event_pathname;                
+                suggested_filename = strcat(obj.SETTINGS.VIEW.src_edf_filename(1:end-4),'.EVTS');
+                
+                if(obj.SETTINGS.VIEW.src_event_pathname_is_edf_pathname)
+                    suggested_pathname = obj.SETTINGS.VIEW.src_edf_pathname;
+                else
+                    suggested_pathname = obj.SETTINGS.VIEW.src_event_pathname;
+                end                
+                suggestion = fullfile(suggested_pathname,suggested_filename);
+
             end
-            
-            suggestion = fullfile(suggested_pathname,suggested_filename);
+                
             if(~exist(suggestion,'file'))
                 
                 suggested_file = getFilenamesi(suggested_pathname,'.EVTS');
@@ -644,7 +679,7 @@ classdef CLASS_UI_marking < handle
                     suggestion = suggested_pathname;
                 end
             end
-            [filename,pathname]=uigetfile({suggestion,'SSC Events (.EVTS)';...
+            [filename,pathname]=uigetfile({'*.evts;*.EVTS;*.Evts','SSC Events (.EVTS)';...
                 '*.*','All Files (*.*)'},'Event File Finder',...
                 suggestion);
             
@@ -1488,10 +1523,9 @@ classdef CLASS_UI_marking < handle
             obj.updateUtilityAxes();
         end
         % --------------------------------------------------------------------
-        function contextmenu_axesutility_psd_autoscale_callback(obj,hObject, eventdata, handles)
+        function contextmenu_axesutility_psd_autoscale_callback(obj,hObject, eventdata)
             % hObject    handle to psd_context_menu_auto_scale (see GCBO)
             % eventdata  reserved - to be defined in a future version of MATLAB
-            % handles    structure with handles and user data (see GUIDATA)
             
             if(strcmp(get(hObject,'Checked'),'off'))
                 set(hObject,'checked','on');
@@ -1500,7 +1534,6 @@ classdef CLASS_UI_marking < handle
                 set(hObject,'checked','off');
                 set(obj.axeshandle.utility,'ylimmode','manual');%,'ylim',get(handles.axes3,'ylim'));
             end;
-            guidata(hObject,handles);
         end
         
                 
@@ -1720,7 +1753,6 @@ classdef CLASS_UI_marking < handle
             catch ME
                 fprintf(1,'Problem loading file in %s\n',mfilename('fullpath'));
                 showME(ME);
-%                 recoverFromError(guidata(hObject),ME);
             end
         end
         
@@ -1892,20 +1924,29 @@ classdef CLASS_UI_marking < handle
             drawnow;
             
             %initialize axes
-            set(obj.axeshandle.main,'Units','normalized',... %normalized allows it to resize automatically
-                'drawmode','normal',... %fast does not allow alpha blending...
-                'xgrid','on','ygrid','off',...
-                'xminortick','on',...
-                'xlimmode','manual',...
-                'xtickmode','manual',...
-                'xticklabelmode','manual',...
-                'xtick',[],...
-                'ytickmode','manual',...
-                'ytick',[],...
-                'nextplot','replacechildren','box','on',...
-                'xlim',obj.sev_mainaxes_xlim,...
-                'ylim',obj.sev_mainaxes_ylim,...  %avoid annoying resolution changes on first load
-                'ydir',obj.SETTINGS.VIEW.yDir);
+            mainAxesProps.Units = 'normalized'; %normalized allows it to resize automatically
+                mainAxesProps.xgrid = 'on';
+                mainAxesProps.ygrid = 'off';
+                mainAxesProps.xminortick = 'on';
+                mainAxesProps.xlimmode = 'manual';
+                mainAxesProps.xtickmode = 'manual';
+                mainAxesProps.xticklabelmode = 'manual';
+                mainAxesProps.xtick = [];
+                mainAxesProps.ytickmode = 'manual';
+                mainAxesProps.ytick = [];
+                mainAxesProps.nextplot = 'replacechildren';
+                mainAxesProps.box = 'on';
+                mainAxesProps.xlim = obj.sev_mainaxes_xlim;
+                mainAxesProps.ylim = obj.sev_mainaxes_ylim;  %avoid annoying resolution changes on first load
+                mainAxesProps.ydir = obj.SETTINGS.VIEW.yDir;
+            
+            if verLessThan('matlab','8.4.0')
+                mainAxesProps.drawmode = 'normal'; %fast does not allow alpha blending...
+            else
+                mainAxesProps.sortmethod = 'childorder'; %fast does not allow alpha blending...
+            end
+
+            set(obj.axeshandle.main,mainAxesProps);
             
             set(obj.axeshandle.timeline,'Units','normalized',... %normalized allows it to resize automatically
                 'xgrid','off','ygrid','off',...

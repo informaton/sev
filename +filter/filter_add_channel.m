@@ -12,7 +12,10 @@
 % documentation.
 function filtsig = filter_add_channel(src_data, ref_data, varargin)
 % Add the two input channels together as a single output file.
-%
-%
-filtsig = src_data+ref_data;
+    if(nargin<1)
+        filtsig = [];  %useful for abstracting other cases when we have no parameters.
+    else
+        filtsig = src_data+ref_data;
+    end
+end
 

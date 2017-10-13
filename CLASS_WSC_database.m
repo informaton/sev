@@ -111,7 +111,6 @@ classdef CLASS_WSC_database < CLASS_database_psg
             obj.create_Bloodiron_T();
 
             system(sprintf('mysql -u%s -p%s %s < %s',obj.dbUser,obj.dbPassword,obj.dbName,plm_dumpfile),'-echo');
-
             
         end
         
@@ -135,8 +134,6 @@ classdef CLASS_WSC_database < CLASS_database_psg
             %       diagnostics_t.  Diagnostics_t creation requires patstudykey and
             %       visitsequence fields to be pulled from studyinfo_t using (patid,
             %       studynum)
-            
-            
             % make the database for the WSC
             if(nargin<3)
                 disp('Select Event directory (*.evt)');
@@ -261,8 +258,7 @@ classdef CLASS_WSC_database < CLASS_database_psg
                     column_names_db_string = sprintf('%s,%s',column_names_db_string,name);
                 end
                 
-                TStr = sprintf('%s PRIMARY KEY (PATSTUDYKEY))',TStr);
-                
+                TStr = sprintf('%s PRIMARY KEY (PATSTUDYKEY))',TStr);                
                 
                 mym(['DROP TABLE IF EXISTS ',TableName]);
                 mym(TStr);
@@ -1200,8 +1196,7 @@ classdef CLASS_WSC_database < CLASS_database_psg
             
             rls_AB_monthly_severity = NaN(numPatid,1);
             rls_AB_monthly_severity(s.rls_AB_monthly) = (q.S3Q13A(s.rls_AB_monthly)+q.S3Q13B(s.rls_AB_monthly)-rls_symptom_base_severity*2)/2;
-            loadStruct.rls_ab_monthly_severity.value = mat2cell(rls_AB_monthly_severity,ones(numPatid,1));
-            
+            loadStruct.rls_ab_monthly_severity.value = mat2cell(rls_AB_monthly_severity,ones(numPatid,1));         
             
             rls_A_weekly = NaN(numPatid,1);
             rls_A_weekly(s.rls_A_weekly)=1;

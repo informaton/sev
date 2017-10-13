@@ -24,7 +24,7 @@
 %> @li @c paramStruct.inst_hr Instantaneous heart rate
 %> @li @c paramStruct.diff_hr Slope of heart rate (i.e. difference or change of consecutive heart rate measures)
 %> @li @c paramStruct.inst_rr Instantaenous RR interval
-function detectStruct = detection_rr_simple(data_cell,params, stageStruct)
+function detectStruct = detection_rr_simple(data_cell,params, ~)
 
 % Implementation by Hyatt Moore IV
 % modified 3/1/2013 - remove global references and use varargin
@@ -190,6 +190,7 @@ else
     % detectStruct.paramStruct.summed_diff_hr = summed_diff_hr; %integrated difference of hr
     detectStruct.paramStruct.diff_hr = diff_hr; %slope of heart rate
     detectStruct.paramStruct.inst_rr = inst_rr;
+    detectStruct.paramStruct.somethingNEW = diff_hr*10;
     % mean(detectStruct.paramStruct.avg_rr)/sample_rate*60
     % detectStruct.new_data = avgdata;
     % new_data = avgdata;

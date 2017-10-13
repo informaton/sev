@@ -12,6 +12,10 @@ function save_periodograms(channelObj,StagingStruct,PSD_settings,filename_out,AR
 %Written by Hyatt Moore IV 
 % (date created is likely 2010-2011)
 % Updated 11/12/13
+
+% Updated 8/5/2016 To account for modifiction to calcPSD: now returns U_psd
+% and U_power which is helpful in the case of 'none' estimate.
+% - Also increase number of digits presented in the frequency header line
 try
     
     if(isempty(PSD_settings))
@@ -28,8 +32,9 @@ try
     E = floor(0:channelObj.PSD.interval/StagingStruct.standard_epoch_sec:(study_duration_in_seconds-channelObj.PSD.FFT_window_sec)/StagingStruct.standard_epoch_sec)'+1;
     S = StagingStruct.line(E);
 
+    numPeriodograms = numel(E);
 %     no_artifact_label = '-';
-    A_ind = false(numel(E),ARTIFACT_CONTAINER.num_events);
+    A_ind = false(numPeriodograms,ARTIFACT_CONTAINER.num_events);
     ArtifactLabels=repmat('_',size(A_ind)); %initialize to blanks
 %     ArtifactBool = zeros(numel(E),1);
     for k = 1:ARTIFACT_CONTAINER.num_events
@@ -38,21 +43,44 @@ try
         %periodogram_epoch refers to an epoch that is measured in terms of
         %the periodogram length and not a 30-second length
         artifacts_per_periodogram_epoch = sample2epoch(artifact_indices,channelObj.PSD.interval,channelObj.samplerate);
-                
+        
+        artifacts_per_periodogram_epoch = min(artifacts_per_periodogram_epoch,numPeriodograms);
+        
+        
+        % 8/30/2016 Dropped this aspect as I can no longer see how it is
+        % useful to shring the periodogram window here.
+        % Begin section to drop:  
+
         %need to handle the overlapping case differently here...
-        if(channelObj.PSD.FFT_window_sec~=channelObj.PSD.interval)
-            %window_sec must be greater than interval_sec if they are not
-            %equal - this is ensured in the PSD settings GUI - though
-            %adjusting the parametes externally may cause trouble!
-            overlap_sec = ceil(channelObj.PSD.FFT_window_sec-channelObj.PSD.interval);
-            artifacts_per_periodogram_epoch(2:end,1) = artifacts_per_periodogram_epoch(2:end,1)-overlap_sec;
-        end;
+        %         if(channelObj.PSD.FFT_window_sec~=channelObj.PSD.interval)
+        %             %window_sec must be greater than interval_sec if they are not
+        %             %equal - this is ensured in the PSD settings GUI - though
+        %             %adjusting the parametes externally may cause trouble!
+        %             overlap_sec = ceil(channelObj.PSD.FFT_window_sec-channelObj.PSD.interval);
+        %             artifacts_per_periodogram_epoch(2:end,1) = artifacts_per_periodogram_epoch(2:end,1)-overlap_sec;
+        %
+        %             % Avoid going too early
+        %             artifacts_per_periodogram_epoch = max(artifacts_per_periodogram_epoch,1);
+        %
+        %         end;
+        
+        % 8/30/2016 End of section to drop.
+        
+        
+        
 
         %assign the corresponding column of A to the artifacts indices
         %found in the current artifact method
         for r = 1:size(artifacts_per_periodogram_epoch,1)
             A_ind(artifacts_per_periodogram_epoch(r,1):artifacts_per_periodogram_epoch(r,2),k)=true; %ARTIFACT_CONTAINER.cell_of_events{k}.batch_mode_score;
         end;
+        
+        % Occassionally a detector will get over zealous and mark artifact
+        % outside the actual data range!  Need to reign it back in here.
+        if(size(A_ind,1)>numel(E))
+            A_ind = A_ind(1:numel(E),:); 
+        end
+        
         ArtifactLabels(A_ind(:,k),k) = ARTIFACT_CONTAINER.cell_of_events{k}.batch_mode_label(1);
 %         ArtifactBool(A_ind(:,k)) = 1;
     end
@@ -80,9 +108,13 @@ try
         ,'#\tFFT interval (taken every _ seconds):\t%0.1f\r\n'...
         ,'#\tInitial Sample Rate(Hz):\t%i\r\n'...
         ,'#\tFinal Sample Rate(Hz):\t%i\r\n'...
+        ,'#\tSpectrum Type:\t%s\r\n'...
+        ,'#\tU_psd:\t%f\r\n'...
+        ,'#\tU_power:\t%f\r\n'...
         ,'%s\tSlow\tDelta\tTheta\tAlpha\tSigma\tBeta\tGamma\tMean0_30\tSum0_30\tA\tA_type\tS\tE\r\n'],batchID,analysis_CHANNEL_label,channelObj.PSD.FFT_window_sec,channelObj.PSD.nfft,channelObj.PSD.interval...
-        ,channelObj.src_samplerate,channelObj.samplerate...
-        ,num2str(channelObj.PSD.x,'\t%0.001f'));%'\t%0.1f'
+        , channelObj.src_samplerate, channelObj.samplerate...
+        , channelObj.PSD.spectrum_type, channelObj.PSD.U_psd, channelObj.PSD.U_power...    
+        , num2str(channelObj.PSD.x,'\t%0.4f'));%'\t%0.1f'
     
     %psd.x is a row vector, delivered by calcPSD
     freqs = channelObj.PSD.x;

@@ -28,6 +28,7 @@
 %> Copy all innodb tables from the old mysql/data directory to the new one
 %>  (e.g. ib_logfile0, ib_logfile1, and ibdata).  
 %> From the terminal run, mysql_upgrade
+%> @note Copyright Hyatt Moore IV, 2011,2012,2013,2014,2015
 % ======================================================================
 classdef CLASS_database < handle
 
@@ -36,8 +37,7 @@ classdef CLASS_database < handle
         %> @li @c name Name of the database to use (string)
         %> @li @c user Database user (string)
         %> @li @c password Password for @c user (string)
-        dbStruct;
-        
+        dbStruct;        
     end
     
     
@@ -78,8 +78,7 @@ classdef CLASS_database < handle
             mym(sprintf('alter table %s add column %s %s',tableName,fieldName,fieldDefinition));
             % This fails on some types of work
             % mym('alter table {S} add column {S} {S}',tableName,fieldName,fieldDefinition); 
-            
-        end        
+        end
         
         % ======================================================================
         %> @brief Rename a table column in the database associated with the
@@ -128,8 +127,7 @@ classdef CLASS_database < handle
             mym(['DROP DATABASE IF EXISTS ',obj.dbStruct.name]);
             mym(['CREATE DATABASE IF NOT EXISTS ',obj.dbStruct.name]);
             
-            mym('CLOSE');            
-            
+            mym('CLOSE');
         end
         
 
@@ -182,10 +180,116 @@ classdef CLASS_database < handle
             mym('close');
         end
         
+        % ======================================================================
+        %> @brief Creates a database table using the input arguments.
+        %> @param this Instance of CLASS_database
+        %> @param Name of the table to create (string)
+        %> @note Table is dropped first if it exists.
+        %> @param Column definitions for the table.  
+        %> @note Format needs to work as follows: sprintf('CREATE TABLE IF NOT EXISTS %s (%s)',tableName,tableStr);        
+        % ======================================================================        
+        function createTable(this,tableName,tableStr)
             
+            this.open(); % CLASS_database.openDB(dbStruct);
+            
+            tableName = lower(tableName);
+            this.dropTable(tableName);
+            createTableStr = sprintf('CREATE TABLE IF NOT EXISTS %s (%s)',tableName,tableStr);
+            mym(createTableStr);
+            this.close();
+        end
         
+        % ======================================================================
+        %> @brief Imports data from a .csv file into a table.
+        %> @param this Instance of CLASS_database
+        %> @param Name of the table to import data into
+        %> @param csv_filename Absolute path of csv file to import.
+        %> @param table description Optional string to show users when
+        %> requesting a file be selected from a UI slection tool
+        %> @note Fields enclosed by double quotes (") ignore commas (,) as field separators.
+        % ======================================================================        
+        function importCSV(this,tableName,csv_filename, optional_prompt)
+            
+            if(nargin<3 || ~exist(csv_filename,'file'))
+                if(nargin==4 && ~isempty(optional_prompt))
+                    promptStr = optional_prompt;
+                else
+                    promptStr = sprintf('Select .csv file to import to %s table',tableName);
+                end
+                csv_filename = uigetfullfile({'*.csv','Comma separated values (*.csv)'},...
+                    promptStr);
+                
+            end
+                        
+            if(exist(csv_filename,'file'))
+                
+                fid = fopen(csv_filename,'r');
+                [~,lineTerminator] = fgets(fid);
+                fclose(fid);
+                loadStr = sprintf([
+                    'LOAD DATA LOCAL INFILE ''%s'' INTO TABLE %s ',...
+                    ' FIELDS TERMINATED BY '','' ENCLOSED BY ''"''',...
+                    ' LINES TERMINATED BY ''%s''',...
+                    ' IGNORE 1 LINES'],csv_filename,tableName,char(lineTerminator));
+                
+                this.open();                
+                mym(loadStr);
+                this.selectSome(tableName);
+                this.close();
+                %                     'set visitNum=%u'],subjectinfo_csv_filename,tableName,visitNum);
+            else
+                throw(MException('CLASS_database','Invalid arguments for importCSV'));
+            end
+        end        
         
+        function dropTable(this,tableName)
+            closeOnExit = false;
+            if(mym())
+                this.open();
+                closeOnExit = true;
+            end
+            mym('DROP TABLE IF EXISTS {S}',tableName);
+            fprintf(1,'Table ''%s'' dropped from ''%s'' database.\n',tableName,this.dbStruct.name);
+            if(closeOnExit)
+                this.close();
+            end
+        end
+        
+        function selectSome(this,tableName,limit)
+            if(nargin>1 && ischar(tableName))
+                if(nargin<3 || ~isnumeric(limit) || limit<1)
+                    limit = 5;
+                end
+                
+                if(mym())
+                    closeOnExit = true;
+                    this.open();
+                else
+                    closeOnExit = false;
+                end
+                mym('SELECT * FROM {S} LIMIT {Si}',tableName,limit);
+                if(closeOnExit())
+                    this.close();
+                end
+            end
+        end  
+        
+        function resultStruct = query(this,queryStr,varargin)
+            if(mym())
+                this.open();
+            end
+            if(nargin>2)
+                queryStr = sprintf(queryStr, varargin{:});
+            end
+            resultStruct = mym(queryStr);
+        end
+        
+        function columnNames = getColumnNames(this, tableName)
+            resultStruct = this.query('describe %s',tableName);
+            columnNames = resultStruct.Field;
+        end
     end
+    
     
     methods(Static)
         
@@ -211,6 +315,7 @@ classdef CLASS_database < handle
             mym(['USE ',dbStruct.name]);
         end
         
+        
         % ======================================================================
         %> @brief Adds the user specified in the dbStruct instance variable to the
         %> the database (also specified in dbStruct)%> @param dbStruct A structure containing database accessor fields:
@@ -220,6 +325,79 @@ classdef CLASS_database < handle
         function grantPrivileges(dbStruct)
             mym(['GRANT ALL ON ',dbStruct.name,'.* TO ''',dbStruct.user,'''@''localhost'' IDENTIFIED BY ''',dbStruct.password,'''']);
         end
+        
+        
+        %------------------------------------------------------------
+        %> @brief Place ',' in between cell string entries for mysql select entry.
+        %> string = cellstr2csv(cellString)
+        %> @param Cell string of fields to select.  
+        %> @retval String
+        %> @note
+        %> example:
+        %>    cellString = {'A0001';
+        %>                  'A0003';
+        %>                  'A0008'};
+        %>
+        %>    selectStr = makeSelectKeysString(cellString)
+        %>
+        %>    ans =
+        %>               A0001,A0003,A0008
+        %>
+        %------------------------------------------------------------        
+        % Hyatt Moore, IV (August 4, 2014)        
+        function selectStr = cellstr2csv(cellOfKeys)            
+            if(isempty(cellOfKeys))
+                selectStr = '';
+            else
+                [r,c] = size(cellOfKeys);
+                if(r>c)
+                    selectStr = cell2mat(strcat(cellOfKeys,',')');
+                else
+                    selectStr = cell2mat(strcat(cellOfKeys',','));
+                end;
+                %remove the trailing ','
+                selectStr(end) = [];
+                
+            end
+        end
+        
+        
+        %------------------------------------------------------------
+        %> @brief Place ',' in between cell string entries for mysql select entry.
+        %> @param Cell string of fields to select.  
+        %> @param Optional mysql grouping command (default is 'mean').
+        %> @retval String
+        %> @note
+        %> example:
+        %>    cellString = {'A0001';
+        %>                  'A0003';
+        %>                  'A0008'};
+        %>
+        %>    selectStr = cellstr2statcsv(cellString)
+        %>
+        %>    ans =
+        %>               mean(A0001) AS A0001, mean(A0003) AS A0003, mean(A0008) AS A0008
+        %>
+        %------------------------------------------------------------        
+        % Hyatt Moore, IV (August 4, 2014)        
+        function selectStr = cellstr2statcsv(cellOfFields,stat)
+            if(isempty(cellOfFields))
+                selectStr = '';
+            else
+                if(nargin<2 || ~ischar(stat))
+                    stat = 'AVG';
+                end
+                [r,c] = size(cellOfFields);
+                if(r>c)
+                    selectStr = cell2mat(strrep(strcat('***',stat,'(',cellOfFields',') AS***',cellOfFields',','),'***',' '));
+                else
+                    selectStr = cell2mat(strrep(strcat('***',stat,'(',cellOfFields,') AS***',cellOfFields,','),'***',' '));
+                end;
+                %remove the trailing ','
+                selectStr(end) = [];                
+            end
+        end
+        
         
         
         % ======================================================================
@@ -631,6 +809,50 @@ classdef CLASS_database < handle
         end
         
  
+        
+        function string = makeWhereInString(data,dataType)
+            %------------------------------------------------------------
+            % string = makeWhereInString(data,dataType)
+            %
+            % helpfer function to return the vector or cell as a string for
+            % use in a mysql 'where somefield in (string) ' select query
+            %
+            % dataType can be 'numeric' or 'string'
+            %
+            %------------------------------------------------------------
+            
+            % Hyatt Moore, IV (< June, 2013)
+            
+            if(isempty(data))
+                string = '';
+            else
+                if(strcmp(dataType,'string'))
+                    strfmt = '"%s"';
+                    string = sprintf(strfmt,data{1});
+                else
+                    strfmt = '%f';
+                    if(~isnumeric(data))
+                        data = str2num(data);
+                    end
+                    string = sprintf(strfmt,data(1));
+                end
+                
+                strfmt = ['%s,',strfmt];
+                
+                if(iscell(data))
+                    for k=2:numel(data)
+                        string = sprintf(strfmt,string,data{k});
+                    end
+                else
+                    for k=2:numel(data)
+                        string = sprintf(strfmt,string,data(k));
+                    end
+                end;
+            end
+            string=['(',string,')'];
+        end
+        
+        
         
     end
     

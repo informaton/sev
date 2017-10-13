@@ -18,7 +18,7 @@ filter_movsum filter_sum 0 plist_editor_dlg FilterSum
 filter_modulate_channel modulate_channel 1 none ModulateChannel
 filter_add_channel add_channel 1 none AddAChannel
 filter_subtract_channel substract_channel 1 none SubtractAChannel
-inverter inverter 0 none Inverted
+filter_invert inverter 0 none Inverted
 iir_bp_butter butterworth_bandpass 0 plist_editor_dlg BwBP
 nlfilter_delay nlfilter_delay 0 plist_editor_dlg Delay
 nlfilter_min_past nlfilter_min_past 0 plist_editor_dlg NLFilterMinPast
@@ -33,3 +33,6 @@ nlfilter_plm_noisefloor_passed nlfilter_plm_noisefloor_passed 0 plist_editor_dlg
 nlfilter_plm_upper_threshold nlfilter_plm_upper_threshold 0 plist_editor_dlg PLM_High
 nlfilter_plm_mid_threshold nlfilter_plm_mid_threshold 0 plist_editor_dlg PLM_Mid
 nlfilter_plm_lower_threshold nlfilter_plm_lower_threshold 0 plist_editor_dlg PLM_Low
+nlfilter_ani nlfilter_ani 0 plist_editor_dlg NLFilterANI
+filter_ecg filter_ecg 0 plist_editor_dlg FilterECG
+nlfilter_hrv nlfilter_hrv 0 plist_editor_dlg NLFilterHRV

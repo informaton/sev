@@ -25,8 +25,8 @@ function varargout = psd_dlg(varargin)
 % length in seconds, and the fft interval in seconds
 %out is a cell with the following properties
 %out.wintype - window type as a string (e.g. 'Hamming')
-%out.winlen - window length in seconds
-%out.fftint (FFT interval in seconds)
+%out.FFT_window_sec - window length in seconds
+%out.interval (FFT interval in seconds)
 %out.modified (FALSE if no changes were made or if the user cancels or
 %closes the dialog without pressing the 'OK' button
 
@@ -35,6 +35,8 @@ function varargout = psd_dlg(varargin)
 %written by Hyatt Moore
 %updated on 10.8.2012 - changed format of .modified field from 'true' and
 %'false' to true and false
+% updated 8.5.2016 - Added estimate type as a dropdown menu option.
+
 % Last Modified by GUIDE v2.5 29-Oct-2012 18:17:07
 
 % Begin initialization code - DO NOT WINDOWLENGTH_EDIT
@@ -70,30 +72,36 @@ function psd_dlg_OpeningFcn(hObject, eventdata, handles, PSDstruct)
 %         removemean: 1
 %           freq_min: 0
 %           freq_max: 30
+%      spectrum_type: 'psd'  {'psd','power','none'}
 global CHANNELS_CONTAINER;
 
-channel_list_value = 1;
+
+handles.user.modified = false;
 
 if(isa(CHANNELS_CONTAINER,'CLASS_channels_container')&& CHANNELS_CONTAINER.num_channels>0)
     channel_labels = CHANNELS_CONTAINER.get_labels();
     if(~isempty(CHANNELS_CONTAINER.current_spectrum_channel_index) && CHANNELS_CONTAINER.current_spectrum_channel_index~=0)
         handles.user.channel_ind = CHANNELS_CONTAINER.current_spectrum_channel_index;
-        channel_list_value = handles.user.channel_ind;
+    else
+        handles.user.channel_ind = 1;
+        handles.user.modified = true;
     end
+    
 else
     channel_labels = 'No Channels Loaded';
     set(handles.list_psg_channels,'enable','off');
     handles.user.channel_ind = 0;
 end
 
-set(handles.list_psg_channels,'string',channel_labels,'value',channel_list_value);
+set(handles.list_psg_channels,'string',channel_labels,'value',handles.user.channel_ind,'callback',@list_psg_channels_Callback);
 
 handles.user.wintype = 'hanning';
-handles.user.winlen = 2.0;
-handles.user.fftint = 2.0;
+handles.user.FFT_window_sec = 2.0;  % updated to FFT_window_sec from 'winlen'
+handles.user.interval = 2.0;  % updated to 'interval' from 'fftint'
 handles.user.freq_min = 0;
 handles.user.sampling_rate = 100;
 handles.user.freq_max = 50;
+handles.user.spectrum_type = 'psd';
 
 if(nargin>3 && ~isempty(PSDstruct))
     fnames = fieldnames(PSDstruct);
@@ -102,7 +110,18 @@ if(nargin>3 && ~isempty(PSDstruct))
     end
 end
 
-handles.user.modified = false;
+handles.original = handles.user;
+
+
+
+spectrumStrings = {'PSD','Power','None'};
+spectrumTypes = {'psd','power','none'};
+spectrumInd = find(strcmpi(handles.user.spectrum_type,spectrumTypes),1);
+if(isempty(spectrumInd))
+    spectrumInd = 1;
+end
+
+set(handles.menu_spectrumType,'string',spectrumStrings,'userdata',spectrumTypes,'value',spectrumInd);
 
 % Choose default command line output for psd_dlg
 % handles.output = hObject;
@@ -124,8 +143,8 @@ set(handles.windowtype_popupmenu,'value',p_ind);
 
 set(handles.windowtype_popupmenu,'string',p_str);
 
-set(handles.windowlength_edit,'string',num2str(handles.user.winlen));
-set(handles.fft_interval_edit,'string',num2str(handles.user.fftint));
+set(handles.windowlength_edit,'string',num2str(handles.user.FFT_window_sec));
+set(handles.fft_interval_edit,'string',num2str(handles.user.interval));
 set(handles.edit_min_hz,'string',num2str(handles.user.freq_min));
 set(handles.edit_max_hz,'string',num2str(handles.user.freq_max));
 
@@ -154,23 +173,44 @@ function varargout = psd_dlg_OutputFcn(hObject, eventdata, handles)
 
 % Get default command line output from handles structure
 % varargout{1} = handles.output;
+
 handles.user.wintype = deblank(handles.user.wintype);
-PSD.wintype = handles.user.wintype;
-PSD.modified = handles.user.modified;
-PSD.FFT_window_sec = handles.user.winlen;
 
-PSD.interval = handles.user.fftint;
+fnames = fieldnames(handles.original);
+PSD.modified = false;
 
-if(~isfield(handles.user,'channel_ind'))
-    PSD.channel_ind = 0;
-else    
-    PSD.channel_ind = handles.user.channel_ind;
+handles.user.spectrum_type = getMenuUserData(handles.menu_spectrumType);
+
+for f=1:numel(fnames)
+    curName = fnames{f};
+    curValue = handles.user.(curName);
+    originalValue = handles.original.(curName);
+    if(ischar(curValue))
+        if(~strcmpi(originalValue,curValue))
+            PSD.modified = true;
+        end
+    elseif(originalValue~=curValue)
+        PSD.modified = true;
+    end        
+    PSD.(curName) = curValue;
 end
+
+% PSD.wintype = handles.user.wintype;
+% PSD.modified = handles.user.modified;
+% PSD.FFT_window_sec = handles.user.FFT_window_sec;
+% PSD.interval = handles.user.interval;
+% if(~isfield(handles.user,'channel_ind'))
+%     PSD.channel_ind = 0;
+% else    
+%     PSD.channel_ind = handles.user.channel_ind;
+% end
     
-PSD.freq_min = handles.user.freq_min;
-PSD.freq_max = handles.user.freq_max;
+% PSD.freq_min = handles.user.freq_min;
+% PSD.freq_max = handles.user.freq_max;
 
 PSD.removemean = true;
+
+% PSD.spectrum_type = getMenuUserData(handles.menu_spectrumType);
 varargout{1} = PSD;
 
 delete(handles.psd_figure);
@@ -217,10 +257,10 @@ fftint = str2double(get(hObject,'String'));
 fftintmin = 0;
 fftintmax = 30;
 
-if(fftint<=fftintmin || fftint>fftintmax || isequal(fftint,handles.user.fftint))
-    set(hObject,'string',num2str(handles.user.fftint));
+if(fftint<=fftintmin || fftint>fftintmax || isequal(fftint,handles.user.interval))
+    set(hObject,'string',num2str(handles.user.interval));
 else
-    handles.user.fftint = fftint;
+    handles.user.interval = fftint;
     handles.user.modified = true;
 end;
 
@@ -250,10 +290,10 @@ winlen = str2double(get(hObject,'String'));
 winlenmin = 0;
 winlenmax = 30;
 
-if(winlen<=winlenmin || winlen>winlenmax || isequal(winlen,handles.user.winlen))
-    set(hObject,'string',num2str(handles.user.winlen));
+if(winlen<=winlenmin || winlen>winlenmax || isequal(winlen,handles.user.FFT_window_sec))
+    set(hObject,'string',num2str(handles.user.FFT_window_sec));
 else
-    handles.user.winlen = winlen;
+    handles.user.FFT_window_sec = winlen;
     handles.user.modified = true;
 %     updatePlot(hObject,handles);
 end;

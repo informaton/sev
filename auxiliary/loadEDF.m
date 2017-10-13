@@ -36,6 +36,9 @@ HDR.starttime = char(fread(fid,8,precision)');% 8 ascii : starttime of recording
 HDR.HDR_size_in_bytes = str2double(char(fread(fid,8,precision)'));% 8 ascii : number of bytes in header record 
 HDR.reserved = char(fread(fid,44,precision)');% 44 ascii : reserved 
 HDR.number_of_data_records = str2double(char(fread(fid,8,precision)'));% 8 ascii : number of data records (-1 if unknown, obey item 10 of the additional EDF+ specs)')  %236
+    % 'EDF+C' means continuous recording
+    % 'EDF+D' means interrupted recording
+    % See EDF+ spec at http://www.edfplus.info/specs/edfplus.html
 HDR.duration_of_data_record_in_seconds = str2double(char(fread(fid,8,precision)'));% 8 ascii : duration of a data record, in seconds 
 HDR.num_signals = str2double(char(fread(fid,4,precision)'));% 4 ascii : number of signals (ns)') in data record 
 ns = HDR.num_signals;

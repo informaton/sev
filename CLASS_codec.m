@@ -1,13 +1,16 @@
-%> @file CLASS_codec.m
-%> @brief CLASS_codec encapuslates many of the coding and decoding 
-%> functionality required by SEV's IO routines.  
+%> @file CLASS_codec.cpp
 % ======================================================================
-%> @brief The methods here are all static.  
+%> @brief CLASS_codec encapuslates much of the coding and decoding 
+%> functionality required by SEV's IO routines.  The methods here are all static.
 %> @note Author: Hyatt Moore IV
 %> @note Created 9/29/2014 - Derived from CLASS_events_container static
 %> methods.
 % ======================================================================
 classdef CLASS_codec < handle
+    properties(Constant)
+       SECONDS_PER_EPOCH = 30;
+       EDF_ANNOTATIONS_CHANNEL = 1;
+    end
     methods(Static)
         
         % ======================================================================
@@ -22,10 +25,17 @@ classdef CLASS_codec < handle
         %> @param unknown_stage_label (Optional) Integer number to use for
         %> unclassified/unknown hypnogram stages.  Default is 7.
         %> @retval STAGES A struct with the following fields
-        %> -@c line = the second column of stages_filename - the scored sleep stages
-        %> -@c count = the number of stages for each one
-        %> -@c cycle - the nrem/rem cycle
-        %> -@c firstNonWake - index of first non-Wake(0) and non-unknown(7) staged epoch      
+        %> - @c line = the second column of stages_filename - the scored sleep stages
+        %> - @c count = the number of stages for each one
+        %> - @c cycle - the nrem/rem cycle
+        %> - @c firstNonWake - index of first non-Wake(0) and non-unknown(7) staged epoch      
+        %> - @c standard_epoch_sec 30 seconds
+        %> - @c filename Name of the staging filename
+        %> - @c study_duration_in_seconds How long the study is measured in
+        %> seconds based on the number of epochs entered and the
+        %> standard_epoch_sec duration (i.e. 30 seconds)
+        
+        
         %> @note Author: Hyatt Moore IV
         %> Written: 9.26.2012
         %> modified before 12.3.2012 to include scoreSleepCycles(.);
@@ -33,78 +43,109 @@ classdef CLASS_codec < handle
         %> modified 2/2/2013 - added .standard_epoch_sec = 30
         %>                           .study_duration_in_seconds
         %> modified 5.1.2013 - added .filename = stages_filename;
-        function STAGES = loadSTAGES(stages_filename,num_epochs,unknown_stage_label)
+        function STAGES = loadSTAGES(stages_filename,num_epochs,unknown_stage_label)            
+            STAGES.standard_epoch_sec = CLASS_codec.SECONDS_PER_EPOCH; %30 second epochs
+            STAGES.standard_epoch_min = CLASS_codec.SECONDS_PER_EPOCH/60; %30 second epochs
             
             if(nargin<3)
                 default_unknown_stage = 7;
+                if(nargin<2)
+                    num_epochs = -1;                    
+                    if(nargin<1)
+                        stages_filename = [];
+                    end
+                end
             else
                 default_unknown_stage = unknown_stage_label;
             end
             
+            % Make a default line, regardless of what comes out of here.
+            
+            STAGES.line = repmat(default_unknown_stage,num_epochs,1);
+            STAGES.filename = [];
+            STAGES.firstNonWake = [];
+            STAGES.count = zeros(8,1);
+            
             if(~isempty(stages_filename))
                 [~,~,ext] = fileparts(stages_filename);
-            end
-            %load stages information if the file exists and we know its
-            %extension.
-            if(exist(stages_filename,'file') && (strcmpi(ext,'.sta')||strcmpi(ext,'.evts')))
-                
-                if(strcmpi(ext,'.sta'))
-                    stages = load(stages_filename,'-ASCII'); %for ASCII file type loading                    
-                    
-                    if(nargin>1 && ~isempty(num_epochs) && floor(num_epochs)>0)
-                        if(num_epochs~=size(stages,1))
-                            STAGES.epochs = stages(:,1);
-                            STAGES.line = repmat(default_unknown_stage,max([num_epochs;size(stages,1);STAGES.epochs(:)]),1);
-                            STAGES.line(STAGES.epochs) = stages(:,2);
+
+                %load stages information if the file exists and we know its
+                %extension.
+                if(exist(stages_filename,'file') && (strcmpi(ext,'.sta')||strcmpi(ext,'.evts')))
+                    if(strcmpi(ext,'.sta') || strcmpi(ext,'.evts'))
+                        if(strcmpi(ext,'.sta'))
+                            stages = load(stages_filename,'-ASCII'); %for ASCII file type loading
                         else
-                            %this cuts things off at the end, where we assume the
-                            %disconnect between num_epochs expected and num epochs found
-                            %has occurred. However, logically, there is no guarantee that
-                            %the disconnect did not occur anywhere else (e.g. at the
-                            %beginning, or sporadically throughout)
-                            STAGES.line = stages(1:floor(num_epochs),2);
+                            [~,stageVec] = CLASS_codec.parseSSCevtsFile(stages_filename,default_unknown_stage);
+                            epochs = 1:numel(stageVec);
+                            stages = [epochs(:), stageVec];
                         end
-                    else
-                        STAGES.line = stages(:,2); %grab the sleep stages
+                        
+                        % stages is Mx2 matrix with column 1 being the
+                        % epochs and column 2 being the stage
+                        if(num_epochs<0)
+                           num_epochs = size(stages,2);
+                        end
+                        
+                        if(nargin>1 && ~isempty(num_epochs) && floor(num_epochs)>0)
+                            if(num_epochs~=size(stages,1))
+                                STAGES.epochs = stages(:,1);
+                                STAGES.line = repmat(default_unknown_stage,max([num_epochs;size(stages,1);STAGES.epochs(:)]),1);
+                                STAGES.line(STAGES.epochs) = stages(:,2);
+                            else
+                                %this cuts things off at the end, where we assume the
+                                %disconnect between num_epochs expected and num epochs found
+                                %has occurred. However, logically, there is no guarantee that
+                                %the disconnect did not occur anywhere else (e.g. at the
+                                %beginning, or sporadically throughout)
+                                STAGES.line = stages(1:floor(num_epochs),2);
+                            end
+                        else
+                            STAGES.line = stages(:,2); %grab the sleep stages
+                        end
+                        %                 elseif(strcmpi(ext,'.evts'))
+                        %                     [~,stageVec] = CLASS_codec.parseSSCevtsFile(stages_filename,default_unknown_stage);
+                        %                     STAGES.line = stageVec;
+                        %                     STAGES.epochs = 1:numel(STAGES.line);
+                        %                 end
                     end
-                elseif(strcmpi(ext,'.evts'))
-                    [~,stageVec] = CLASS_codec.parseSSCevtsFile(stages_filename,default_unknown_stage);
-                    STAGES.line = stageVec;
-                    STAGES.epochs = 1:numel(STAGES.line);
-                end                
-            else                
-                if(nargin<2)
-                    mfile =  strcat(mfilename('fullpath'),'.m');
-                    fprintf('failed on %s\n',mfile);
+                    
+                    if(nargin<2)
+                        num_epochs = numel(STAGES.line);
+                    end
+                    %calculate number of epochs in each stage
+                    for k = 0:numel(STAGES.count)-1
+                        STAGES.count(k+1) = sum(STAGES.line==k);
+                    end
+                    
+                    firstNonWake = 1;
+                    while( firstNonWake<=numel(STAGES.line) && (STAGES.line(firstNonWake)==7||STAGES.line(firstNonWake)==0))
+                        firstNonWake = firstNonWake+1;
+                    end
+                    STAGES.firstNonWake = firstNonWake;
+                    if(num_epochs~=numel(STAGES.line))
+                        fprintf(1,'%s contains %u stages, but shows it should have %u\n',stages_filename,numel(STAGES.line),num_epochs);
+                    end
+                    
+                    STAGES.filename = stages_filename;
                 else
-                    STAGES.line = repmat(default_unknown_stage,num_epochs,1);
+                    
+                    mfile =  strcat(mfilename('fullpath'),'.m');
+                    fprintf('failed in %s\n\tFilename argument for loadSTAGES could not be found.\n',mfile);
+                    %  throw(MException('SEV:ARGERR','Filename argument for loadSTAGES could not be found'));
+                    
                 end
-            end;
-            
-            if(nargin<2)
-                num_epochs = numel(STAGES.line);
-            end
-            %calculate number of epochs in each stage
-            STAGES.count = zeros(8,1);
-            for k = 0:numel(STAGES.count)-1
-                STAGES.count(k+1) = sum(STAGES.line==k);
+            else
+                mfile =  strcat(mfilename('fullpath'),'.m');
+                fprintf('failed in %s\n\tMissing or empty filename argument for loadSTAGES\n',mfile);
+                % throw(MException('SEV:ARGERR','Missing or empty filename argument for loadSTAGES'));
             end
             %this may be unnecessary when the user does not care about sleep cycles.
             % STAGES.cycles = scoreSleepCycles(STAGES.line);
             STAGES.cycles = scoreSleepCycles_ver_REMweight(STAGES.line);
-            
-            firstNonWake = 1;
-            while( firstNonWake<=numel(STAGES.line) && (STAGES.line(firstNonWake)==7||STAGES.line(firstNonWake)==0))
-                firstNonWake = firstNonWake+1;
-            end
-            STAGES.firstNonWake = firstNonWake;
-            if(num_epochs~=numel(STAGES.line))
-                fprintf(1,'%s contains %u stages, but shows it should have %u\n',stages_filename,numel(STAGES.line),num_epochs);
-            end
-            
-            STAGES.filename = stages_filename;
-            STAGES.standard_epoch_sec = 30;
             STAGES.study_duration_in_seconds = STAGES.standard_epoch_sec*numel(STAGES.line);
+            
+                    
         end
         
         
@@ -145,16 +186,17 @@ classdef CLASS_codec < handle
         %> .EVTS is checked first, then .SCO extension is checked if .STA is
         %> not found.  If neither staging file type is found (.STA or .EVTS)
         %> then stages_filename is returned as empty (i.e. [])
-        %> @retval edf filename sans pathname.
+        %> @retval event_Filename
+        %> @retval edf_name edf filename sans pathname.
         % ======================================================================
-        function [events_filename, edf_name] = getEventsFilenameFromEDF(edf_fullfilename)
+        function [event_Filename, edf_name] = getEventsFilenameFromEDF(edf_fullfilename)
             [edf_path,edf_name,edf_ext] = fileparts(edf_fullfilename);
-            events_filename = fullfile(edf_path,strcat(edf_name,'.EVTS'));
+            event_Filename = fullfile(edf_path,strcat(edf_name,'.EVTS'));
             
-            if(~exist(events_filename,'file'))
-                events_filename = fullfile(edf_path,strcat(edf_name,'.SCO'));
-                if(~exist(events_filename,'file'))
-                    events_filename = [];
+            if(~exist(event_Filename,'file'))
+                event_Filename = fullfile(edf_path,strcat(edf_name,'.SCO'));
+                if(~exist(event_Filename,'file'))
+                    event_Filename = [];
                 end
             end  
             edf_name = strcat(edf_name,edf_ext);
@@ -164,8 +206,8 @@ classdef CLASS_codec < handle
         %> @brief Retrives a function call for files in directories with a '+'
         %> prefix.
         %------------------------------------------------------------------%
-        %> @param Method's name (sans path and .m)
-        %> @param Package name (string).  Supported values include
+        %> @param methodName Method's name (sans path and .m)
+        %> @param packageName Package name (string).  Supported values include
         %> - @c export
         %> - @c detection
         %> - @c filter
@@ -196,11 +238,11 @@ classdef CLASS_codec < handle
         %> @brief Retrives the information file (.inf) for the package of interest.
         %> Information files describe methods used in a particular toolbox.
         %------------------------------------------------------------------%
-        %> @param Package name (string).  Supported values include
+        %> @param packageName Package name (string).  Supported values include
         %> - @c export
         %> - @c detection
         %> - @c filter
-        %> @retval methodInformationFile Full filename of the information
+        %> @retval methodInformationFilename Full filename of the information
         %> file used to describe the toolbox associated with methodCategory.
         %> Information files describe methods used in a particular toolbox.
         %> Empty if no match is found.
@@ -219,18 +261,16 @@ classdef CLASS_codec < handle
             end
         end
         
-                
-        
-        
         % =================================================================
         %> @brief Retrives a function call for files in directories with a '+'
         %> prefix.
         %------------------------------------------------------------------%
-        %> @param Method's name (sans path and .m)
-        %> @param Package name that method is part of (string).  Supported values include
+        %> @param methodName Method's name (sans path and .m)
+        %> @param packageName Package name that method is part of (string).  Supported values include
         %> - @c export
         %> - @c detection
         %> - @c filter        
+        %> @retval parameterStruct
         %> @retval packageMethodName - method name with package prefix (e.g. export.someMethod) to call the method in
         %> the package a directory outside of its category.
         %> Empty if no match is found.
@@ -264,9 +304,9 @@ classdef CLASS_codec < handle
         %> @brief Parses an export package information file (.inf) and returns 
         %> each rows values as a struct entry.
         %------------------------------------------------------------------%        
-        %> @param Full filename (path and name) of the export information
+        %> @param exprtInfFullFilename Full filename (path and name) of the export information
         %> file to parse.
-        %> @retval Struct with the following fields:
+        %> @retval exportMethodsStruct Struct with the following fields:
         %> - @c mfilename Nx1 cell of filenames of the export method
         %> - @c description Nx1 cell of descriptions for each export method.
         %> - @c settingsEditor Nx1 cell of the settings editor to use for each method.     
@@ -287,7 +327,7 @@ classdef CLASS_codec < handle
         end
 
         % ======================================================================
-                %> @brief loads/parses the .SCO file associated with an EDF.        
+        %> @brief loads/parses the .SCO file associated with an EDF.
         % ======================================================================
         %> @param filename Full .SCO filename (i.e. with path) to load.
         %> @param dest_samplerate Sample rate to use for SCO fields (return value)
@@ -495,19 +535,24 @@ classdef CLASS_codec < handle
         %> Embla events to.  This is helpful when displaying a samplerate
         %> different than recorded in the .evt file.  If desired_samplerate
         %> is not provided, then embla_samplerate is used.
-        %> filename in .SCO format        
+        %> filename in .SCO format      
+        %> @retval embla_evt_Struct
+        %> @retval embla_samplerate_out
         % =================================================================
         function [embla_evt_Struct,embla_samplerate_out] = parseEmblaEvent(evtFilename,embla_samplerate,desired_samplerate)
             %embla_samplerate_out may change if there is a difference found in
             %the stage .evt file processing as determined by adjusting for
             %a 30 second epoch.
             
-            seconds_per_epoch = 30;
+            
+            if(nargin<2)
+                embla_samplerate = [];
+            end
             embla_samplerate_out = embla_samplerate;
             
             if(~exist(evtFilename,'file'))
                 embla_evt_Struct = [];
-                disp([nvt_filename,' not handled']);
+                disp([evtFilename,' not handled']);
             else
                 
                 if(nargin < 3 || isempty(desired_samplerate))
@@ -515,7 +560,7 @@ classdef CLASS_codec < handle
                 end
                 [~,name,~] = fileparts(evtFilename);
                 
-                fid = fopen(evtFilename,'r');
+                fid = fopen(evtFilename,'r','l'); % little endian format
                 HDR = CLASS_codec.parseEmblaHDR(fid);
                 
                 start_sec = [];
@@ -526,9 +571,11 @@ classdef CLASS_codec < handle
                 start_stop_matrix = [];
                 description = [];
                 
+                remainder = [];
                 eventType = name;
-                
-                if(HDR.num_records>0 && strncmpi(deblank(HDR.label),'event',5))
+                bytes_per_uint16 = 2;
+
+                if(HDR.num_records>0 && strncmpi(deblank(HDR.label),'event',5))                    
                     fseek(fid,0,'eof');
                     file_size = ftell(fid);
                     fseek(fid,32,'bof');
@@ -536,49 +583,537 @@ classdef CLASS_codec < handle
                     bytes_per_record = bytes_remaining/HDR.num_records;
                     start_sample = zeros(HDR.num_records,1);
                     stop_sample = start_sample;
+                    evtID = zeros(HDR.num_records,2);
                     
-                    %sometimes these have the extension .nvt
-                    if(strcmpi(eventType,'plm'))
-                        intro_size = 8;
+                    
+                    if strcmpi(eventType,'arousal')
+                        
+                        arousType = stop_sample;
+                        arousSecondType = stop_sample;
+                        description = cell(HDR.num_records,1);
+                        if(false)
+                            fseek(fid,32,'bof');
+                            a=fread(fid,[bytes_per_record,inf],'uint8')';
+                            a                       
+                            fseek(fid,32,'bof');                            
+                        end                                                 
+                        
+                        if(bytes_per_record==52)
+                            unknownID = zeros(HDR.num_records,3);
+                            remainder = zeros(HDR.num_records,4,'uint8');
+                            orderPlaced = start_sample;
+                            for r=1:HDR.num_records
+                                start_sample(r) = fread(fid,1,'uint32');%[0-3
+                                stop_sample(r) = fread(fid,1,'uint32');%[4-7
+                                evtID(r,:) = fread(fid,2,'uint8'); % [8- [6,1]
+                                unknownID(r,:) = fread(fid,3,'uint16');%[10-15
+                                orderPlaced(r) = fread(fid,1,'uint32');%[16-
+                                fseek(fid,28,'cof');% [20
+                                remainder(r,:) = fread(fid,4,'uint8');%[440
+                            end
+                        elseif(bytes_per_record==16)
+                            unknownID = zeros(HDR.num_records,2);
+                            remainder = zeros(HDR.num_records,2,'uint8');
+                            for r=1:HDR.num_records
+                                start_sample(r) = fread(fid,1,'uint32');
+                                stop_sample(r) = fread(fid,1,'uint32');
+                                evtID(r,:) = fread(fid,2,'uint8'); % [6,1]
+                                unknownID(r,:) = fread(fid,2,'uint16');
+                                remainder(r,:) = fread(fid,2,'uint8');
+                            end
+                        end
+                    elseif(strcmpi(eventType,'baddata'))
+                        if(false)
+                            fseek(fid,32,'bof');
+                            a=fread(fid,[bytes_per_record,inf],'uint8')';
+                            fseek(fid,32,'bof');
+                            a(:,5:end)
+                        end
+                        start_sample = zeros(HDR.num_records,1);
+                        stop_sample = start_sample;
+                        intro_size = 10;
                         remainder = zeros(HDR.num_records,bytes_per_record-intro_size,'uint8');
+                        
                         for r=1:HDR.num_records
                             start_sample(r) = fread(fid,1,'uint32');
                             stop_sample(r) = fread(fid,1,'uint32');
+                            evtID(r,:) = fread(fid,2,'uint8'); % [5,1]                            
                             remainder(r,:) = fread(fid,bytes_per_record-intro_size,'uint8');
                         end
+                        
+                        
+                    elseif(strcmpi(eventType,'biocals'))
+                        if(false)
+                            fseek(fid,32,'bof');
+                            a=fread(fid,[bytes_per_record,inf],'uint8')';
+                            a                         
+                            fseek(fid,32,'bof');
+                        end
+                        % first line:
+                        % [1][2] [3-4]...[23-24] [25-28]   [29-32]   || [33-36]                 [37-40]                     [41-42]
+                        % [1  0] [uint16=>char]  uint32    uint32    || uint32
+                        %        Title Text      checksum  # entries || elapsed sample start    [13 1 0 0]  - biocals
+                        %                                                                       [1 stage# 0 0] - stage...   [34 0]
+                        %
+                        % Elapsed Time Format:
+                        % byte ref =[0  1 2  3  4  5]
+                        % example = [34 0 0 164 31 0]
+                        %
+                        % example[5]*256*256*0.5+example[4]*256*0.5+example[3]*0.5+example[2]*0.5*1/256...
+                        % example(4)*2^15+example(3)*2^7+example(2)*2^-1+example(1)*2^-9
+                        description = cell(HDR.num_records,1); %24 bytes  --> varies in size; some descriptions are longer, some are shorter
+                        remainder = cell(HDR.num_records,1); % --> varies in size because description is not always the same length.                     
+                        intro_size = 10; % 6 + 4
+%                         intro_size = 34;
+%                         remainder = zeros(HDR.num_records,bytes_per_record-intro_size,'uint8');
+                        
+                        for r=1:HDR.num_records
+                            start_sample(r) = fread(fid,1,'uint32');  % 4 bytes
+                            evtID(r,:) = fread(fid,2,'uint8'); % [13,1]
+                            
+                            padding = fread(fid,1,'uint32')'; %[0 0 0 0]  % 4 bytes                            
+                            curRecord = fread(fid,(bytes_per_record-intro_size)/bytes_per_uint16,'uint16')';
+                            descriptionStop = find(curRecord==0,1,'first');
+                            description{r} = char(curRecord(1:descriptionStop-1));
+                            remainder{r}=curRecord(descriptionStop:end);
+                            
+                            %                             description{r} = fread(fid,12,'uint16=>char')';  %24 bytes %need to read until I get to a 34 essentially%now at 64 or %32 bytes read
+                            %                             remainder(r,:) = fread(fid,bytes_per_record-intro_size,'uint8')';
+                        end
+                        stop_sample = start_sample+5*embla_samplerate_out; %make it 5 seconds for viewing
+                                            
+                    elseif strcmpi(eventType,'custom')
+                        %.evt is a 12 byte record
+                        
+                        % 20 byte record
+                        customType = stop_sample;
+                        
+                        intro_size = 10;
+
+                        if(false)
+                            fseek(fid,32,'bof');
+                            a=fread(fid,[bytes_per_record,inf],'uint8')';
+                            fseek(fid,32,'bof');
+                            a
+                        end
+                        
+                        
+                        % Earlier notes from Hyatt
+                        %80 byte blocks 
+                        %  1       5       9        13       14     15        16               17       25       30            31       32     33       38            39             40     41        42       45     46     47       49        53      57             58       61        77     78     79     80  
+                        % [uint32][uint32][uint8*4][ uint8] [uint8][uint8   ][uint8]          [uint8*8][uint8*5][uint8       ][uint8  ][uint8][uint8*5][uint8       ][uint8        ][uint8][uint8   ][uint8*3][uint8][uint8][uint8*2][uint32  ][uint32][uint8        ][uint8*3][uint32*4][uint8][uint8][uint8][uint8]          
+                        % [start ][stop  ][7 2 3 0][1/32/33][ 0   ][0-248   ][0/63/64/191/192][  255  ][   0   ][0/64/128/192][0/86/87][0/64 ][0      ][0/64/128/192][0/84/85/86/87][ 0/64][ 44/46  ][ 0     ][0-255][0/1/2][ 0     ][? or 255][ 255  ][counter++/255][0/255  ][   255  ][42   ][0/128][0-248][0/63/64/191/192]
+                        %                                                                                                                                                                                                          i                      
+                        %intro_size = 8;
+                        %                         remainder_byte_count = (bytes_per_record-intro_size)/bytes_per_uint16;
+                        remainder_byte_count = (bytes_per_record-intro_size);
+
+                        remainder = zeros(HDR.num_records,remainder_byte_count,'uint8');                        
+                        
+                        for r=1:HDR.num_records
+                            start_sample(r) = fread(fid,1,'uint32');
+                            stop_sample(r) = fread(fid,1,'uint32');                            
+                            evtID(r,:) = fread(fid,2,'uint8'); % [20,?]
+                            
+                            remainder(r,:) = fread(fid,remainder_byte_count,'uint8');
+                        end
+                        
                     elseif(strcmpi(eventType,'desat'))
-                        intro_size = 8;
-                        remainder_size = bytes_per_record-intro_size;
-                        remainder = zeros(HDR.num_records,remainder_size,'uint8');                        
-                        
-                        for r=1:HDR.num_records
-                            
-                            start_sample(r) = fread(fid,1,'uint32');
-                            stop_sample(r) = fread(fid,1,'uint32');
-                            %                             description = fread(fid,remainder_size/2,'uint16=>char')';
-                            %desats - (come in pairs?)
-                            % [8 1 2 0] [0/4 0 ? ?]  [255 255 255 255] [255 255 255 255] [84 16 13 164]
-                            
-                            % [? ? 88/86/87 64] [? ? ? ?] [? ? 86/87/85 64] [8/10 ? ? ?] [? ? ? ?]
-                            %
-                            %1 byte [224] = ?
-                            %4 bytes 224  106   99  104] [186  131   88   64]  [87   27   67  211]  [29 108   87   64]   [9  144   98    0  228  151    98  0]
-                            %4 bytes
-                            remainder(r,:) = fread(fid,remainder_size,'uint8');
+                        if(false)
+                            fseek(fid,32,'bof');
+                            a=fread(fid,[bytes_per_record,inf],'uint8')'
+                            a
+                            fseek(fid,32,'bof');
                         end
-                    elseif(strcmpi(eventType,'resp'))
-                        %80 byte blocks
+                       
+                        desatType = stop_sample;                        
+                        respRelated = stop_sample;
                         
-                        intro_size = 8;
-                        remainder = zeros(HDR.num_records,bytes_per_record-intro_size,'uint8');                        
+                        desatHigh = stop_sample;
+                        desatLow = stop_sample;
+                        unknownFlags = nan(HDR.num_records,1);
+                        otherStartStop = nan(HDR.num_records,2);
+                        unknownDouble = desatHigh;
+                        % 48 byte record
+                        if(bytes_per_record ==48)                           
+                            remainder = nan(HDR.num_records,1);
+                            for r=1:HDR.num_records
+                                
+                                start_sample(r) = fread(fid,1,'uint32'); % 04
+                                stop_sample(r) = fread(fid,1,'uint32');  % 08
+                                %  description = fread(fid,remainder_size/2,'uint16=>char')';
+                                %desats - (come in pairs?)
+                                % [8 1 2 0] [0/4 0 ? ?]  [255 255 255 255] [255 255 255 255] [84 16 13 164]
+                                
+                                % [? ? 88/86/87 64] [? ? ? ?] [? ? 86/87/85 64] [8/10 ? ? ?] [? ? ? ?]
+                                %
+                                %1 byte [224] = ?
+                                %4 bytes 224  106   99  104] [186  131   88   64]  [87   27   67  211]  [29 108   87   64]   [9  144   98    0  228  151    98  0]
+                                %4 bytes
+                                evtID(r,:) = fread(fid,2,'uint8'); % 10
+                                desatType(r) = fread(fid,1,'uint16'); %12                                
+                                respRelated(r) = fread(fid,1,'uint16'); %14
+                                unknownFlags(r) = fread(fid,1,'int16'); %resp related flag %16
+                                otherStartStop(r,:) = fread(fid,2,'int32'); % 24 % Padding
+                                %                                 unknown(r) = fread(fid,1,'uint32'); % 28
+                                % Signal# (##) 2 bytes
+                                %                             signal(r) = fread(fid,1,'uint16'); %16
+                                % Order of events placed (##) 2 bytes
+                                % placementOrder(r) = fread(fid,1,'uint16'); %18
+                                
+                                % skip 6 bytes
+                                % unknown(r,:) = fread(fid,3,'uint16'); % 24
+                                
+                                desatHigh(r) = fread(fid,1,'double'); % 36
+                                desatLow(r) = fread(fid,1,'double');  % 44
+                                unknownDouble(r) = fread(fid,1,'double');
+                                remainder(r) = unknownDouble(r);
+
+%                                 remainder(r) = fread(fid,1,'double');
+                            end
+                        elseif(bytes_per_record ==80)
+                            remainder = zeros(HDR.num_records,4,'uint8');
+                            for r=1:HDR.num_records
+                                start_sample(r) = fread(fid,1,'uint32'); % 04
+                                stop_sample(r) = fread(fid,1,'uint32');  % 08
+                                evtID(r,:) = fread(fid,2,'uint8'); % 10
+                                desatType(r) = fread(fid,1,'uint16'); %12
+                                respRelated(r) = fread(fid,1,'uint16'); %14
+                                unknownFlags(r) = fread(fid,1,'int16'); %resp related flag %16
+                                otherStartStop(r,:) = fread(fid,2,'int32'); % 24 % Padding                                                                         
+                                desatHigh(r) = fread(fid,1,'double'); % 32
+                                desatLow(r) = fread(fid,1,'double');  % 40
+                                unknownDouble(r) = fread(fid,1,'double');
+                                %                                 fseek(fid,2,'cof'); % 42 [255x2]
+                                %                                 fseek(fid,4,'cof'); %46
+                                %                                 fseek(fid,2,'cof'); % 48 [0x2]
+                                
+                                fseek(fid,28,'cof'); % 76 [255x28]
+                                % last 4 bytes: checksum
+                                remainder(r,:) = fread(fid,4,'uint8');% 80 [41,108,0,0]
+                            end
+                        end
+                        
+                        description = cell(HDR.num_records,1);
+                        for r=1:HDR.num_records
+                            subIDStr = '';
+                            if(evtID(r,2)~=1)
+                                subIDStr = sprintf(' SubID(%d)',evtID(r,2));
+                            end
+                            desatStr = '';
+                            if(desatType(r)~=2)
+                                desatStr = sprintf(' DesatType(%d)',desatType(r));
+                            end                                
+                            if(respRelated(r)==4)
+                                respStr = ' w/Respiratory';
+                            elseif(respRelated(r)==0)
+                                respStr = '';
+                            else
+                                respStr = sprintf(' w/%d',respRelated(r));
+                            end                            
+                           description{r} = strtrim(sprintf('High=%f Low=%f%s%s%s',desatHigh(r), desatLow(r),subIDStr,desatStr,respStr));
+                        end
+
+                    elseif strcmpi(eventType,'filesect')
+                        % 528 byte record
+                        if(false)
+                            fseek(fid,32,'bof');
+                            a=fread(fid,[bytes_per_record,inf],'uint8')';
+                            a                         
+                            fseek(fid,32,'bof');
+                        end
+                        description = cell(HDR.num_records,1);
+                        intro_size = 10;
+                        remainder = cell(HDR.num_records,1);                        
                         
                         for r=1:HDR.num_records
                             start_sample(r) = fread(fid,1,'uint32');
+                            evtID(r,:) = fread(fid,2,'uint8'); % [6]
+                            fseek(fid,4,'cof');  % zero padding fread(fid,1,'uint32');[10]
+                            
+                            %get current position.  
+                            %                             curPos = ftell(fid);
+                            % read until 0 char ? [42]
+                            curRecord = fread(fid,(bytes_per_record-intro_size)/bytes_per_uint16,'uint16')';
+                            descriptionStop = find(curRecord==0,1,'first');
+                            description{r} = char(curRecord(1:descriptionStop-1));
+                            
+                            remainder{r}=curRecord(descriptionStop+1:end-1);
+                            recordStopSig = curRecord(end); % 31
+                        end 
+                        stop_sample = start_sample+5*embla_samplerate_out; %make it 5 seconds for viewing
+                    elseif strcmpi(eventType,'hr')
+                        %  32 byte record
+                        if(false)
+                            fseek(fid,32,'bof');
+                            a=fread(fid,[bytes_per_record,inf],'uint8')';
+                            a                         
+                            fseek(fid,32,'bof');
+                        end                        
+                        
+                        remainder = zeros(HDR.num_records,4);                        
+                        float1 = nan(HDR.num_records,1);
+                        float2 = nan(HDR.num_records,1);
+                        for r=1:HDR.num_records
+                            start_sample(r) = fread(fid,1,'uint32');
                             stop_sample(r) = fread(fid,1,'uint32');
-                            remainder(r,:) = fread(fid,bytes_per_record-intro_size,'uint8');
+                            evtID(r,:) = fread(fid,2,'uint8'); % [6]
+                            fseek(fid,2,'cof');  % zero padding fread(fid,1,'uint16');[10]
+                            float1(r) = fread(fid,1,'float');
+                            fseek(fid,4,'cof'); % 0-padding
+                            float2(r) = fread(fid,1,'float');                            
+                            remainder(r,:) = fread(fid,4,'uint16');
+                        end                          
+                    elseif(strcmpi(eventType,'numeric'))
+                        fseek(fid,32,'bof');
+                        if(false)
+                            fseek(fid,32,'bof');
+                            a=fread(fid,[bytes_per_record,inf],'uint8')';
+                            a(:,9:18)
+                            fseek(fid,32,'bof');
+                            a=fread(fid,[bytes_per_record/2,inf],'uint16')';
+                            a(:,9:end)
+                            fseek(fid,32,'bof');
+                        end
+                        description = cell(HDR.num_records,1); 
+                        studyType = start_sample;
+                        readLevels = zeros(HDR.num_records,2);
+                        remainder = zeros(HDR.num_records,8,'uint8');
+
+                        for r=1:HDR.num_records
+                            start_sample(r) = fread(fid,1,'uint32');
+                            stop_sample(r) = fread(fid,1,'uint32'); % duration?
+                            evtID(r,:) = fread(fid,2,'uint8');   %10
+                            studyType(r) = evtID(r,2);                            
+                            fseek(fid,4,'cof');  %unused. %14
+                            fread(fid,1,'uint16'); % used but unknown %16
+                            readLevels(r,:) = fread(fid,2,'double'); %32
+                            remainder(r,:) = fread(fid,8,'uint8');
+                        end
+                        stop_sample = start_sample;
+                        
+                    %sometimes these have the extension .nvt
+                    elseif(strcmpi(eventType,'plm'))
+                        if(false)
+                            fseek(fid,32,'bof');
+                            a=fread(fid,[bytes_per_record,inf],'uint8')';
+                            a(1:4,:)
+                            fseek(fid,32,'bof');
+
+                        end
+                        leg = stop_sample;
+                        arousal = stop_sample;
+                        %                         signal = stop_sample;
+                        %                         tag = signal;
+                        %                         intro_size = 18;
+                        arousalField = arousal;
+                        if(bytes_per_record==52)
+                            remainder = zeros(HDR.num_records,4,'uint8');
+                            eventNumber = arousalField;
+                            for r=1:HDR.num_records
+                                start_sample(r) = fread(fid,1,'uint32'); % 4
+                                stop_sample(r) = fread(fid,1,'uint32');  % 8
+                                
+                                evtID(r,:) = fread(fid,2,'uint8'); % 10
+                                leg(r) = fread(fid,1,'uint16'); %12 % From Oscar - Legs (L,R,Both: 1,2,3) 2 bytes
+                                arousal(r) = fread(fid,1,'uint16'); %14 - % Arousal (No,Yes: 0,1) 2 bytes                                
+                                % if there is an aroual
+                                arousalField(r) = fread(fid,1,'uint16'); % Then this might be the channel associated with it, or the event associated with it. % 7 is a respiratory event
+                                eventNumber(r) = fread(fid,1,'uint32'); % This is the event record number.  If there are no associated events, it is the current records value.  Otherwise, it is the number of associated events for that type.
+                                fseek(fid,28,'cof');                                
+                                remainder(r,:) = fread(fid,4,'uint8');
+                            end
+                        elseif(bytes_per_record==16)
+                            remainder = zeros(HDR.num_records,2,'uint8');
+                            for r=1:HDR.num_records
+                                start_sample(r) = fread(fid,1,'uint32'); % 4
+                                stop_sample(r) = fread(fid,1,'uint32');  % 8
+                                
+                                evtID(r,:) = fread(fid,2,'uint8'); % 10
+                                leg(r) = fread(fid,1,'uint16'); %12 % From Oscar - Legs (L,R,Both: 1,2,3) 2 bytes
+                                arousal(r) = fread(fid,1,'uint16'); %14 - % Arousal (No,Yes: 0,1) 2 bytes
+                                remainder(r,:) = fread(fid,2,'uint8');
+                                
+                                % Signal# (##) 2 bytes
+                                %                             signal(r) = fread(fid,1,'uint16'); %16
+                                % Tag# entered? (##) 2 bytes
+                                %                             tag(r) = fread(fid,1,'uint16'); %18
+                                % skip 30 bytes
+                                % last 4 bytes: checksum?
+                                %                             remainder(r,:) = fread(fid,bytes_per_record-intro_size,'uint8');
+                            end
+                        end
+                        
+                        description = cell(HDR.num_records,1);
+                        for r=1:HDR.num_records
+                            subIDStr = '';
+                            if(evtID(r,2)~=2)
+                                subIDStr = sprintf(' SubID(%d)',evtID(r,2));
+                            end
+                            legStr = '';
+                            if(leg(r)==1)
+                                legStr = 'Left leg';
+                            elseif(leg(r)==2)
+                                legStr = 'Right leg';
+                            elseif(leg(r)==3)
+                                legStr = 'Both legs';
+                            end
+                            if(arousal(r)==1)
+                                arousalStr = ' w/Arousal';
+                            elseif(arousal(r)==0)
+                                arousalStr = '';
+                            else
+                                arousalStr = sprintf(' w/%d',arousal(r));
+                            end                            
+                           description{r} = strtrim(sprintf('%s%s%',subIDStr,legStr,arousalStr));
+                        end
+                        
+                        
+                    elseif strcmpi(eventType,'resp')
+                        
+                        respType = stop_sample;
+                        mediatedType = stop_sample;
+                        arousal = stop_sample;
+                        signal = stop_sample;
+                        placementOrder = signal;
+                       
+                        if(false)
+                            fseek(fid,32,'bof');
+                            a=fread(fid,[bytes_per_record,inf],'uint8')';
+                            a(:,9:18)                            
+                            fseek(fid,32,'bof');
+                            a=fread(fid,[bytes_per_record/2,inf],'uint16')';
+                            a=fread(fid,[bytes_per_record/4,inf],'uint32')';
+                            a(:,9:end)
+                            fseek(fid,32,'bof');
+                        end
+                        if(bytes_per_record==48) % found this in 'resp.evt'                       
+
+                            for r=1:HDR.num_records
+                                start_sample(r) = fread(fid,1,'uint32'); % [0,3]
+                                stop_sample(r) = fread(fid,1,'uint32'); % [4,7]                                
+                                evtID(r,:) = fread(fid,2,'uint8'); % [8] 7:
+                                respType(r) = evtID(r,2); % [9] 1: Apnea; 2: Hypopne; 5: RERA
+                                mediatedType(r) = fread(fid,1,'uint16'); % [10,11]  1: Central; 2: Mixed; 3: Obstructive; 0: ''
+                                arousal(r) = fread(fid,1,'uint16'); % [12,13] 1: w/Arousal 32: w/Desat
+                                signal(r) = fread(fid,1,'uint16'); % [14,15] => Signal# (##) 2 bytes?
+                                fread(fid,8,'uint8'); % [18,25] 8 bytes of 1 bits set
+                                fread(fid,16,'uint8'); %[26, 41] 16 bytes of 1 bits set
+                                fread(fid,1,'uint8'); % [42] The number 10
+                                fread(fid,7,'uint8'); % [43, 49] ?                              
+                            end                            
+                        elseif(bytes_per_record==80)   % found this in resp.nvt                         
+                            
+                            % 80 byte record
+                            % Earlier notes from Hyatt
+                            %80 byte blocks
+                            %  1       5       9        13       14     15        16               17       25       30            31       32     33       38            39             40     41        42       45     46     47       49        53      57             58       61        77     78     79     80
+                            % [uint32][uint32][uint8*4][ uint8] [uint8][uint8   ][uint8]          [uint8*8][uint8*5][uint8       ][uint8  ][uint8][uint8*5][uint8       ][uint8        ][uint8][uint8   ][uint8*3][uint8][uint8][uint8*2][uint32  ][uint32][uint8        ][uint8*3][uint32*4][uint8][uint8][uint8][uint8]
+                            % [start ][stop  ][7 2 3 0][1/32/33][ 0   ][0-248   ][0/63/64/191/192][  255  ][   0   ][0/64/128/192][0/86/87][0/64 ][0      ][0/64/128/192][0/84/85/86/87][ 0/64][ 44/46  ][ 0     ][0-255][0/1/2][ 0     ][? or 255][ 255  ][counter++/255][0/255  ][   255  ][42   ][0/128][0-248][0/63/64/191/192]
+                            %                                                                                                                                                                                                          i
+                            %intro_size = 8;
+                            %                         remainder_byte_count = (bytes_per_record-intro_size)/bytes_per_uint16;
+                            intro_size = 18;
+                            remainder_byte_count = (bytes_per_record-intro_size);
+                            remainder = zeros(HDR.num_records,remainder_byte_count,'uint8');
+                            for r=1:HDR.num_records
+                                start_sample(r) = fread(fid,1,'uint32'); % [0,3]
+                                stop_sample(r) = fread(fid,1,'uint32'); % [4,7]
+                                evtID(r,:) = fread(fid,2,'uint8'); % [8] 7:
+                                respType(r) = evtID(r,2); % [9] 1: Apnea; 2: Hypopne; 5: RERA
+                                mediatedType(r) = fread(fid,1,'uint16'); % [10,11]  1: Central; 2: Mixed; 3: Obstructive; 0: ''
+                                arousal(r) = fread(fid,1,'uint16'); % [12,13] 1: w/Arousal 32: w/Desat
+                                signal(r) = fread(fid,1,'uint16'); % [14,15] => Signal# (##) 2 bytes
+                                placementOrder(r) = fread(fid,1,'uint16'); % [16,17] => Order of events placed (##) 2 bytes
+                                remainder(r,:) = fread(fid,remainder_byte_count,'uint8');
+                                
+                            end
+                        else
+                            fprintf(1,'Unknown block size (%d) for respiratory events\n',bytes_per_record);
+                        end
+                        description = cell(HDR.num_records,1);
+                        for r=1:HDR.num_records
+                        description{r} = strtrim(sprintf('%s %s %s',CLASS_codec.getRespMediatedType(mediatedType(r)),...
+                                    CLASS_codec.getRespType(respType(r)),CLASS_codec.getRespAssociation(arousal(r))));
+                        end
+                    elseif(strcmpi(eventType,'snapshot'))
+                        if(false)
+                            fseek(fid,32,'bof');
+                            a=fread(fid,[bytes_per_record,inf],'uint8')';
+                            a                         
+                            fseek(fid,32,'bof');
+                        end                        
+                        
+                    elseif strcmpi(eventType,'snore')      
+                        if(false)
+                            fseek(fid,32,'bof');
+                            a=fread(fid,[bytes_per_record,inf],'uint8')';
+                            a
+                            fseek(fid,32,'bof');
+                        end
+                        arousal = stop_sample;
+                        respRelated = arousal;
+                        snoreType = zeros(HDR.num_records,1);
+
+                        if(bytes_per_record==16)
+                            remainder = zeros(HDR.num_records,2,'uint8');
+                            for r=1:HDR.num_records
+                                start_sample(r) = fread(fid,1,'uint32'); % 4
+                                stop_sample(r) = fread(fid,1,'uint32');  % 8
+                                
+                                evtID(r,:) = fread(fid,2,'uint8'); % 10
+                                %                                 snoreType(r) = fread(fid,1,'uint16'); %12 % ?
+                                respRelated(r) = fread(fid,1,'uint16'); %14 
+                                arousal(r) = fread(fid,1,'uint16'); %14 - % Arousal (No,Yes: 0,1) 2 bytes
+                                remainder(r,:) = fread(fid,2,'uint8');
+                            end
+                        elseif(bytes_per_record==52)
+                            remainder = zeros(HDR.num_records,4,'uint8');
+                            
+                            secondSignal = arousal; % related to respiratory 4 signal.  
+                            
+                            for r=1:HDR.num_records
+                                start_sample(r) = fread(fid,1,'uint32'); % 4
+                                stop_sample(r) = fread(fid,1,'uint32');  % 8
+                                
+                                evtID(r,:) = fread(fid,2,'uint8'); % 10
+                                snoreType(r) = fread(fid,1,'uint16'); %12 % ?
+                                respRelated(r) = fread(fid,1,'uint16'); %14 
+                                arousal(r) = fread(fid,1,'uint16'); %16 - % Arousal (No,Yes: 0,1) 2 bytes
+                                counter = fread(fid,1,'uint32');                                
+                                padding = fread(fid,1,'uint32');
+                                secondSignal(r) = fread(fid,1,'uint32');  % seen a three                              
+                                fseek(fid,20,'cof');
+                                remainder(r,:) = fread(fid,4,'uint8');
+                            end                            
+                        end
+                        description = cell(HDR.num_records,1);
+                        for r=1:HDR.num_records
+                            subIDStr = '';
+                            if(evtID(r,2)~=1)
+                                subIDStr = sprintf(' SubID(%d)',evtID(r,2));
+                            end
+                            snoreStr = '';
+                            if(snoreType(r)~=0)
+                                snoreStr = sprintf(' SnoreType(%d)',snoreType(r));
+                            end                                
+                            if(respRelated(r)==4)
+                                respStr = ' w/Respiratory';
+                            elseif(respRelated(r)==0)
+                                respStr = '';
+                            else
+                                respStr = sprintf(' w/%d',respRelated(r));
+                            end                            
+                           description{r} = strtrim(sprintf('%s%s%',subIDStr,snoreStr,respStr));
                         end
                         
                     elseif(strcmpi(eventType,'stage'))
+                         if(false)
+                            fseek(fid,32,'bof');
+                            a=fread(fid,[bytes_per_record,inf],'uint8')';
+                            a
+                            fseek(fid,32,'bof');
+                        end
                         %   stage_mat = fread(fid,[12,HDR.num_records],'uint8');
                         %   x=reshape(stage_mat,12,[])';
                         %  stage records are produced in 12 byte sections
@@ -594,10 +1129,10 @@ classdef CLASS_codec < handle
                         %  5 = Stage 4
                         %  7 = REM
                         intro_size = 6;
-                        stage = zeros(-1,HDR.num_records,1);
+                        stage = zeros(HDR.num_records,1);  %had been zeros(-1, HDR.num_records,1); on 12/6/2016
                         for r=1:HDR.num_records
                             start_sample(r) = fread(fid,1,'uint32');
-                            fseek(fid,1,'cof');
+                            evtID(r,1) = fread(fid,1,'uint8');
                             stage(r) = fread(fid,1,'uint8');
                             fseek(fid,bytes_per_record-intro_size,'cof');
                         end
@@ -605,7 +1140,7 @@ classdef CLASS_codec < handle
                         stage(stage==6)=5;
                         stage(stage==-1)=7;
                         samples_per_epoch = median(diff(start_sample));
-                        embla_samplerate = samples_per_epoch/seconds_per_epoch;
+                        embla_samplerate = samples_per_epoch/CLASS_codec.SECONDS_PER_EPOCH;
                         embla_samplerate_out = embla_samplerate;
                         stop_sample = start_sample+samples_per_epoch;
                         description = cell(HDR.num_records,1);
@@ -617,7 +1152,6 @@ classdef CLASS_codec < handle
                         description(stage==4) = {'Stage 4'};
                         description(stage==5) = {'REM'};
                         description(stage==7) = {'Unknown'};
-                        
                         
                                                 %   stage_mat = fread(fid,[12,HDR.num_records],'uint8');
                         %   x=reshape(stage_mat,12,[])';
@@ -637,105 +1171,98 @@ classdef CLASS_codec < handle
                         % start_sample = stage_mat(:,1);
                         % stage = (stage_mat(:,2)-1)/256;  %bitshifting will also work readily;
                         
-                    elseif(strcmpi(eventType,'biocals'))
-                        % first line:
-                        % [1][2] [3-4]...[23-24] [25-28]   [29-32]   || [33-36]                 [37-40]                     [41-42]
-                        % [1  0] [uint16=>char]  uint32    uint32    || uint32
-                        %        Title Text      checksum  # entries || elapsed sample start    [13 1 0 0]  - biocals
-                        %                                                                       [1 stage# 0 0] - stage...   [34 0]
-                        %
-                        % Elapsed Time Format:
-                        % byte ref =[0  1 2  3  4  5]
-                        % example = [34 0 0 164 31 0]
-                        %
-                        % example[5]*256*256*0.5+example[4]*256*0.5+example[3]*0.5+example[2]*0.5*1/256...
-                        % example(4)*2^15+example(3)*2^7+example(2)*2^-1+example(1)*2^-9
-                        description = cell(HDR.num_records,1); %24 bytes  --> varies in size; some descriptions are longer, some are shorter
-                        remainder = cell(HDR.num_records,1); % --> varies in size because description is not always the same length.
-                        tag = zeros(1,6); %6 bytes                        
-                        intro_size = 10; % 6 + 4
-                        bytes_per_uint16 = 2;
-%                         intro_size = 34;
-%                         remainder = zeros(HDR.num_records,bytes_per_record-intro_size,'uint8');
+                    elseif(strcmpi(eventType,'tag'))
+                        if(false)
+                            fseek(fid,32,'bof');
+                            a=fread(fid,[bytes_per_record,inf],'uint8')';
+                            fseek(fid,32,'bof');
+                            a(:,5:end)
+                            a=fread(fid,[bytes_per_record/2,inf],'uint16')';
+                            a(:,5:end)
+                            fseek(fid,32,'bof');
+                        end
+                        intro_size = 8;
+                        
+                        tagType = start_sample;
+                        tagSubType = tagType;
+                        tagSidePosition = tagType;
+                        description = cell(HDR.num_records,1);
+                        
+                        remainder = zeros(HDR.num_records,bytes_per_record-intro_size,'uint8');
                         
                         for r=1:HDR.num_records
-                            start_sample(r) = fread(fid,1,'uint32');  % 4 bytes
-                            tag = fread(fid,6,'uint8')'; %[13 1 0 0 0 0]  % 6 bytes
+                            start_sample(r) = fread(fid,1,'uint32');
+                            evtID(r,1) = fread(fid,1,'uint8'); % 2,
+                            tagType(r) = fread(fid,1,'uint8');
+                            tagSubType(r) = fread(fid,1,'uint8');
+                            tagSidePosition(r) = fread(fid,1,'uint8');  
+                            
+                            remainder(r,:) = fread(fid,bytes_per_record-intro_size,'uint8'); %[0,0,43,{0,68,1}]
+                            description{r} = strtrim(sprintf('%s %s %s',CLASS_codec.getTagType(tagType(r)),...
+                                CLASS_codec.getTagSubType(tagSubType(r)),CLASS_codec.getTagSidePosition(tagSidePosition(r))));
+                            
+                        end
+                        stop_sample = start_sample+5*embla_samplerate_out; %make it 5 seconds for viewing
+
+                        
+                    elseif(strcmpi(eventType,'user'))
+                        if(false)
+                            fseek(fid,32,'bof');
+                            a=fread(fid,[bytes_per_record,inf],'uint8')';
+                            fseek(fid,32,'bof');
+                            a=fread(fid,[bytes_per_record/2,inf],'uint16')';
+                            fseek(fid,32,'bof');
+                            fseek(fid,32,'bof');
+                            a=fread(fid,[bytes_per_record/4,inf],'uint32')';
+                            fseek(fid,32,'bof');
+                            a
+                        end
+                        
+                        fseek(fid,32,'bof');
+                        remainder = cell(HDR.num_records,1);
+                        description = cell(HDR.num_records,1);
+                        intro_size = 10;
+                        for r=1:HDR.num_records
+                            start_sample(r) = fread(fid,1,'uint32');
+                            evtID(r,:) = fread(fid,2,'uint8'); % [4,1]
+                            padding = fread(fid,1,'uint32'); % [0,0,0,0]
                             
                             curRecord = fread(fid,(bytes_per_record-intro_size)/bytes_per_uint16,'uint16')';
                             descriptionStop = find(curRecord==0,1,'first');
                             description{r} = char(curRecord(1:descriptionStop-1));
                             remainder{r}=curRecord(descriptionStop:end);
                             
-                            
-                            
-                            %                             description{r} = fread(fid,12,'uint16=>char')';  %24 bytes %need to read until I get to a 34 essentially%now at 64 or %32 bytes read
-                            %                             remainder(r,:) = fread(fid,bytes_per_record-intro_size,'uint8')';
-                        end
-                        stop_sample = start_sample;
-                        
-                    elseif(strcmpi(eventType,'numeric'))
-                        disp('numeric');
-                    elseif(strcmpi(eventType,'tag'))
-                        intro_size = 4;
-                        remainder = zeros(HDR.num_records,bytes_per_record-intro_size,'uint8');
-                        
-                        for r=1:HDR.num_records
-                            start_sample(r) = fread(fid,1,'uint32');
-                            remainder(r,:) = fread(fid,bytes_per_record-intro_size,'uint8');
-                        end
-                        stop_sample = start_sample;
-                        
-                    elseif(strcmpi(eventType,'user'))
-                        fseek(fid,32,'bof');
-                        tag = zeros(1,6);
-                        remainder = cell(HDR.num_records,1);
-                        description = cell(HDR.num_records,1);
-                        for r=1:HDR.num_records
-                            start_sample(r) = fread(fid,1,'uint32');
-                            tag = fread(fid,6,'uint8');
-                            %read until double 00 are encountered
-                            cur_loc = ftell(fid);
-                            curValue = 1;
-                            while(~feof(fid) && curValue~=0)
-                                curValue = fread(fid,1,'uint16');
-                            end
-                            description_size = ftell(fid)-cur_loc;
-                            intro_size = 4+6+description_size;
-                            fseek(fid,-description_size,'cof'); %or fseek(fid,cur_loc,'bof');
-                            description{r} = fread(fid,description_size/2,'uint16=>char')';
-                            remainder{r} = fread(fid,bytes_per_record-intro_size,'uint8=>char')';
+                            % Old way
+                            %                             %read until double 00 are encountered
+                            %                             cur_loc = ftell(fid);
+                            %                             curValue = 1;
+                            %                             while(~feof(fid) && curValue~=0)
+                            %                                 curValue = fread(fid,1,'uint16');
+                            %                             end
+                            %                             description_size = ftell(fid)-cur_loc;
+                            %                             intro_size = 4+6+description_size;
+                            %                             fseek(fid,-description_size,'cof'); %or fseek(fid,cur_loc,'bof');
+                            %                             description{r} = fread(fid,description_size/2,'uint16=>char')';
+                            %                             remainder{r} = fread(fid,bytes_per_record-intro_size,'uint8=>char')';
                             %remainder is divided into sections  with
                             %tokens of  [0    17     0   153     0     3
                             %1     9     0 ]
                         end
-                        
-                    elseif(strcmpi(eventType,'snapshot'))
-                        
-                    elseif(strcmpi(eventType,'baddata'))
-                        
-                        start_sample = zeros(HDR.num_records,1);
-                        stop_sample = start_sample;
-                        intro_size = 8;
-                        remainder = zeros(HDR.num_records,bytes_per_record-intro_size,'uint8');
-                        
-                        for r=1:HDR.num_records
-                            start_sample(r) = fread(fid,1,'uint32');
-                            stop_sample(r) = fread(fid,1,'uint32');
-                            remainder(r,:) = fread(fid,bytes_per_record-intro_size,'uint8');
-                        end
+                        stop_sample = start_sample+5*embla_samplerate_out; %make it 5 seconds for viewing
+
+
                     end
                                         
                     start_stop_matrix = [start_sample(:)+1,stop_sample(:)+1]; %add 1 because MATLAB is one based
                     dur_sec = (start_stop_matrix(:,2)-start_stop_matrix(:,1))/embla_samplerate;
-                    epoch = ceil(start_stop_matrix(:,1)/embla_samplerate/seconds_per_epoch);
+                    epoch = ceil(start_stop_matrix(:,1)/embla_samplerate/CLASS_codec.SECONDS_PER_EPOCH);
                     
                     if(desired_samplerate>0)
                         start_stop_matrix = ceil(start_stop_matrix*(desired_samplerate/embla_samplerate));
                     end
                     
                 end
-                
+                embla_evt_Struct = CLASS_codec.makeEventStruct();
                 embla_evt_Struct.HDR = HDR;
                 embla_evt_Struct.type = eventType;
                 embla_evt_Struct.start_stop_matrix = start_stop_matrix;
@@ -748,9 +1275,133 @@ classdef CLASS_codec < handle
                 if(~isempty(description))
                     embla_evt_Struct.description = description;
                 end
+                if(~isempty(remainder))
+                    embla_evt_Struct.unknown = remainder;
+                end
 
                 fclose(fid);
             end
+        end
+        
+        
+        % =================================================================
+        %> @brief Returns a stage event struct using input arguments.
+        %> @param stage Row vector of staging values
+        %> @param sampleRate
+        %> @param HDR (optional) Header of corresponding EDF study.  If HDR
+        %> is included the duration of the entire study will be taken from
+        %> the HDR.duration_sec field and be used as the final/last stop
+        %> value of the @c stop_sec field (and corresponding value of
+        %> start_stop_matrix(end).  Otherwise, these values will be
+        %> determined by assuming the last epoch is complete and lasts
+        %> SECONDS_PER_EPOCH.
+        %> @retval evt_Struct Struct for holding hynogram/staging data.
+        %> Fields include:
+        %> - @c HDR (optionally filled)
+        %> - @c type = 'stage'
+        %> - @c start_stop_matrix
+        %> - @c start_sec
+        %> - @c stop_sec
+        %> - @c dur_sec
+        %> - @c epoch
+        %> - @c stage
+        %> - @c description (empty)
+        %> - @c unknown (empty)
+        %> - @c channel (empty)       
+        % =================================================================        
+        function evt_Struct = makeStageEventStruct(stage, sampleRate,HDR)
+            if(nargin<3)
+                HDR = [];
+            end            
+            evt_Struct = CLASS_codec.makeEventStruct('HDR',HDR,'type','stage','stage',stage(:));
+            evt_Struct.epoch = (1:numel(stage))';
+
+            if(~isempty(HDR) && isfield(HDR,'duration_sec'))
+                duration_sec = HDR.duration_sec;
+            else
+                duration_sec = CLASS_codec.SECONDS_PER_EPOCH*evt_Struct.epoch(end);
+            end
+            
+            evt_Struct.start_sec = (0:CLASS_codec.SECONDS_PER_EPOCH:duration_sec)';
+            evt_Struct.stop_sec = evt_Struct.start_sec+CLASS_codec.SECONDS_PER_EPOCH;
+            evt_Struct.stop_sec(end) = duration_sec;
+            evt_Struct.dur_sec = repmat(CLASS_codec.SECONDS_PER_EPOCH,size(evt_Struct.epoch));
+
+            evt_Struct.start_stop_matrix = [evt_Struct.start_sec,evt_Struct.stop_sec]*sampleRate;
+            evt_Struct.start_stop_matrix(:,1) = evt_Struct.start_stop_matrix(:,1)+1; % MATLAB starts indexing at 1.
+        end
+            
+        % =================================================================
+        %> @brief Returns an empty event struct
+        %> @retval evt_Struct Struct for holding event data.  Fields are empty and 
+        %> include:
+        %> - @c HDR
+        %> - @c type
+        %> - @c start_stop_matrix
+        %> - @c start_sec
+        %> - @c stop_sec
+        %> - @c dur_sec
+        %> - @c epoch
+        %> - @c stage
+        %> - @c description
+        %> - @c unknown
+        %> - @c channel
+        %> - @c samplerate
+        %> - @c start_vec start time as a datevec
+        %> - @c stop_vec stop time as a datevec
+        % =================================================================
+        function evt_Struct = makeEventStruct(varargin)
+            names = {'HDR','type','start_stop_matrix','start_sec','stop_sec',...
+                'dur_sec','epoch','stage','description','unknown','channel',...
+                'samplerate','start_vec','stop_vec'};
+
+            defaults = cell(size(names));
+            values = defaults;
+            [values{:}] = parsepvpairs(names,defaults,varargin{:});
+            
+            for n=1:numel(names)
+                evt_Struct.(names{n}) = values{n};
+            end
+            
+            if( ~isempty(evt_Struct.start_sec) && (~isempty(evt_Struct.stop_sec)||~isempty(evt_Struct.dur_sec)) )
+                if(isempty(evt_Struct.dur_sec))
+                    evt_Struct.dur_sec = evt_Struct.stop_sec-evt_Struct.start_sec;
+                end
+                if(isempty(evt_Struct.stop_sec))
+                    evt_Struct.stop_sec = evt_Struct.start_sec+evt_Struct.dur_sec;
+                end
+                
+                if(~isempty(evt_Struct.HDR) && isfield(evt_Struct.HDR,'T0'))
+                    numEvents = numel(evt_Struct.dur_sec);
+                    t0_notSec = evt_Struct.HDR.T0(1:end-1);
+                    t0_sec = evt_Struct.HDR.T0(end);
+                    evt_Struct.start_vec = [repmat(t0_notSec,numEvents,1),t0_sec+evt_Struct.start_sec];
+                    evt_Struct.stop_vec = [repmat(t0_notSec,numEvents,1),t0_sec+evt_Struct.stop_sec];
+                end
+            end
+                
+            hasStartStopSec = ~isempty(evt_Struct.start_sec) && ~isempty(evt_Struct.stop_sec);
+            if(~isempty(evt_Struct.samplerate))
+                if(~isempty(evt_Struct.start_stop_matrix) || hasStartStopSec)
+                    if(~hasStartStopSec)
+                        evt_Struct.start_sec = max(0,(evt_Struct.start_stop_matrix(:,1)-1)/evt_Struct.samplerate); % -1 b/c MATLAB is 1-based
+                        evt_Struct.stop_sec = evt_Struct.start_stop_matrix(:,2)/evt_Struct.samplerate;
+                        
+                        % Or perhaps do nothing if it already exists.  But
+                        % what if it exists and is incorrect??? Enough.
+                        evt_Struct.dur_sec = evt_Struct.stop_sec-evt_Struct.start_sec;                        
+                    end
+                    if(isempty(evt_Struct.start_stop_matrix))
+                        evt_Struct.start_stop_matrix = [evt_Struct.start_sec(:), evt_Struct.stop_sec(:)]*evt_Struct.samplerate;
+                        evt_Struct.start_stop_matrix(:,1) = evt_Struct.start_stop_matrix(:,1)+ 1; % +1 b/c MATLAB is 1-based
+                    end 
+                end
+            end
+            
+        end
+                
+        function [annotationsCell, header] = parseEDFPlusAnnotations(fileName)
+            [annotationsCell, header ] =  loadEDFPlusAnnotations(fileName);  % currently in ~/git/matlab/sleep            
         end
 
         % =================================================================
@@ -770,7 +1421,164 @@ classdef CLASS_codec < handle
             HDR.num_records = fread(fid,1,'int32'); %32 bytes read
         end
         
+        % =================================================================
+        %> @brief Parses time annotated lists (TALs) as events from a 
+        %> a single EDF annotation record.
+        %> @param annRecord Struct containing one or more TALs as obtained
+        %> from cell of EDF Annotation data obtained from loadEDFPlusAnnotations.
+        %> @param HDR Struct containing EDF Plus header data.  This is used
+        %> to obtain sampling rate.
+        %> @retval eventStructs Nx1 vector of structs.  See CLASS_codec.makeEventStruct
+        %> for field names.
+        % =================================================================
+        function eventStructs = getEventsFromEDFAnnotationRecord(annRecord, HDR)
+            if(numel(annRecord)==1)
+                eventStructs = CLASS_codec.tal2evt(annRecord,HDR);
+            else
+                numTals = numel(annRecord);
+                eventStructs = repmat(CLASS_codec.makeEventStruct(),numTals,1);
+                for t=1:numTals
+                    eventStructs(t) = CLASS_codec.tal2evt(annRecord(t),HDR);
+                end
+            end
+        end
         
+        % =================================================================
+        %> @brief Translate one item of time annotated lists (TALs) to an event struct.
+        %> @param tal A TAL item in a struct.  See loadEDFPlusAnnotations.m
+        %> @param HDR Struct containing EDF Plus header data.  This is used
+        %> to obtain sampling rate.
+        %> @retval eventStruct A struct with tal information.  See CLASS_codec.makeEventStruct
+        %> for field names.
+        % =================================================================
+        function eventStruct = tal2evt(tal,HDR)
+            startSec = str2double(tal.tal_start);            
+            durationSec = str2double(tal.duration);
+            fs = max(HDR.samplerate);  %use the highest sampling rate available in the signal.  Otherwise you may run into issues of decimal precision sample indices.
+            stageStrPrefixCount = numel('Sleep stage ');            
+            if(strncmpi(tal.annotation,'Sleep stage ',stageStrPrefixCount))
+                stageStr = tal.annotation(stageStrPrefixCount+1:end);                
+                switch stageStr
+                    case 'W'
+                        stageVal = 0;
+                    case 'N1'
+                        stageVal = 1;
+                    case 'N2'
+                        stageVal = 2;
+                    case 'N3'
+                        stageVal = 3;
+                    case 'N4'
+                        stageVal = 4;
+                    case 'R'
+                        stageVal = 5;
+                    otherwise
+                        stageVal = 7;
+                end
+                
+                cur_epoch = ceil(startSec/CLASS_codec.SECONDS_PER_EPOCH);
+                %dur_epochs = ceil(durationSec/CLASS_codec.SECONDS_PER_EPOCH);
+                % removed ('HDR',HDR,...) because the event struct here is
+                % so small, perhaps containing 3 or 4 events at most, per
+                % tal.  Repeated calls to tal2evt to get all tals parsed
+                % results in multiple HDR fields with the same information,
+                % which is a waste.
+                eventStruct = CLASS_codec.makeEventStruct('samplerate',fs,...
+                    'start_sec',startSec,'dur_sec',durationSec,'epoch',cur_epoch,...
+                    'description',stageStr,'type','stage','stage',stageVal);
+            else
+                description = strtrim(strsplit(tal.annotation,':'));
+                
+                if(numel(description)>1)
+                    channelStr = description{1};
+                    description = description{2};
+                else
+                    
+                    description = description{1};
+%                     if(strncmpi(description,'<EDF_XML',8))
+%                         description = 'XML note';
+%                         channelStr = []
+%                     else
+%                         channelStr = [];
+%                     end
+                        
+                        %<EDF_XMLnote>
+                        %                     <Sauerstoffsättigungsabfall>
+                        %                     <Value unit="%">3</Value>
+                        %                     </Sauerstoffsättigungsabfall>
+                        %                     </EDF_XMLnote>",
+
+                    channelStr = 'unspecified';
+                end
+                description = strrep(description,'"','''');
+                eventStruct = CLASS_codec.makeEventStruct('HDR',HDR,'samplerate',fs,...
+                    'start_sec',startSec,'dur_sec',durationSec,...
+                    'description',description,'type',channelStr);
+            end
+            
+        end
+        
+        function  stageStruct = getStageStructFromEDFPlusFile(edfPlusFile)
+            [annotationRecords, HDR] = loadEDFPlusAnnotations(edfPlusFile);
+            stageStruct = CLASS_codec.getStageStructFromEDFPlusAnnotations(annotationRecords,HDR);
+        end
+        
+        % =================================================================
+        %> @brief Parses the hypnogram from an annotations cell, as obtained
+        %> from call to loadEDFPlusAnnotations with an EDF Plus file, and returns
+        %> it in a struct.
+        %> @param annotations Cell of EDF Annotation data obtained from loadEDFPlusAnnotations.
+        %> @param HDR Struct containing EDF Plus header data.
+        %> @retval stageStruct Struct containing the parsed hypnogram.
+        %> @note See @makeStageEventStruct for stageStruct field names.
+        % =================================================================
+        function stageStruct = getStageStructFromEDFPlusAnnotations(annotations, HDR)
+            
+            num_epochs = ceil(HDR.duration_sec/CLASS_codec.SECONDS_PER_EPOCH);
+            stage = repmat(7,num_epochs,1);
+            % stageStartTime = zeros(size(stage));
+            num_records = size(annotations,1);
+            stageStrPrefixCount = numel('Sleep stage ');
+            for r=1:num_records
+                num_tals = size(annotations{r},1);
+                for t=1:num_tals
+                    tal = annotations{r}(t);
+                    if(strncmpi(tal.annotation,'Sleep stage ',stageStrPrefixCount))
+                        stageStr = tal.annotation(stageStrPrefixCount+1:end);
+                        startTime = str2double(tal.tal_start);
+                        duration = str2double(tal.duration);
+                        
+                        switch stageStr
+                            case 'W'
+                                stageVal = 0;
+                            case 'N1'
+                                stageVal = 1;
+                            case 'N2'
+                                stageVal = 2;
+                            case 'N3'
+                                stageVal = 3;
+                            case 'N4'
+                                stageVal = 4;
+                            case 'R'
+                                stageVal = 5;
+                            otherwise
+                                stageVal = 7;
+                        end
+                        
+                        cur_epoch = floor(startTime/CLASS_codec.SECONDS_PER_EPOCH + 1);
+                        
+                        dur_epochs = ceil(duration/CLASS_codec.SECONDS_PER_EPOCH);
+                        stage(cur_epoch:cur_epoch+dur_epochs-1) = stageVal;
+                        % fprintf('%u\n',stage);
+                    else
+                        
+                    end
+                end
+            end
+            fs = max(HDR.samplerate);
+            stageStruct = CLASS_codec.makeStageEventStruct(stage,fs,HDR);
+
+            
+        end
         
         % =================================================================
         %> @brief This function takes an event file of Stanford Sleep Cohort's .evts
@@ -793,6 +1601,12 @@ classdef CLASS_codec < handle
         %> @retval stageVec A hynpogram of scored sleep stages as parsed from filenameIn.       
         %> @note SSC .evts files give time and samples as elapsed values
         %> starting from 0 (for samples) and 00:00:00.000 (for time stamps)
+        %> @note The stageVec is ordered by epoch from 1:N sequentially, 1
+        %> epoch increase per row  (i.e. stageVec(2) is the stage for epoch
+        %> 2, and stageVec(N) is the stage for the Nth epoch.  It is
+        %> possible that the stageVec is shorter than the recorded file.  In
+        %> this case, it is necessary for the calling member to add 
+        %> addtional epochs as unknown (e.g. 7).
         % =================================================================
         function [SCOStruct, stageVec] = parseSSCevtsFile(filenameIn,unknown_stage_label)
             if(nargin<2)
@@ -808,34 +1622,90 @@ classdef CLASS_codec < handle
                 %Start Sample,End Sample,Start Time (elapsed),End Time (elapsed),Event,File Name
                 %0,58240,00:00:00.000,00:01:53.750,"Bad Data (SaO2)",BadData.evt
                 %----------------------------------------------/
-                scanCell = textscan(fid,'%f %f %s %s %s %s','delimiter',',','commentstyle','#','headerlines',2);
+                
+                headerLine1 = fgetl(fid);
+                    
+                scanCell = textscan(fid,'%f %f %s %s %q %s','delimiter',',','commentstyle','#','headerlines',1);  %used to be 2, but now I retrieve the first line in case there is additional information there.
                 fclose(fid);
                 
                 if(isempty(scanCell{1}))
                     fprintf('Warning!  The file ''%s'' could not be parsed!\nAn empty struct will be returned.',filenameIn);
                     SCOStruct = [];
                     stageVec = [];
-                else 
+                else
                     
+                    fsCell = regexp(headerLine1,'#\s*\w+=(?<samplerate>\d+(\.\d+)?)','names');                    
+                    if(~isempty(fsCell))
+                        SCOStruct.samplerate = str2double(fsCell.samplerate);
+                    else
+                        SCOStruct.samplerate = [];
+                    end
+
                     % parse the stages first
-                    stageInd = strcmp(scanCell{6},'stage.evt');
-                    stageStartStopSamples = [scanCell{1}(stageInd),scanCell{2}(stageInd)];
-                    stageStartStopDatenums =  [datenum(scanCell{3}(stageInd),'HH:MM:SS.FFF'),datenum(scanCell{4}(stageInd),'HH:MM:SS.FFF')];
-                    epochDurSec = datevec(diff(stageStartStopDatenums(1,:)))*[0;0;24*60;60;1;1/60]*60;
-                    epochDurSamples = diff(stageStartStopSamples(1,:));
-                    SCOStruct.samplerate = epochDurSamples/epochDurSec;
-                    lastStageSample  = stageStartStopSamples(end);
-                    numEpochs = lastStageSample/epochDurSamples;  %or stageStartStopSamples(end,1)/epochDurSamples+1;
-                    stageStr = strrep(strrep(strrep(strrep(scanCell{5}(stageInd),'"',''),'Stage ',''),'REM','5'),'Wake','0');
-                    %fill in any missing stages with 7.
-                    missingStageValue = default_unknown_stage;
-                    stageVec = repmat(missingStageValue,numEpochs,1);
-                    stageStartEpochs = stageStartStopSamples(:,1)/epochDurSamples+1;  %evts file's start samples begin at 0; 0-based nubmer, but MATLAB indexing starts at 1.
-                    stageVec(stageStartEpochs) = str2double(stageStr);  % or, equivalently, str2num(cell2mat(stageStr));
-                    %                 y = [eventStruct.epoch,eventStruct.stage];
-                    %                 staFilename = fullfile(outPath,strcat(studyID,'STA'));
-                    %                 save(staFilename,'y','-ascii');
+                    stageInd = strncmpi(scanCell{6},'stage',5);
                     
+                    if(isempty(stageInd) || ~any(stageInd))
+                        stageVec = [];
+                        
+                        if(isempty(SCOStruct.samplerate))
+                           SCOStruct.samplerate = getSamplerateDlg();
+                        end
+                    else
+                        stageStartStopSamples = [scanCell{1}(stageInd),scanCell{2}(stageInd)];
+                        stageStartStopDatenums =  [datenum(scanCell{3}(stageInd),'HH:MM:SS.FFF'),datenum(scanCell{4}(stageInd),'HH:MM:SS.FFF')];
+                        stageDurSecs = datevec(stageStartStopDatenums(:,2)-stageStartStopDatenums(:,1))*[0;0;24*60;60;1;1/60]*60;
+                        %epochDurSec = datevec(diff(stageStartStopDatenums(1,:)))*[0;0;24*60;60;1;1/60]*60;
+                        stageDurSamples = stageStartStopSamples(:,2)-stageStartStopSamples(:,1)+1;
+                        if(isempty(SCOStruct.samplerate))
+                            
+                            % Sometimes that stop sample extends to the next start sample
+                            % due to a systematic conversion problem in
+                            % events files received from Huneo.
+                            if(size(stageStartStopSamples,1)>1)
+                                
+                                if(stageStartStopSamples(1,2)==stageStartStopSamples(2,1))
+                                    stageStartStopSamples(:,2) = stageStartStopSamples(:,2) -1;
+                                    stageDurSamples = stageDurSamples - 1;
+                                end
+                            end
+                            SCOStruct.samplerate = stageDurSamples(1)/stageDurSecs(1);
+                        end
+                        
+                        % Sort the stages just to be sure now.
+                        [lastStageSample, finalStopIndex] = max(stageStartStopSamples(:,2));
+                        stageStartStopEpochs = floor(stageStartStopSamples/SCOStruct.samplerate/CLASS_codec.SECONDS_PER_EPOCH)+1;
+                        numEpochs = stageStartStopEpochs(finalStopIndex,end);
+                        
+                        %numStagedEpochs =  (finalStartValue+stageDurSamples(finalStartIndex))/SCOStruct.samplerate/CLASS_codec.SECONDS_PER_EPOCH; %30 second epcohs
+                        
+                        %numEpochs = ceil(lastStageSample/SCOStruct.samplerate/CLASS_codec.SECONDS_PER_EPOCH);
+                        stageStr = strrep(strrep(strrep(strrep(scanCell{5}(stageInd),'"',''),'Stage ',''),'REM','5'),'Wake','0');
+                        stageStr = strrep(stageStr,'N','');  %These were added with Innsbruck files
+                        stageStr = strrep(stageStr,'W','0');
+                        stageStr = strrep(stageStr,'R','5');
+                        
+                        stageNum = str2double(stageStr);
+                        
+                        %                         stageStr(cellfun(@isempty,stageStr))={num2str(missingStageValue)};
+
+                        %fill in any missing stages with 7.
+                        missingStageValue = default_unknown_stage;
+                        stageVec = repmat(missingStageValue,numEpochs,1);
+                        
+                        for s=1:size(stageStartStopEpochs)
+                            stageVec(stageStartStopEpochs(s,1):stageStartStopEpochs(s,2)) = stageNum(s);
+                        end
+                        %stageStartEpochs = stageStartStopSamples(:,1)/epochDurSamples+1;  %evts file's start samples begin at 0; 0-based nubmer, but MATLAB indexing starts at 1.
+                        %stageVec(stageStartEpochs) = str2double(stageStr);  % or, equivalently, str2num(cell2mat(stageStr));
+                        
+                        % Sometimes we get '' as a stage value, and these
+                        % are converted to nan by str2double.
+                        
+                        stageVec(isnan(stageVec)) = missingStageValue;
+                        %                 y = [eventStruct.epoch,eventStruct.stage];
+                        %                 staFilename = fullfile(outPath,strcat(studyID,'STA'));
+                        %                 save(staFilename,'y','-ascii');
+                    end
                     
                     % Okay, now that we have taken care of the staging, let's
                     % remove it and everything else that is not going to be
@@ -855,8 +1725,9 @@ classdef CLASS_codec < handle
                     SCOStruct.startStopSamples = [scanCell{1},scanCell{2}]+1;
                     
                     % MATLAB starts indices at 1, while the rest of the
-                    % programming world starts at 0.
+                    % programming world starts at 0.               
                     SCOStruct.startStopDatenums =  [datenum(scanCell{3},'HH:MM:SS.FFF'),datenum(scanCell{4},'HH:MM:SS.FFF')];
+               
                     SCOStruct.durationSeconds = datevec(diff(SCOStruct.startStopDatenums,1,2))*[0;0;24*60;60;1;1/60]*60;
                     
                 end
@@ -939,8 +1810,8 @@ classdef CLASS_codec < handle
         %> @brief searches through the roc_struct to find the best possible configurations in terms of sensitivity and specificity and K_0_0, and K_1_0
         %> the roc_struct fields are ordered first by study name and then
         %> by configuration
-        %> @param
-        %> @retval Struct with same fields as input roc_struct and also
+        %> @param roc_struct
+        %> @retval roc_struct Struct with same fields as input roc_struct and also
         %> additional field @c optimum which is a struct contaning the
         %> following fields:
         %> - @c K_0_0
@@ -1306,6 +2177,87 @@ classdef CLASS_codec < handle
             end
         end
         
+        function respStr = getRespType(rint)
+            switch(rint)
+                case 1
+                    respStr = 'Apnea';
+                case 2
+                    respStr = 'Hypopnea';
+                case 5
+                    respStr = 'RERA'; %respiratory effort related arousal
+                otherwise
+                    respStr = '';
+            end
+        end
+        
+        function respMedtypeStr = getRespMediatedType(rint)
+            switch(rint)
+                case 1
+                    respMedtypeStr = 'Central';
+                case 2
+                    respMedtypeStr = 'Mixed';
+                case 3
+                    respMedtypeStr = 'Obstructive';
+                otherwise
+                    respMedtypeStr = '';
+            end
+        end
+        
+        function assocStr = getRespAssociation(rint)
+            switch(rint)
+                case 0
+                    assocStr = '';
+                case 1
+                    assocStr = 'w/Arousal';
+                case 32
+                    assocStr = 'w/Desat';
+                case 33
+                    assocStr = 'w/Arousal w/Desat';
+                otherwise
+                    assocStr = sprintf('w/%d',rint);
+            end
+        end   
+
+        function tagStr = getTagType(tagInt)
+            tagCell = {'Lights'
+                'Bathroom';              
+                'Tech';
+                'Position';
+                'Cough';
+                'Feeding';
+                };
+            try
+                tagStr = tagCell{tagInt};
+            catch me
+                tagStr = '';
+            end
+        end
+        
+        function tagSubStr = getTagSubType(tagInt)
+            tagCell = {'On'
+                'Off';
+                'In';
+                'Out';
+                'Prone';
+                'Supine';
+                'Side';
+                };
+            try
+                tagSubStr = tagCell{tagInt};
+            catch me
+                tagSubStr = '';
+            end
+        end
+        function posStr = getTagSidePosition(tagInt)
+            tagCell = {'Left'
+                'Right';
+                };
+            try
+                posStr = tagCell{tagInt};
+            catch me
+                posStr = '';
+            end
+        end       
             
     end %End static methods
     

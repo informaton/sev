@@ -1,4 +1,5 @@
-function n = findpeaks(x)
+% Returns indices of peak values for vector x.  
+function n = sev_findpeaks(x)
 % Find peaks.
 % n = findpeaks(x)
 
