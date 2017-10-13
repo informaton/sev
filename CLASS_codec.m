@@ -680,8 +680,7 @@ classdef CLASS_codec < handle
                             %                             description{r} = fread(fid,12,'uint16=>char')';  %24 bytes %need to read until I get to a 34 essentially%now at 64 or %32 bytes read
                             %                             remainder(r,:) = fread(fid,bytes_per_record-intro_size,'uint8')';
                         end
-                        stop_sample = start_sample;
-                        
+                        stop_sample = start_sample+5*embla_samplerate_out; %make it 5 seconds for viewing
                                             
                     elseif strcmpi(eventType,'custom')
                         %.evt is a 12 byte record
@@ -726,22 +725,18 @@ classdef CLASS_codec < handle
                             a
                             fseek(fid,32,'bof');
                         end
-                        
                        
-                        desatType = stop_sample;
+                        desatType = stop_sample;                        
+                        respRelated = stop_sample;
                         
                         desatHigh = stop_sample;
                         desatLow = stop_sample;
-                      
-                        respRelated = stop_sample;
-                        optionalDouble = desatHigh;
-                        
+                        unknownFlags = nan(HDR.num_records,1);
+                        otherStartStop = nan(HDR.num_records,2);
+                        unknownDouble = desatHigh;
                         % 48 byte record
-                        if(bytes_per_record ==48)
-                            intro_size = 44;
-                            remainder_size = bytes_per_record-intro_size;
-                            remainder = zeros(HDR.num_records,remainder_size,'uint8');
-                            unknown = zeros(HDR.num_records,1,'uint32');
+                        if(bytes_per_record ==48)                           
+                            remainder = nan(HDR.num_records,1);
                             for r=1:HDR.num_records
                                 
                                 start_sample(r) = fread(fid,1,'uint32'); % 04
@@ -756,12 +751,11 @@ classdef CLASS_codec < handle
                                 %4 bytes 224  106   99  104] [186  131   88   64]  [87   27   67  211]  [29 108   87   64]   [9  144   98    0  228  151    98  0]
                                 %4 bytes
                                 evtID(r,:) = fread(fid,2,'uint8'); % 10
-                                desatType(r) = fread(fid,1,'uint16'); %12
-                                % Arousal (No,Yes: 0,1) 2 bytes
+                                desatType(r) = fread(fid,1,'uint16'); %12                                
                                 respRelated(r) = fread(fid,1,'uint16'); %14
-                                fseek(fid,2,'cof'); %16 (padding, 255,255) %16
-                                optionalDouble(r) = fread(fid,1,'double'); % 24
-                                unknown(r) = fread(fid,1,'uint32'); % 28
+                                unknownFlags(r) = fread(fid,1,'int16'); %resp related flag %16
+                                otherStartStop(r,:) = fread(fid,2,'int32'); % 24 % Padding
+                                %                                 unknown(r) = fread(fid,1,'uint32'); % 28
                                 % Signal# (##) 2 bytes
                                 %                             signal(r) = fread(fid,1,'uint16'); %16
                                 % Order of events placed (##) 2 bytes
@@ -772,9 +766,10 @@ classdef CLASS_codec < handle
                                 
                                 desatHigh(r) = fread(fid,1,'double'); % 36
                                 desatLow(r) = fread(fid,1,'double');  % 44
-                                
-                                % last 4 bytes: checksum
-                                remainder(r,:) = fread(fid,4,'uint8');
+                                unknownDouble(r) = fread(fid,1,'double');
+                                remainder(r) = unknownDouble(r);
+
+%                                 remainder(r) = fread(fid,1,'double');
                             end
                         elseif(bytes_per_record ==80)
                             remainder = zeros(HDR.num_records,4,'uint8');
@@ -784,12 +779,15 @@ classdef CLASS_codec < handle
                                 evtID(r,:) = fread(fid,2,'uint8'); % 10
                                 desatType(r) = fread(fid,1,'uint16'); %12
                                 respRelated(r) = fread(fid,1,'uint16'); %14
-                                fseek(fid,10,'cof'); %24 [0x2 255x8]                                
+                                unknownFlags(r) = fread(fid,1,'int16'); %resp related flag %16
+                                otherStartStop(r,:) = fread(fid,2,'int32'); % 24 % Padding                                                                         
                                 desatHigh(r) = fread(fid,1,'double'); % 32
                                 desatLow(r) = fread(fid,1,'double');  % 40
-                                fseek(fid,2,'cof'); % 42 [255x2]
-                                fseek(fid,4,'cof'); %46 
-                                fseek(fid,2,'cof'); % 48 [0x2]
+                                unknownDouble(r) = fread(fid,1,'double');
+                                %                                 fseek(fid,2,'cof'); % 42 [255x2]
+                                %                                 fseek(fid,4,'cof'); %46
+                                %                                 fseek(fid,2,'cof'); % 48 [0x2]
+                                
                                 fseek(fid,28,'cof'); % 76 [255x28]
                                 % last 4 bytes: checksum
                                 remainder(r,:) = fread(fid,4,'uint8');% 80 [41,108,0,0]
@@ -813,7 +811,7 @@ classdef CLASS_codec < handle
                             else
                                 respStr = sprintf(' w/%d',respRelated(r));
                             end                            
-                           description{r} = strtrim(sprintf('High=%s Low=%s%s%s%',desatHigh(r), desatLow(r),subIDStr,desatStr,respStr));
+                           description{r} = strtrim(sprintf('High=%f Low=%f%s%s%s',desatHigh(r), desatLow(r),subIDStr,desatStr,respStr));
                         end
 
                     elseif strcmpi(eventType,'filesect')
@@ -842,7 +840,8 @@ classdef CLASS_codec < handle
                             
                             remainder{r}=curRecord(descriptionStop+1:end-1);
                             recordStopSig = curRecord(end); % 31
-                        end  
+                        end 
+                        stop_sample = start_sample+5*embla_samplerate_out; %make it 5 seconds for viewing
                     elseif strcmpi(eventType,'hr')
                         %  32 byte record
                         if(false)
@@ -1203,7 +1202,8 @@ classdef CLASS_codec < handle
                                 CLASS_codec.getTagSubType(tagSubType(r)),CLASS_codec.getTagSidePosition(tagSidePosition(r))));
                             
                         end
-                        stop_sample = start_sample;
+                        stop_sample = start_sample+5*embla_samplerate_out; %make it 5 seconds for viewing
+
                         
                     elseif(strcmpi(eventType,'user'))
                         if(false)
@@ -1248,7 +1248,8 @@ classdef CLASS_codec < handle
                             %tokens of  [0    17     0   153     0     3
                             %1     9     0 ]
                         end
-                        stop_sample = start_sample;
+                        stop_sample = start_sample+5*embla_samplerate_out; %make it 5 seconds for viewing
+
 
                     end
                                         
