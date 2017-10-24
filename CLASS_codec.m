@@ -880,14 +880,14 @@ classdef CLASS_codec < handle
                         studyType = start_sample;
                         readLevels = zeros(HDR.num_records,2);
                         remainder = zeros(HDR.num_records,8,'uint8');
-
+                        unknown = nan(HDR.num_records,1);
                         for r=1:HDR.num_records
                             start_sample(r) = fread(fid,1,'uint32');
                             stop_sample(r) = fread(fid,1,'uint32'); % duration?
                             evtID(r,:) = fread(fid,2,'uint8');   %10
                             studyType(r) = evtID(r,2);                            
                             fseek(fid,4,'cof');  %unused. %14
-                            fread(fid,1,'uint16'); % used but unknown %16
+                            unknown(r) = fread(fid,1,'uint16'); % used but unknown %16 % maybe ascii char
                             readLevels(r,:) = fread(fid,2,'double'); %32
                             remainder(r,:) = fread(fid,8,'uint8');
                         end
@@ -902,7 +902,7 @@ classdef CLASS_codec < handle
                                 subIDStr = 'Bilevel';
                                 levelStr = sprintf('(%0.3f %0.3f)',readLevels(r,:));
                             else
-                                subIDStr = sprintf('Numeric subID=%d',evtID(r,2));
+                                subIDStr = sprintf('Numeric(subID=%d)',evtID(r,2));
                                 levelStr = sprintf('(%0.3f %0.3f)',readLevels(r,:));
                             end
                            description{r} = sprintf('%s %s',subIDStr,levelStr);
