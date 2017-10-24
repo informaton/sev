@@ -1042,8 +1042,9 @@ classdef CLASS_events_container < handle
                 obj.removeEvent(event_index);
             else
                 
-                %get's the pointer to the event object
+                %get's the 'pointer' to the event object
                 event_obj = obj.getEventObj(event_index);
+                % ... and updates using it
                 event_obj.start_stop_matrix = event_data;
                 event_obj.paramStruct = event_paramStruct;
                 event_obj.summary_stats_needs_updating_Bool = true;
@@ -2334,9 +2335,13 @@ classdef CLASS_events_container < handle
         %> @retval childobj Instance of CLASS_events with label @c
         %> thisLabel
         % =================================================================
-        function childobj = getEventObjFromLabel(obj,thisLabel)
-            allLabels = obj.get_event_labels();            
-            childobj = obj.cell_of_events{strcmpi(thisLabel,allLabels)};
+        function evtObj = getEventObjFromLabel(obj,thisLabel)
+            matchingLabels = strcmpi(thisLabel,obj.get_event_labels());            
+            if(any(matchingLabels))
+                evtObj = obj.cell_of_events{matchingLabels};
+            else
+                evtObj = [];
+            end
         end
         
         % =================================================================

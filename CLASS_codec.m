@@ -570,6 +570,7 @@ classdef CLASS_codec < handle
                 stage = [];
                 start_stop_matrix = [];
                 description = [];
+                evtID = [];
                 
                 remainder = [];
                 eventType = name;
