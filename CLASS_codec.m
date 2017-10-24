@@ -865,6 +865,7 @@ classdef CLASS_codec < handle
                             remainder(r,:) = fread(fid,4,'uint16');
                         end                          
                     elseif(strcmpi(eventType,'numeric'))
+                        % With text fields 7060_5-7-2006/numeric.evt
                         fseek(fid,32,'bof');
                         if(false)
                             fseek(fid,32,'bof');
@@ -875,7 +876,6 @@ classdef CLASS_codec < handle
                             a(:,9:end)
                             fseek(fid,32,'bof');
                         end
-                        description = cell(HDR.num_records,1); 
                         studyType = start_sample;
                         readLevels = zeros(HDR.num_records,2);
                         remainder = zeros(HDR.num_records,8,'uint8');
@@ -891,6 +891,22 @@ classdef CLASS_codec < handle
                             remainder(r,:) = fread(fid,8,'uint8');
                         end
                         stop_sample = start_sample;
+                        description = cell(HDR.num_records,1);                         
+                        for r=1:HDR.num_records
+                            %subIDStr = this.getNumericSubID(evtID(r,2));
+                            if(evtID(r,2)==1)
+                                subIDStr = 'CPAP';
+                                levelStr = sprintf('(%0.3f)',readLevels(r,1));
+                            elseif(evtID(r,2)==2)
+                                subIDStr = 'Bilevel';
+                                levelStr = sprintf('(%0.3f %0.3f)',readLevels(r,:));
+                            else
+                                subIDStr = sprintf('Numeric subID=%d',evtID(r,2));
+                                levelStr = sprintf('(%0.3f %0.3f)',readLevels(r,:));
+                            end
+                           description{r} = sprintf('%s %s',subIDStr,levelStr);
+                        end
+                        
                         
                     %sometimes these have the extension .nvt
                     elseif(strcmpi(eventType,'plm'))
@@ -1132,8 +1148,8 @@ classdef CLASS_codec < handle
                         stage = zeros(HDR.num_records,1);  %had been zeros(-1, HDR.num_records,1); on 12/6/2016
                         for r=1:HDR.num_records
                             start_sample(r) = fread(fid,1,'uint32');
-                            evtID(r,1) = fread(fid,1,'uint8');
-                            stage(r) = fread(fid,1,'uint8');
+                            evtID(r,:) = fread(fid,2,'uint8');
+                            stage(r) = evtID(r,2);
                             fseek(fid,bytes_per_record-intro_size,'cof');
                         end
                         stage = stage-1;
@@ -1192,8 +1208,8 @@ classdef CLASS_codec < handle
                         
                         for r=1:HDR.num_records
                             start_sample(r) = fread(fid,1,'uint32');
-                            evtID(r,1) = fread(fid,1,'uint8'); % 2,
-                            tagType(r) = fread(fid,1,'uint8');
+                            evtID(r,:) = fread(fid,2,'uint8'); %
+                            tagType(r) = evtID(r,2);
                             tagSubType(r) = fread(fid,1,'uint8');
                             tagSidePosition(r) = fread(fid,1,'uint8');  
                             
@@ -1271,7 +1287,7 @@ classdef CLASS_codec < handle
                 embla_evt_Struct.dur_sec = dur_sec;
                 embla_evt_Struct.epoch = epoch;
                 embla_evt_Struct.stage = stage;
-                
+                embla_evt_Struct.evtID = evtID;
                 if(~isempty(description))
                     embla_evt_Struct.description = description;
                 end

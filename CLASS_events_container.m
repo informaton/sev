@@ -2588,7 +2588,7 @@ classdef CLASS_events_container < handle
         %> @retval obj Instance of CLASS_events_container
         function obj = importEmblaEvtDir(embla_path,embla_samplerate,desired_samplerate)
             obj = CLASS_events_container();
-            import_types = {'biocals','resp','desat','plm','BadData','arousal','snore','tag','user','filesect'}; 
+            import_types = {'biocals','resp','desat','plm','BadData','arousal','snore','tag','user','filesect','numeric'}; 
             if(nargin<2 || isempty(embla_samplerate))
                 stage_evt_file = fullfile(embla_path,'stage.evt');
                 if(exist(stage_evt_file,'file'))
