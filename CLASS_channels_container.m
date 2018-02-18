@@ -309,7 +309,7 @@ classdef CLASS_channels_container < handle
            set(obj.parent_fig,'pointer','crosshair','WindowScrollWheelFcn',...
                {@obj.resize_WindowScrollWheelFcn,...
                obj.getCurrentChild(),handles.text_marker});
-       end;
+       end
        
        
        % =================================================================
@@ -399,12 +399,12 @@ classdef CLASS_channels_container < handle
            %the windowwheelscrollfcn set by contextmenu_line_resize_callback
            %it is used to adjust the size of the selected channel object (channelObj)
            scroll_step = 0.05;
-           lowerbound = 0.01;
+           lowerbound = 0.001;
            channelObj.scale = max(lowerbound,channelObj.scale-eventdata.VerticalScrollCount*scroll_step);
            channelObj.draw();
            
            %update this text scale...
-           click_str = sprintf('Scale: %0.2f',channelObj.scale);
+           click_str = sprintf('Scale: %0.3f',channelObj.scale);
            set(text_h,'string',click_str);
        end
        

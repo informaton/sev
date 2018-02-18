@@ -322,6 +322,7 @@ classdef CLASS_UI_marking < handle
             set(handles.menu_file_import_evtsFile,'callback',@obj.menu_file_import_evtsFile_callback);
                         
             set(handles.menu_file_load_text_channel,'callback',@obj.menu_file_load_text_channel_callback);
+            set(handles.menu_file_import_mat_channels,'callback',@obj.menu_import_mat_channels_callback);
             set(handles.menu_file_load_events_container,'callback',@obj.menu_file_load_events_container_callback);
             set(handles.menu_file_import_Evt_database,'callback',@obj.menu_file_import_evt_database_callback);
                %export section
@@ -537,9 +538,75 @@ classdef CLASS_UI_marking < handle
                 EVENT_CONTAINER.loadEventsFromWSCscoFile(fullfile(pathname,filename));
                 EVENT_CONTAINER.draw_events(); %events_to_plot(event_index) = 1;                
                 obj.refreshAxes();
-            end;
+            end
             
         end
+        
+        % =================================================================
+        %> @brief Loads signal data from a matlab archive file (.mat)
+        %> @param obj instance of CLASS_UI_marking
+        % =================================================================        
+        function menu_import_mat_channels_callback(obj, varargin)
+            global CHANNELS_CONTAINER;
+            
+            candidateFilename = obj.SETTINGS.VIEW.mat_channels_filename;
+            
+            msg = 'Select a .mat file with channel data (struct format) to load';
+            fileFilter = {'*.mat;*.MAT','MATLAB archive files';'*.*','All files'};
+            
+            if(~exist(candidateFilename,'file'))
+                candidateFilename = pwd;
+            end
+            fullfile = uigetfullfile(fileFilter,msg, candidateFilename);
+           
+                
+            if(~isempty(fullfile))
+                
+                obj.SETTINGS.VIEW.mat_channels_filename = fullfile;
+                
+                channelData = load(fullfile);
+                if(isfield(channelData,'samplerate'))
+                    fs = channelData.samplerate;
+                    channelData = rmfield(channelData,'samplerate');
+                else
+                    try
+                        defaultAnswer = {num2str(obj.SETTINGS.VIEW.mat_channels_samplerate)};
+                    catch me
+                        showME(me);
+                        defaultAnswer = {'100'};
+                    end
+                    fs = getSamplerateDlg(defaultAnswer);
+                end
+                
+                if(isfield(channelData,'scale'))
+                    scale = channelData.scale;
+                    channelData = rmfield(channelData,'scale');
+                else
+                    scale = 1;
+                end
+                channelNames = fieldnames(channelData);
+
+                for ch=1:numel(channelNames)
+                    channelName = channelNames{ch};
+                    HDR = CHANNELS_CONTAINER.loadGenericChannel(channelData.(channelName)*scale,fs,channelName);
+                end
+                
+                obj.setDateTimeFromHDR(HDR);
+                stages_filename = [];                
+                obj.loadSTAGES(stages_filename,obj.num_epochs);
+                obj.display_samples = 1:obj.getSamplesPerEpoch();
+                obj.setAxesResolution(); %calls refreshAxes()  %calls set epoch;
+                
+                CHANNELS_CONTAINER.align_channels_on_axes();
+                CHANNELS_CONTAINER.setChannelSettings();
+                    
+                enableFigureHandles(obj.figurehandle.sev);
+                set(obj.texthandle.src_filename,'string',fullfile);
+                obj.STATE.single_study_running = true;
+            end
+            obj.sev_loading_file_flag = false;        
+        end
+        
         
         % =================================================================
         %> @brief Loads generic text file data as channel data.
@@ -2004,6 +2071,7 @@ classdef CLASS_UI_marking < handle
             set(handles.menu_file_export,'enable','on');
             set(handles.menu_file_import,'enable','on');
             set(handles.menu_file_load_text_channel,'enable','on');
+            set(handles.menu_file_import_mat_channels,'enable','on');
             
             set(handles.menu_tools,'enable','on');
             set(handles.menu_tools_roc,'enable','on');
