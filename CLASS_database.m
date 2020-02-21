@@ -28,7 +28,7 @@
 %> Copy all innodb tables from the old mysql/data directory to the new one
 %>  (e.g. ib_logfile0, ib_logfile1, and ibdata).  
 %> From the terminal run, mysql_upgrade
-%> @note Copyright Hyatt Moore IV, 2011,2012,2013,2014,2015
+%> @note Copyright Hyatt Moore IV, 2011,2012,2013,2014,2015,...,2019, ...
 % ======================================================================
 classdef CLASS_database < handle
 
@@ -113,8 +113,9 @@ classdef CLASS_database < handle
             % Author: Hyatt Moore IV
             % Created 12/27/11
             %
-            % Last Modified 1/5/12
-            mym('open','localhost','root')
+            % Last Modified 2/5/19
+            % Last Modified 1/5/12                        
+            mym('open','localhost','root','<add password here>')
             
             %setup a user for this person
             mym(['GRANT ALL ON ',obj.dbStruct.name,'.* TO ''',obj.dbStruct.user,'''@''localhost'' IDENTIFIED BY ''',obj.dbStruct.password,'''']);
@@ -354,7 +355,7 @@ classdef CLASS_database < handle
                     selectStr = cell2mat(strcat(cellOfKeys,',')');
                 else
                     selectStr = cell2mat(strcat(cellOfKeys',','));
-                end;
+                end
                 %remove the trailing ','
                 selectStr(end) = [];
                 
@@ -392,7 +393,7 @@ classdef CLASS_database < handle
                     selectStr = cell2mat(strrep(strcat('***',stat,'(',cellOfFields',') AS***',cellOfFields',','),'***',' '));
                 else
                     selectStr = cell2mat(strrep(strcat('***',stat,'(',cellOfFields,') AS***',cellOfFields,','),'***',' '));
-                end;
+                end
                 %remove the trailing ','
                 selectStr(end) = [];                
             end
@@ -832,7 +833,7 @@ classdef CLASS_database < handle
                 else
                     strfmt = '%f';
                     if(~isnumeric(data))
-                        data = str2num(data);
+                        data = str2num(data); %#ok<ST2NM>
                     end
                     string = sprintf(strfmt,data(1));
                 end
@@ -847,7 +848,7 @@ classdef CLASS_database < handle
                     for k=2:numel(data)
                         string = sprintf(strfmt,string,data(k));
                     end
-                end;
+                end
             end
             string=['(',string,')'];
         end

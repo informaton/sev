@@ -281,7 +281,6 @@ function playlist = getPlaylist(handles,ply_filename)
         set(handles.radio_processList,'value',1);
         set(handles.edit_selectPlaylist,'string',ply_filename);
     end
-    
 end
 
 function filtered_file_struct = filterPlaylist(file_struct,file_filter_list)
@@ -295,7 +294,6 @@ function filtered_file_struct = filterPlaylist(file_struct,file_filter_list)
         filtered_file_struct = file_struct;  %i.e. nothing to filter
     end
 end
-
 
 function checkPathForEDFs(handles,playlist)
     %looks in the path for EDFs
@@ -685,7 +683,7 @@ function push_run_Callback(hObject, eventdata, handles)
         artifact_method_values = cell2mat(artifact_method_values);
         artifact_channel1_values = cell2mat(artifact_channel1_values);
         artifact_channel2_values = cell2mat(artifact_channel2_values);
-    end;
+    end
     
     artifact_settings_handles = flipud(findobj(handles.panel_artifact,'-regexp','tag','settings'));
     if(iscell(artifact_settings_handles))
@@ -704,7 +702,7 @@ function push_run_Callback(hObject, eventdata, handles)
     artifact_channel_values = [artifact_channel1_values(selected_artifacts),artifact_channel2_values(selected_artifacts)];
     
     num_selected_artifacts = sum(selected_artifacts);
-    artifact_settings = cell(num_selected_artifacts,1);
+    artifact_settings = getArtifactStruct(num_selected_artifacts);
     
     for k = 1:num_selected_artifacts
         selected_method = artifact_method_values(k);
@@ -747,7 +745,7 @@ function push_run_Callback(hObject, eventdata, handles)
         %         params = [];
         
         artifactStruct.params = params;
-        artifact_settings{k} = artifactStruct;
+        artifact_settings(k) = artifactStruct;
     end
     
     BATCH_PROCESS.artifact_settings = artifact_settings;

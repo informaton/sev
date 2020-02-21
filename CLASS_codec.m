@@ -34,8 +34,8 @@ classdef CLASS_codec < handle
         %> - @c study_duration_in_seconds How long the study is measured in
         %> seconds based on the number of epochs entered and the
         %> standard_epoch_sec duration (i.e. 30 seconds)
-        
-        
+        %> - @c standard_epoch_sec standard epoch duration in sec (30 s)
+        %> - @c standard_epoch_min minutes per epoch (e.g. 0.5 m)
         %> @note Author: Hyatt Moore IV
         %> Written: 9.26.2012
         %> modified before 12.3.2012 to include scoreSleepCycles(.);
@@ -43,9 +43,9 @@ classdef CLASS_codec < handle
         %> modified 2/2/2013 - added .standard_epoch_sec = 30
         %>                           .study_duration_in_seconds
         %> modified 5.1.2013 - added .filename = stages_filename;
+        %> midified 12.17.2019 - adding stage summary metrics (e.g. sleep
+        %>                       latency metric)        
         function STAGES = loadSTAGES(stages_filename,num_epochs,unknown_stage_label)            
-            STAGES.standard_epoch_sec = CLASS_codec.SECONDS_PER_EPOCH; %30 second epochs
-            STAGES.standard_epoch_min = CLASS_codec.SECONDS_PER_EPOCH/60; %30 second epochs
             
             if(nargin<3)
                 default_unknown_stage = 7;
@@ -59,12 +59,8 @@ classdef CLASS_codec < handle
                 default_unknown_stage = unknown_stage_label;
             end
             
-            % Make a default line, regardless of what comes out of here.
-            
-            STAGES.line = repmat(default_unknown_stage,num_epochs,1);
-            STAGES.filename = [];
-            STAGES.firstNonWake = [];
-            STAGES.count = zeros(8,1);
+            % Make a default line, regardless of what comes out of here.            
+            stages = repmat(default_unknown_stage,num_epochs,1);
             
             if(~isempty(stages_filename))
                 [~,~,ext] = fileparts(stages_filename);
@@ -76,58 +72,16 @@ classdef CLASS_codec < handle
                         if(strcmpi(ext,'.sta'))
                             stages = load(stages_filename,'-ASCII'); %for ASCII file type loading
                         else
-                            [~,stageVec] = CLASS_codec.parseSSCevtsFile(stages_filename,default_unknown_stage);
-                            epochs = 1:numel(stageVec);
-                            stages = [epochs(:), stageVec];
+                            [~,stages] = CLASS_codec.parseSSCevtsFile(stages_filename,default_unknown_stage);                            
                         end
                         
-                        % stages is Mx2 matrix with column 1 being the
-                        % epochs and column 2 being the stage
-                        if(num_epochs<0)
-                           num_epochs = size(stages,2);
-                        end
                         
-                        if(nargin>1 && ~isempty(num_epochs) && floor(num_epochs)>0)
-                            if(num_epochs~=size(stages,1))
-                                STAGES.epochs = stages(:,1);
-                                STAGES.line = repmat(default_unknown_stage,max([num_epochs;size(stages,1);STAGES.epochs(:)]),1);
-                                STAGES.line(STAGES.epochs) = stages(:,2);
-                            else
-                                %this cuts things off at the end, where we assume the
-                                %disconnect between num_epochs expected and num epochs found
-                                %has occurred. However, logically, there is no guarantee that
-                                %the disconnect did not occur anywhere else (e.g. at the
-                                %beginning, or sporadically throughout)
-                                STAGES.line = stages(1:floor(num_epochs),2);
-                            end
-                        else
-                            STAGES.line = stages(:,2); %grab the sleep stages
-                        end
                         %                 elseif(strcmpi(ext,'.evts'))
                         %                     [~,stageVec] = CLASS_codec.parseSSCevtsFile(stages_filename,default_unknown_stage);
                         %                     STAGES.line = stageVec;
                         %                     STAGES.epochs = 1:numel(STAGES.line);
                         %                 end
                     end
-                    
-                    if(nargin<2)
-                        num_epochs = numel(STAGES.line);
-                    end
-                    %calculate number of epochs in each stage
-                    for k = 0:numel(STAGES.count)-1
-                        STAGES.count(k+1) = sum(STAGES.line==k);
-                    end
-                    
-                    firstNonWake = 1;
-                    while( firstNonWake<=numel(STAGES.line) && (STAGES.line(firstNonWake)==7||STAGES.line(firstNonWake)==0))
-                        firstNonWake = firstNonWake+1;
-                    end
-                    STAGES.firstNonWake = firstNonWake;
-                    if(num_epochs~=numel(STAGES.line))
-                        fprintf(1,'%s contains %u stages, but shows it should have %u\n',stages_filename,numel(STAGES.line),num_epochs);
-                    end
-                    
-                    STAGES.filename = stages_filename;
                 else
                     
                     mfile =  strcat(mfilename('fullpath'),'.m');
@@ -140,14 +94,133 @@ classdef CLASS_codec < handle
                 fprintf('failed in %s\n\tMissing or empty filename argument for loadSTAGES\n',mfile);
                 % throw(MException('SEV:ARGERR','Missing or empty filename argument for loadSTAGES'));
             end
-            %this may be unnecessary when the user does not care about sleep cycles.
-            % STAGES.cycles = scoreSleepCycles(STAGES.line);
-            STAGES.cycles = scoreSleepCycles_ver_REMweight(STAGES.line);
-            STAGES.study_duration_in_seconds = STAGES.standard_epoch_sec*numel(STAGES.line);
             
-                    
+            STAGES = CLASS_codec.stages2STAGES(stages,num_epochs, default_unknown_stage);
+            STAGES.filename = stages_filename;
+            
         end
         
+        % stages is either an Mx1 vector or an Mx2 or Mx3 matrix
+        % If Mx1 then elements are stages in epoch order.
+        % If Mx2 then column 1 comprises the scored epoch number and column 2
+        % comprises the sleep stage scored for the corresponding epoch
+        function STAGES = stages2STAGES(stages, num_epochs, default_unknown_stage)
+            narginchk(1,3);
+            
+            if(nargin<3)
+                default_unknown_stage = 7;
+            end
+            STAGES.standard_epoch_sec = CLASS_codec.SECONDS_PER_EPOCH; %30 second epochs
+            STAGES.standard_epoch_min = CLASS_codec.SECONDS_PER_EPOCH/60; %30 second epochs
+            
+            if(size(stages,2)>2)
+                stages = stages(:, 1:2);
+            end
+
+            if(size(stages,2)~=2)
+                stage_vec = stages;
+                epochs = 1:numel(stage_vec);
+                stages = [epochs(:), stage_vec];                
+            end
+            
+            % stages is Mx2 matrix with column 1 being the
+            % epochs and column 2 being the stage
+            if(nargin<2 || num_epochs<0)
+                num_epochs = size(stages,1);
+            end
+            
+            if(nargin>1 && ~isempty(num_epochs) && floor(num_epochs)>0)
+                if(num_epochs~=size(stages,1))
+                    STAGES.epochs = stages(:,1);
+                    STAGES.line = repmat(default_unknown_stage,max([num_epochs;size(stages,1);STAGES.epochs(:)]),1);
+                    STAGES.line(STAGES.epochs) = stages(:,2);
+                else
+                    %this cuts things off at the end, where we assume the
+                    %disconnect between num_epochs expected and num epochs found
+                    %has occurred. However, logically, there is no guarantee that
+                    %the disconnect did not occur anywhere else (e.g. at the
+                    %beginning, or sporadically throughout)
+                    STAGES.line = stages(1:floor(num_epochs),2);
+                end
+            else
+                STAGES.line = stages(:,2); %grab the sleep stages
+            end
+            
+            STAGES.filename = [];
+            STAGES.firstNonWake = [];
+            STAGES.summary_field_names = CLASS_codec.getSTAGESSummaryFieldNames();
+            STAGES.count = zeros(8,1);
+            
+            if(nargin<2)
+                num_epochs = numel(STAGES.line);
+            end
+            %calculate number of epochs in each stage
+            for k = 0:numel(STAGES.count)-1
+                STAGES.count(k+1) = sum(STAGES.line==k);
+            end
+            
+            firstNonWake = 1;
+            while( firstNonWake<=numel(STAGES.line) && (STAGES.line(firstNonWake)==7||STAGES.line(firstNonWake)==0))
+                firstNonWake = firstNonWake+1;
+            end
+            STAGES.firstNonWake = firstNonWake;
+            if(num_epochs~=numel(STAGES.line))
+                fprintf(1,'%s contains %u stages, but shows it should have %u\n',stages_filename,numel(STAGES.line),num_epochs);
+            end
+            
+            %this may be unnecessary when the user does not care about sleep cycles.
+            % STAGES.cycles = scoreSleepCycles(STAGES.line);
+            
+            STAGES.cycles = scoreSleepCycles_ver_REMweight(STAGES.line);
+            STAGES.study_duration_in_seconds = STAGES.standard_epoch_sec*numel(STAGES.line);
+            STAGES.total_wake_sleep_minutes = sum(STAGES.line~=7) * STAGES.standard_epoch_min;
+            STAGES.sleep_latency_minutes = CLASS_codec.getSleepLatency(STAGES);
+            STAGES.rem_latency_minutes = CLASS_codec.getREMLatency(STAGES);
+            STAGES.waso_minutes = sum(STAGES.line(STAGES.firstNonWake:end)==0) * STAGES.standard_epoch_min;
+            STAGES.total_wake_min = sum(STAGES.line==0) * STAGES.standard_epoch_min;
+            STAGES.total_sleep_min = sum(STAGES.line~=0 & STAGES.line~=7) * STAGES.standard_epoch_min;
+            STAGES.total_s1_min = sum(STAGES.line==1) * STAGES.standard_epoch_min;
+            STAGES.total_s2_min = sum(STAGES.line==2) * STAGES.standard_epoch_min;
+            STAGES.total_sws_min = sum(STAGES.line==3|STAGES.line==4) * STAGES.standard_epoch_min;
+            STAGES.total_rem_min = sum(STAGES.line==5) * STAGES.standard_epoch_min;
+
+            
+        end
+        function summary_field_names = getSTAGESSummaryFieldNames()
+            summary_field_names = { ...
+                'study_duration_in_seconds', 'total_wake_sleep_minutes', ...
+                'sleep_latency_minutes', 'rem_latency_minutes', 'waso_minutes', ...
+                'total_wake_min', 'total_sleep_min', 'total_s1_min', ...
+                'total_s2_min', 'total_sws_min', 'total_rem_min' ...
+                };
+        end
+        
+        function sleepl_minutes_elapsed = getSleepLatency(STAGES)
+            sleepl_minutes_elapsed = STAGES.firstNonWake*STAGES.standard_epoch_min;                   
+        end
+        
+        % The presence of a SOREMP upon first falling asleep was first reported by
+        % Vogel in 1960 and Rechaffen and Dement in approximately half of untreated
+        % patients with narcolepsy.  In a large study of 648 Type 1 patients and
+        % 1369 controls we found that a REM latency (REML) ? 15 minutes was highly
+        % specific in controls (98.0% but only had a specificity of 49.7%.  A
+        % cutoff for REML of <= 15 minutes was used as it is the value also used in
+        % MSLT naps, although in many models REML ranging <= 20 minutes were more
+        % advantageous, allowing sensitivity to be raised to 60% with limited loss
+        % of specificity and are likely to be used in a combined model.
+        function [reml_minutes_elapsed, test_result] = getREMLatency(STAGES, threshold_optional)
+            INIT_SOREMP_THRESHOLD_MIN = 15;
+            REM_STAGE = 5;
+            if(nargin>1 && ~isempty(threshold_optional))
+                threshold_min = threshold_optional;
+            else
+                threshold_min = INIT_SOREMP_THRESHOLD_MIN;
+            end
+            firstREMIndex = find(STAGES.line==REM_STAGE,1);
+            reml_minutes_elapsed = (firstREMIndex - STAGES.firstNonWake)*STAGES.standard_epoch_min;
+            
+            test_result = reml_minutes_elapsed <= threshold_min;
+        end
         
         % ======================================================================
         %> @brief Retrieves SEV compatible hypnogram filename (with path)
@@ -322,7 +395,7 @@ classdef CLASS_codec < handle
                 exportMethodsStruct.mfilename = scanCell{1};
                 exportMethodsStruct.description = scanCell{2};
                 exportMethodsStruct.settingsEditor = scanCell{3};
-            end;
+            end
             
         end
 
@@ -1469,8 +1542,8 @@ classdef CLASS_codec < handle
         %> for field names.
         % =================================================================
         function eventStruct = tal2evt(tal,HDR)
-            startSec = str2double(tal.tal_start);            
-            durationSec = str2double(tal.duration);
+            startSec = tal.tal_start;            
+            durationSec = tal.duration;
             fs = max(HDR.samplerate);  %use the highest sampling rate available in the signal.  Otherwise you may run into issues of decimal precision sample indices.
             stageStrPrefixCount = numel('Sleep stage ');            
             if(strncmpi(tal.annotation,'Sleep stage ',stageStrPrefixCount))
@@ -1749,12 +1822,112 @@ classdef CLASS_codec < handle
                     
                 end
             else
-                fprintf('Warning!  The file ''%s'' does not exist and was not parsed!\nAn empty struct will be returned.',filenameIn);
+                fprintf(2, 'Warning!  The file ''%s'' does not exist and was not parsed!\nAn empty struct will be returned.\n',filenameIn);
                 SCOStruct = [];
                 stageVec = [];
             end
         end
         
+        function [evtStruct, STAGES] = parseWSCexportFile(filenameIn,unknown_stage_label)
+            if(nargin<2)
+                default_unknown_stage = 7;
+            else
+                default_unknown_stage = unknown_stage_label;
+            end
+            
+            evtStruct = [];
+            STAGES = [];
+            if(exist(filenameIn,'file'))
+                fid = fopen(filenameIn,'r');
+                %%---/ Contents of an .export.csv file (first 3 lines): %-----------------------/
+                %;;;
+                %;1.0; 22:41:30.00;Start Recording
+                %;1.0; 22:41:30.00;New Montage - NPSG Standard Plus
+                %----------------------------------------------/
+                
+                frewind(fid);
+                a = textscan(fid, ';%f;%[^;];%[^\n\r]','headerlines',1);
+                
+                fclose(fid);
+                epoch = a{1};
+                start_time = a{2};
+                description = a{3};
+                start_datenum = datenum(start_time,'HH:MM:SS.FFF');                
+                        
+                if(isempty(epoch))
+                    fprintf(2,'Warning!  The file ''%s'' could not be parsed!\nAn empty struct will be returned.\n',filenameIn);
+                else                    
+                                        
+                    % parse the stages first
+                    stageInd = strncmpi(description,'stage',5); % logical indexing vector
+                    
+                    if(~isempty(stageInd) && any(stageInd))                        
+                        stage_epochs = epoch(stageInd);
+                        stage_descriptions = description(stageInd);
+                        stage_start_datenum = start_datenum(stageInd);
+                        stage_start_times = start_time(stageInd);
+                        
+                        evtStruct.epoch = epoch(~stageInd);
+                        evtStruct.description = description(~stageInd);
+                        evtStruct.start_time = start_time(~stageInd);
+                        evtStruct.start_datenum = start_datenum(~stageInd);
+                        
+                        % last_staged_epoch = max(epoch(stageInd));
+                        % first_staged_epoch = min(epoch(stageInd));                        
+                        % num_staged_epochs = last_staged_epoch-first_staged_epoch+1;
+                        num_epochs = max(epoch);
+                        
+                        %numEpochs = ceil(lastStageSample/SCOStruct.samplerate/CLASS_codec.SECONDS_PER_EPOCH);
+                        stageStr = strtrim(strrep(strrep(strrep(strrep(strrep(stage_descriptions,'"',''),'Stage',''),'REM','5'),'Wake','0'),'-',''));
+                        stageStr = strrep(stageStr,'No','7'); % this is the 'No Stage'
+                        stageStr = strrep(stageStr,'N','');  %These were added with Innsbruck files
+                        stageStr = strrep(stageStr,'W','0');
+                        stageStr = strrep(stageStr,'R','5');
+                        
+                        stageNum = str2double(stageStr);
+                        
+                        lights_on_index = strcmpi(evtStruct.description,'Lights On');
+                        
+                        if(isempty(lights_on_index))
+                            last_lights_on_epoch = max(stage_epochs);
+                        else
+                            last_lights_on_epoch = evtStruct.epoch(lights_on_index);
+                        end
+                        
+                        last_scored_epoch = max(last_lights_on_epoch, max(stage_epochs));
+                        
+                        %fill in any missing stages with 7.
+                        missingStageValue = default_unknown_stage;
+                        stageVec = repmat(missingStageValue,last_scored_epoch,1);
+                        
+                        stage_start_epochs = stage_epochs;
+                        stage_end_epochs = [stage_epochs(2:end)-1; last_scored_epoch];
+                        stageStartEndEpochs = [stage_start_epochs, stage_end_epochs];
+                        for s=1:size(stageStartEndEpochs)
+                            stageVec(stageStartEndEpochs(s,1):stageStartEndEpochs(s,2)) = stageNum(s);
+                        end
+                        %stageStartEpochs = stageStartStopSamples(:,1)/epochDurSamples+1;  %evts file's start samples begin at 0; 0-based nubmer, but MATLAB indexing starts at 1.
+                        %stageVec(stageStartEpochs) = str2double(stageStr);  % or, equivalently, str2num(cell2mat(stageStr));
+                        
+                        % Sometimes we get '' as a stage value, and these
+                        % are converted to nan by str2double.
+                        
+                        stageVec(isnan(stageVec)) = missingStageValue;
+                        STAGES = CLASS_codec.stages2STAGES(stageVec, num_epochs); 
+                        
+                        %                 y = [eventStruct.epoch,eventStruct.stage];
+                        %                 staFilename = fullfile(outPath,strcat(studyID,'STA'));
+                        %                 save(staFilename,'y','-ascii');
+                    end
+                    
+                                           
+                end
+            else
+                fprintf('Warning!  The file ''%s'' does not exist and was not parsed!\nAn empty struct will be returned.',filenameIn);
+            end
+        end
+            
+            
         % =================================================================
         %> @brief This function takes an event file of SEV's evt.* format and
         %> returns a struct whose field names are taken from the third header
@@ -1818,7 +1991,7 @@ classdef CLASS_codec < handle
             
             for k=1:numFields %skip the start time...
                 evtStruct.(headerFields{k}) = scanCell{k};
-            end;
+            end
             
             fclose(fid);
         end
@@ -1929,7 +2102,7 @@ classdef CLASS_codec < handle
            str = fgetl(fid);
            if(strcmp(str(1),'#'))
                str = str(2:end);
-           end;
+           end
            
            %pull out all of the column names now and convert to a cell
            col_names = textscan(str,'%s');
@@ -2027,7 +2200,7 @@ classdef CLASS_codec < handle
            str = fgetl(fid);
            if(strcmp(str(1),'#'))
                str = str(2:end);
-           end;
+           end
            col_names = textscan(str,'%s');
            col_names = col_names{1};
            data = textscan(fid,['%f%s%s',repmat('%f',1,numel(col_names)-2)]);

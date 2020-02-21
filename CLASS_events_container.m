@@ -531,8 +531,8 @@ classdef CLASS_events_container < handle
                 event_index = events2hide(k);
                 if(event_index <=obj.num_events)
                     obj.cell_of_events{event_index}.hide;
-                end;
-            end;
+                end
+            end
         end
         
         % =================================================================
@@ -545,8 +545,8 @@ classdef CLASS_events_container < handle
                 event_index = event_indices(k);
                 if(event_index <=obj.num_events && event_index>0)
                     obj.cell_of_events{event_index}.show;
-                end;
-            end;
+                end
+            end
         end
         
         % =================================================================
@@ -594,7 +594,7 @@ classdef CLASS_events_container < handle
                 num_events_in_channel = sum(class_channel_index(1)==obj.channel_vector);
             else
                 num_events_in_channel = 0;
-            end;
+            end
         end
         
         
@@ -615,7 +615,7 @@ classdef CLASS_events_container < handle
              else
                  count =  0;
                  time_in_sec = 0;
-             end;   
+             end   
         end
         
         % =================================================================
@@ -659,7 +659,7 @@ classdef CLASS_events_container < handle
                     obj.cell_of_events{event_index}.appendEvent(single_event);
                     start_stop_matrix_index = obj.getEventCount(event_index);
                 end
-            end;
+            end
             %make sure the parent channel knows to redraw this...
             obj.draw_events(event_index);
         end
@@ -774,7 +774,7 @@ classdef CLASS_events_container < handle
                EDF_index = zeros(1,numel(parent_index));
                for k=1:numel(parent_index)
                    EDF_index(k) = obj.CHANNELS_CONTAINER.cell_of_channels{parent_index(k)}.EDF_index;
-               end;
+               end
                
                parent_index = parent_index(1); %avoid problems wiht multiple parents, as the case with ocular movements.
                
@@ -789,7 +789,7 @@ classdef CLASS_events_container < handle
                parent_EDF_label = obj.defaults.parent_channel_title;
                parent_channel_samplerate = obj.defaults.parent_channel_samplerate;
                EDF_index = 0;
-           end;
+           end
            obj.channel_vector(obj.num_events) = parent_index;
            obj.cell_of_events{obj.num_events} = ...
                CLASS_events([],...
@@ -841,7 +841,7 @@ classdef CLASS_events_container < handle
                         EDF_index = zeros(1,numel(parent_index));
                         for k=1:numel(parent_index)
                             EDF_index(k) = obj.CHANNELS_CONTAINER.cell_of_channels{parent_index(k)}.EDF_index(1);  %sometimes there are two EDF indices here when more than one channel is used in synthesizing the event - and will go back to the original one then.
-                        end;
+                        end
                         
                         parent_index = parent_index(1); %avoid problems wiht multiple parents, as the case with ocular movements.
                         
@@ -856,7 +856,7 @@ classdef CLASS_events_container < handle
                         parent_EDF_label = obj.defaults.parent_channel_title;
                         parent_channel_samplerate = obj.defaults.parent_channel_samplerate;
                         EDF_index = 0;
-                    end;
+                    end
                     class_channel_index = parent_index;
                     
                     obj.channel_vector(obj.num_events) = parent_index;
@@ -892,7 +892,7 @@ classdef CLASS_events_container < handle
                 end
             else
                 disp 'empty event_data';
-            end;
+            end
         end
         
         % =================================================================
@@ -966,7 +966,7 @@ classdef CLASS_events_container < handle
             c = uisetcolor(eventObj.cur_color);
             if(numel(c)~=1)
                 eventObj.updateColor(c);
-            end;        
+            end        
             MARKING.refreshAxes();
         end
         
@@ -1049,7 +1049,7 @@ classdef CLASS_events_container < handle
                 event_obj.paramStruct = event_paramStruct;
                 event_obj.summary_stats_needs_updating_Bool = true;
                 event_obj.source.pStruct = source_pStruct; %update any changes to the detectors parameters;
-            end;
+            end
             
             obj.set_Channel_drawEvents(event_index);
         end
@@ -1139,8 +1139,8 @@ classdef CLASS_events_container < handle
                         event_index = event_indices(k);
                         break; %stop at the first match...
                     end
-                end;
-            end;
+                end
+            end
         end
 
         % =================================================================
@@ -1207,7 +1207,7 @@ classdef CLASS_events_container < handle
                     
                 obj.addEvent(event_data, event_label,class_channel_index,sourceStruct, paramStruct);
                 event_index = obj.num_events;
-            end;
+            end
             
             if((~isempty(obj.roc_truth_ind)&&any(event_index == obj.roc_truth_ind)) ||...
                     (~isempty(obj.roc_estimate_ind)&&any(event_index == obj.roc_estimate_ind)) ||...
@@ -1411,7 +1411,7 @@ classdef CLASS_events_container < handle
                 end
                 mym('CLOSE');
             end
-        end;
+        end
         
         % =================================================================
         %> @brief Save events container to a .mat file.
@@ -1426,7 +1426,7 @@ classdef CLASS_events_container < handle
             %channel
             save(filename,'obj','-mat');
             
-        end;
+        end
         
         % =================================================================
         %> @brief Load events container from a .mat file.
@@ -1443,14 +1443,14 @@ classdef CLASS_events_container < handle
                    if(strcmp(obj.CHANNELS_CONTAINER.cell_of_channels{c}.EDF_label, cur_event.channel_name))
                        class_channel_index = c;
                        break;
-                   end;
-                end;
+                   end
+                end
                 
                 if(isfield(cur_event,'paramStruct'))
                     paramStruct = cur_event.paramStruct;
                 else
                     paramStruct = [];
-                end;
+                end
                 
                 sourceStruct.algorithm = 'external file (.SCO)';
                 sourceStruct.channel_indices = class_channel_index;
@@ -1523,7 +1523,7 @@ classdef CLASS_events_container < handle
                 end
             end
             
-        end;
+        end
 
         % =================================================================
         %> @brief Loads Embla formatted event file (.evt or .nvt) into obj
@@ -1731,7 +1731,7 @@ classdef CLASS_events_container < handle
                     expression = regexp(filename,'([^\.]+\.+)+(?<channel>[^\.]+)\.(?<event>[^\.]+)','names');
                     if(numel(expression)>0)
                         channel_label = expression.channel;
-                    end;
+                    end
                 end
                 if(~isempty(obj.CHANNELS_CONTAINER))
                     if(~isempty(channel_label))
@@ -1739,8 +1739,8 @@ classdef CLASS_events_container < handle
                             if(strcmp(obj.CHANNELS_CONTAINER.cell_of_channels{c}.EDF_label, channel_label))
                                 class_channel_index = c;
                                 break;
-                            end;
-                        end;
+                            end
+                        end
                     end
                     if(class_channel_index == 0)
                         if(~optional_batch_process_running_flag)
@@ -1756,7 +1756,7 @@ classdef CLASS_events_container < handle
                         paramStruct = cur_event.paramStruct;
                     else
                         paramStruct = [];
-                    end;
+                    end
                     
                     sourceStruct.algorithm = 'external file';
                     sourceStruct.channel_indices = class_channel_index;
@@ -1817,7 +1817,7 @@ classdef CLASS_events_container < handle
                     fprintf(fid,'\t%s',keys{k});
                 end
                 fclose(fid);
-            end;
+            end
 
             fid = fopen(filename,'a');
             configID = 1;
@@ -1965,7 +1965,7 @@ classdef CLASS_events_container < handle
                     warndlg('No events currently available');
                 else
                     
-                end;
+                end
             end
         end  %end save2evts(obj,varargin) 
         
@@ -2008,7 +2008,7 @@ classdef CLASS_events_container < handle
                             eventLabel = strcat(eventLabel,' (',obj.CHANNELS_CONTAINER.getChannelName(obj.channel_vector(k)),')');
                         end
                         uicontrol('style','checkbox','units',units,'string',eventLabel,'parent',pan_channels,'userdata',k,'value',1);
-                    end;
+                    end
                     
                     % left and bottom are the distance from the lower-left corner of the parent object to the lower-left corner of the uicontrol object. width and height are the dimensions of the uicontrol rectangle. All measurements are in units specified by the Units property.
                     
@@ -2069,7 +2069,7 @@ classdef CLASS_events_container < handle
                             end
                         else
                             event2save = get(h_channels(cell2mat(get(h_channels,'value'))==1),'userdata');
-                        end;
+                        end
                         if(iscell(event2save))
                             event2save = cell2mat(event2save);
                         end
@@ -2093,8 +2093,8 @@ classdef CLASS_events_container < handle
                             end
                         end
                         delete(dlg);
-                    end;
-                end;
+                    end
+                end
             end
         end 
         
@@ -2176,7 +2176,7 @@ classdef CLASS_events_container < handle
                     warndlg('No events currently available');
                 else
                     
-                end;
+                end
             end
         end  %end save2sco(obj,varargin)
         
