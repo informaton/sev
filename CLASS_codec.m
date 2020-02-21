@@ -163,6 +163,8 @@ classdef CLASS_codec < handle
             while( firstNonWake<=numel(STAGES.line) && (STAGES.line(firstNonWake)==7||STAGES.line(firstNonWake)==0))
                 firstNonWake = firstNonWake+1;
             end
+            
+            [STAGES.tib_first_epoch, STAGES.tib_final_epoch] = CLASS_Codec.getTIBEpochs(STAGES.line, default_unknown_stage);
             STAGES.firstNonWake = firstNonWake;
             if(num_epochs~=numel(STAGES.line))
                 fprintf(1,'%s contains %u stages, but shows it should have %u\n',stages_filename,numel(STAGES.line),num_epochs);
@@ -183,12 +185,35 @@ classdef CLASS_codec < handle
             STAGES.total_s2_min = sum(STAGES.line==2) * STAGES.standard_epoch_min;
             STAGES.total_sws_min = sum(STAGES.line==3|STAGES.line==4) * STAGES.standard_epoch_min;
             STAGES.total_rem_min = sum(STAGES.line==5) * STAGES.standard_epoch_min;
-
             
+            num_epochs_in_bed = STAGES.tib_final_epoch-STAGES.tib_first_epoch+1;
+            if isempty(num_epochs_in_bed)
+                num_epochs_in_bed = 0;
+            end
+            STAGES.tib_min = max(num_epochs_in_bed *STAGES.standard_epoch_min,0); % ensure sure we don't get negative values with max(...,0)
         end
+        
+        function [first_epoch, final_epoch] = getTIBEpochs(stages_vec, not_in_bed_value)
+            if nargin<2
+                not_in_bed_value = 7;
+            end
+            first_epoch = 1;
+            final_epoch = numel(stages_vec);
+            mask_indices = stages_vec==not_in_bed_value;
+            if(mask_indices(1))
+                first_epoch = find(~stages_vec, 1, 'first');                
+            end
+            
+            % book end - does it end masked (i.e. finish with 7's)
+            if(mask_indices(end))
+                final_epoch = find(~mask_indices,1, 'last');
+            end
+        end
+        
+        
         function summary_field_names = getSTAGESSummaryFieldNames()
             summary_field_names = { ...
-                'study_duration_in_seconds', 'total_wake_sleep_minutes', ...
+                'study_duration_in_seconds', 'tib_min', 'total_wake_sleep_minutes', ...
                 'sleep_latency_minutes', 'rem_latency_minutes', 'waso_minutes', ...
                 'total_wake_min', 'total_sleep_min', 'total_s1_min', ...
                 'total_s2_min', 'total_sws_min', 'total_rem_min' ...
@@ -395,8 +420,7 @@ classdef CLASS_codec < handle
                 exportMethodsStruct.mfilename = scanCell{1};
                 exportMethodsStruct.description = scanCell{2};
                 exportMethodsStruct.settingsEditor = scanCell{3};
-            end
-            
+            end            
         end
 
         % ======================================================================
