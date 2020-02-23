@@ -1732,7 +1732,5 @@ classdef CLASS_channels_container < handle
            end
        end
        
-       
-       
     end
 end

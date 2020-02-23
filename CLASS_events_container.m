@@ -271,6 +271,13 @@ classdef CLASS_events_container < handle
             obj.stageStruct = stageStruct;
         end
         
+        function loadStageFile(obj, stageFile, startDateTime)
+            obj.stageStruct = CLASS_codec.loadSTAGES(stageFile);
+            if ~isempty(obj.stageStruct) && nargin>2
+                obj.stageStruct.startDateTime = startDateTime;
+            end            
+        end
+        
         % =================================================================
         %> @brief Sets SEV's default sample rate
         %> @param obj instance of CLASS_events_container class.
@@ -1950,7 +1957,7 @@ classdef CLASS_events_container < handle
                     stop_times = datestr(datenum([zeros(numel(stop_offset_sec),numel(t0)-1),stop_offset_sec(:)])+datenum(t0),'HH:MM:SS.FFF');
                     
                     
-                    for e=1:numel(starts);
+                    for e=1:numel(starts)
                         fprintf(fid,'%u,%u,%s,%s,"%s",%s\n',starts(e),stops(e),start_times(e,:),stop_times(e,:),evt_labels{e},evt_filenames{e});
                     end
                     
@@ -2002,7 +2009,7 @@ classdef CLASS_events_container < handle
                     
                     pan_channels = uipanel('title','SEV Events','parent',dlg,'units',units);
                     
-                    for k=1:obj.num_events;
+                    for k=1:obj.num_events
                         eventLabel = [obj.getName(k)];
                         if(obj.channel_vector>0)
                             eventLabel = strcat(eventLabel,' (',obj.CHANNELS_CONTAINER.getChannelName(obj.channel_vector(k)),')');
@@ -2159,7 +2166,7 @@ classdef CLASS_events_container < handle
                     duration_sco_samples = (event_start_stop_matrix(:,2)-event_start_stop_matrix(:,1))*conversion_factor;
                     duration_seconds = duration_sco_samples/obj.defaults.parent_channel_samplerate;
                     %                 fid = 1;
-                    for r=1:numel(evt_indices);
+                    for r=1:numel(evt_indices)
                         e=evt_indices(r);
                         fprintf(fid,'%u\t%u\t%u\t%f\t%s\t%u\t%s\n',start_epochs(r),starts_sco_samples(r),duration_sco_samples(r),...
                             duration_seconds(r),evt_labels{e},e,start_times(r,:));
@@ -2179,6 +2186,105 @@ classdef CLASS_events_container < handle
                 end
             end
         end  %end save2sco(obj,varargin)
+        
+        
+        % =================================================================
+        %> @brief Saves events to .wsc format - which is created for
+        %> Wisconsin and based on save2evts method.  
+        %> @param obj instance of CLASS_events_container class.
+        %> @param optional_filename Filename (string) Name of file to save events to.           
+        %> @note .wsc file format contains the following columns/fields for
+        %> describing events on a per row basis:
+        %> - Start time of the event in hh:mm:ss.fff 24 hour format
+        %> - End time of the event in hh:mm:ss.fff 24 hour format
+        %> - Event name or category - Name or category of the event.
+        %>   (e.g. biocals, stage)
+        %> - Event Value - optional value associated with the named event.
+        %> - Start Time,End Time,Event name, Event value
+        %> - 00:01:04.060,00:01:04.060,"CPAP TRIAL STARTED WITH PATIENT'S OWN MASK;  RESMED MIRAGE QUATTRO MEDIUM FULL FACE @ 9 CM; LK @ 32",user.evt
+        %> - 00:18:37.189,00:18:37.189,"Video Recording Started",biocals.evt
+        %> - 00:18:37.689,00:18:37.689,"Impedence Check Passed",biocals.evt        
+        % =================================================================
+        function save2wsc(obj,save_as_filename)
+            narginchk(2,2)
+            if(obj.num_events<1 && isempty(obj.stageStruct))             
+                fprintf(1,'No event or stage information found to export available.\n');
+            elseif(isempty(save_as_filename))
+                fprintf(1,'Save as filename cannot be empty.  Export cancelled.\n');
+            else
+                % Now need to go through the stages struct as well!  
+                % had 'evt_label and evt_values' ?
+                % Use elapsed start times and stop times and sort those,
+                % not the start stop matrix.  
+                
+                elapsed_start_sec = [];
+                duration_sec = [];
+                evt_labels = {};
+                evt_values = [];
+                
+                if ~isempty(obj.stageStruct)
+                    sta_vec = obj.stageStruct.line;
+                    epoch_vec = 0:numel(sta_vec)-1;                    
+                    elapsed_start_sec = epoch_vec*obj.stageStruct.standard_epoch_sec;  %i.e. 30 s
+                    duration_sec = repmat(obj.stageStruct.standard_epoch_sec, numel(sta_vec), 1);
+                    evt_labels = cellstr(repmat('Stage', numel(sta_vec), 1));
+                    evt_values = sta_vec;
+                end
+               
+                if obj.num_events>0
+                    fprintf(1,'[WARNING] obj.num_events event export is not implemented yet\n');
+                end
+                %                 for k =1:obj.num_events
+                %                     evtObj = obj.getEventObj(k);
+                %                     numRows = size(evtObj.start_stop_matrix,1);
+                %                     evtFilename = cellstr(repmat(evtObj.source.algorithm,numRows,1));
+                %                     if(any(strcmpi('description',evtObj.paramFieldNames))&&~isempty(evtObj.paramStruct.description))
+                %                         labels = evtObj.paramStruct.description;
+                %                     else
+                %                         labels = cellstr(repmat(evtObj.label,numRows,1));
+                %                     end
+                %                     start_stop_datenum = [start_stop_datenum; evtObj.start_stop_matrix];
+                %                     evt_filenames = [evt_filenames; evtFilename];
+                %                     evt_labels = [evt_labels; labels];
+                %                 end
+                
+                [elapsed_start_sec, sort_index] = sort(elapsed_start_sec);
+                duration_sec = duration_sec(sort_index);
+                evt_values = evt_values(sort_index);
+                evt_labels = evt_labels(sort_index);
+                
+                % Study's start date num.
+                t0 = obj.stageStruct.startDateTime;
+                t0_datenum = datenum(t0);
+                study_start_time = datestr(t0_datenum,'HH:MM:SS.FFF');
+                
+                % Create a start_datenum matrix using ony the seconds value
+                % and then adding that to the study's start datenum
+                start_datenum = datenum([zeros(numel(elapsed_start_sec),numel(t0)-1),elapsed_start_sec(:)])+t0_datenum;
+                start_datestr = datestr(start_datenum,'HH:MM:SS.FFF');
+                
+                fid = fopen(save_as_filename,'w');
+                if(fid>1)
+                    % print the header                    
+                    fprintf(fid,'# Study start time (HH:MM:SS.FFF)=%s\n',study_start_time);
+                    fprintf(fid,'# Study duration (sec)=%d\n', obj.stageStruct.study_duration_in_seconds);
+                    fprintf(fid,'# Study duration (min)=%0.2f\n', obj.stageStruct.study_duration_minutes);                    
+                    fprintf(fid,'Start Time, Duration (sec), Category, Value(s)\n');
+                    
+                    % Export each row
+                    for e=1:size(start_datestr,1)
+                        fprintf(fid,'%s,%s,"%s",%s\n',start_datestr(e,:),num2str(duration_sec(e)),evt_labels{e},num2str(evt_values(e)));
+                    end
+                    
+                    fclose(fid);
+                    fprintf('Events saved to: %s\n', save_as_filename);
+                else
+                    fprintf('Could not open %s for writing.\n',save_as_filename);
+                end
+                
+            end
+        end  %end save2wsc(obj,varargin) 
+                
         
         % =================================================================
         %> @brief Contextmenu callback for deleting an event in the sev
