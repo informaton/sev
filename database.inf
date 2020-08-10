@@ -1,0 +1,4 @@
+#DatabaseName DatabaseUserName DatabaseUserPassword
+WSC_DB WSC_user WSC_password
+SSC_DB SSC_user SSC_password
+PTSD_DB PTSD_user PTSD_password

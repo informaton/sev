@@ -721,7 +721,7 @@ function push_run_Callback(hObject, eventdata, handles)
         %for artifacts, only apply the first step in each case, that is the
         %start value given
         if(~isempty(pBatchStruct))
-            for key_ind=1:numel(pBatchStruct);
+            for key_ind=1:numel(pBatchStruct)
                 params.(pBatchStruct{key_ind}.key)=pBatchStruct{key_ind}.start;
             end
         else
