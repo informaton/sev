@@ -702,52 +702,58 @@ function push_run_Callback(hObject, eventdata, handles)
     artifact_channel_values = [artifact_channel1_values(selected_artifacts),artifact_channel2_values(selected_artifacts)];
     
     num_selected_artifacts = sum(selected_artifacts);
-    artifact_settings = getArtifactStruct(num_selected_artifacts);
-    
-    for k = 1:num_selected_artifacts
-        selected_method = artifact_method_values(k);
-        num_reqd_channels = detection_inf.reqd_indices(selected_method);
+    if num_selected_artifacts>0
+        artifact_settings = cell(num_selected_events,1);
+        % artifact_settings = getArtifactStruct(num_selected_artifacts);
         
-        artifactStruct.save2img = artifact_save_image_choices(k);
-        artifactStruct.channel_labels = EDF_labels(artifact_channel_values(k,1:num_reqd_channels));
-        artifactStruct.method_label = detection_inf.labels{selected_method};
-        artifactStruct.method_function = detection_inf.mfile{selected_method};
-        artifactStruct.batch_mode_label = char(detection_inf.batch_mode_label{selected_method});
-        
-        settings_userdata = get(artifact_settings_handles(k),'userdata');
-        pBatchStruct = settings_userdata.pBatchStruct;
-        
-        params = [];
-        %for artifacts, only apply the first step in each case, that is the
-        %start value given
-        if(~isempty(pBatchStruct))
-            for key_ind=1:numel(pBatchStruct)
-                params.(pBatchStruct{key_ind}.key)=pBatchStruct{key_ind}.start;
-            end
-        else
-            pfile = ['+detection/',artifactStruct.method_function,'.plist'];
-            if(exist(pfile,'file'))
-                params =plist.loadXMLPlist(pfile);
+        for k = 1:num_selected_artifacts
+            selected_method = artifact_method_values(k);
+            num_reqd_channels = detection_inf.reqd_indices(selected_method);
+            
+            artifactStruct.save2img = artifact_save_image_choices(k);
+            artifactStruct.channel_labels = EDF_labels(artifact_channel_values(k,1:num_reqd_channels));
+            artifactStruct.method_label = detection_inf.labels{selected_method};
+            artifactStruct.method_function = detection_inf.mfile{selected_method};
+            artifactStruct.batch_mode_label = char(detection_inf.batch_mode_label{selected_method});
+            
+            settings_userdata = get(artifact_settings_handles(k),'userdata');
+            pBatchStruct = settings_userdata.pBatchStruct;
+            
+            params = [];
+            %for artifacts, only apply the first step in each case, that is the
+            %start value given
+            if(~isempty(pBatchStruct))
+                for key_ind=1:numel(pBatchStruct)
+                    params.(pBatchStruct{key_ind}.key)=pBatchStruct{key_ind}.start;
+                end
             else
-                mfile = ['detection.',artifactStruct.method_function];
-                params = feval(mfile);
-            end            
+                pfile = ['+detection/',artifactStruct.method_function,'.plist'];
+                if(exist(pfile,'file'))
+                    params =plist.loadXMLPlist(pfile);
+                else
+                    mfile = ['detection.',artifactStruct.method_function];
+                    params = feval(mfile);
+                end
+            end
+            
+            %left overs fromn April 9, 2012 - which may not be necessary anymore...
+            %         params = [];
+            %        %may not work on windows platform....
+            %         pfile = ['+detection/',artifactStruct.method_function,'.plist'];
+            %         if(exist(pfile,'file'))
+            %             params =plist.loadXMLPlist(pfile);
+            %         end
+            %     else
+            %         params = [];
+            
+            artifactStruct.params = params;
+            artifact_settings(k) = artifactStruct;
         end
-        
-        %left overs fromn April 9, 2012 - which may not be necessary anymore...
-        %         params = [];
-        %        %may not work on windows platform....
-        %         pfile = ['+detection/',artifactStruct.method_function,'.plist'];
-        %         if(exist(pfile,'file'))
-        %             params =plist.loadXMLPlist(pfile);
-        %         end
-        %     else
-        %         params = [];
-        
-        artifactStruct.params = params;
-        artifact_settings(k) = artifactStruct;
+    else
+        artifact_settings = {};
     end
     
+
     BATCH_PROCESS.artifact_settings = artifact_settings;
     
     pathname = get(handles.edit_edf_directory,'string');
@@ -1101,21 +1107,21 @@ function batch_process(pathname, BATCH_PROCESS,playlist)
         
         if(~isdir(BATCH_PROCESS.output_path.current))
             mkdir(BATCH_PROCESS.output_path.current);
-        end;
+        end
         
         full_roc_path = fullfile(BATCH_PROCESS.output_path.current,BATCH_PROCESS.output_path.roc);
         if(~isdir(full_roc_path))
             mkdir(full_roc_path);
-        end;
+        end
         
         full_psd_path = fullfile(BATCH_PROCESS.output_path.current,BATCH_PROCESS.output_path.power);
         if(~isdir(full_psd_path))
             mkdir(full_psd_path);
-        end;
+        end
         full_events_path = fullfile(BATCH_PROCESS.output_path.current,BATCH_PROCESS.output_path.events);
         if(~isdir(full_events_path))
-            mkdir(full_events_path);
-        end;
+            mkdir(full_events_path)
+        end
         full_events_images_path = fullfile(BATCH_PROCESS.output_path.current,BATCH_PROCESS.output_path.events,BATCH_PROCESS.output_path.images);
         if(~isdir(full_events_images_path))
             mkdir(full_events_images_path);
@@ -1123,7 +1129,7 @@ function batch_process(pathname, BATCH_PROCESS,playlist)
         full_artifacts_path = fullfile(BATCH_PROCESS.output_path.current,BATCH_PROCESS.output_path.artifacts);
         if(~isdir(full_artifacts_path))
             mkdir(full_artifacts_path);
-        end;
+        end
         full_artifacts_images_path = fullfile(BATCH_PROCESS.output_path.current,BATCH_PROCESS.output_path.artifacts,BATCH_PROCESS.output_path.images);
         if(~isdir(full_artifacts_images_path))
             mkdir(full_artifacts_images_path);
@@ -1169,7 +1175,7 @@ function batch_process(pathname, BATCH_PROCESS,playlist)
                 end
             else
                 fprintf(log_fid,'No event detectors were run with this batch job.\r\n');
-            end;
+            end
             if(numel(BATCH_PROCESS.artifact_settings)>0)
                 fprintf(log_fid,'The following artifact detectors were run with this batch job.\r\n');
                 
@@ -1197,7 +1203,7 @@ function batch_process(pathname, BATCH_PROCESS,playlist)
                 
             else
                 fprintf(log_fid,'No artifact detectors were run with this batch job.\r\n');
-            end;
+            end
             
             if(numel(BATCH_PROCESS.PSD_settings)>0)
                 fprintf(log_fid,'Power spectral density by periodogram analysis was conducted with the following configuration(s):\r\n');
@@ -1257,7 +1263,7 @@ function batch_process(pathname, BATCH_PROCESS,playlist)
         else
             disp('No log file created for this run.  Choose settings to change this, and check the log checkbox if you want to change this.');
             BATCH_PROCESS.start_time = ' ';
-        end;
+        end
         
         event_settings = BATCH_PROCESS.event_settings;
         artifact_settings = BATCH_PROCESS.artifact_settings;
@@ -1356,15 +1362,15 @@ function batch_process(pathname, BATCH_PROCESS,playlist)
         %% setup database for events
         if(BATCH_PROCESS.database.save2DB)
             %database_struct contains fields 'name','user','password' for interacting with a mysql database
-            DBstruct = CLASS_database.loadDatabaseStructFromInf(BATCH_PROCESS.database.filename,BATCH_PROCESS.database.choice);
+            DBstruct = CLASS_database_psg.loadDatabaseStructFromInf(BATCH_PROCESS.database.filename,BATCH_PROCESS.database.choice);
             if(~isempty(DBstruct))
                 DBstruct.table = 'events_t';
                 if(BATCH_PROCESS.database.auto_config~=0||BATCH_PROCESS.database.config_start==0)
-                    event_settings = CLASS_database.getDatabaseAutoConfigID(DBstruct,event_settings);
+                    event_settings = CLASS_database_psg.getDatabaseAutoConfigID(DBstruct,event_settings);
                 else
-                    event_settings = CLASS_database.setDatabaseConfigID(DBstruct,event_settings,BATCH_PROCESS.database.config_start);
+                    event_settings = CLASS_database_psg.setDatabaseConfigID(DBstruct,event_settings,BATCH_PROCESS.database.config_start);
                 end
-                event_settings = CLASS_database.deleteDatabaseRecordsUsingSettings(DBstruct,event_settings);
+                event_settings = CLASS_database_psg.deleteDatabaseRecordsUsingSettings(DBstruct,event_settings);
             end
         else
             DBstruct = [];

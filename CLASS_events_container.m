@@ -1910,8 +1910,8 @@ classdef CLASS_events_container < handle
         %> - 572001,572001,00:18:37.189,00:18:37.189,"Video Recording Started",biocals.evt
         %> - 572257,572257,00:18:37.689,00:18:37.689,"Impedence Check Passed",biocals.evt        
         % =================================================================
-        function save2evts(obj,optional_filename)
-            if(nargin>1 && ~isempty(optional_filename))
+        function save2evts(obj,evt_filename)
+            if(nargin>1 && ~isempty(evt_filename))
                 start_stop_matrix = [];
                 evt_labels = {};
                 evt_filenames = {};
@@ -1934,14 +1934,13 @@ classdef CLASS_events_container < handle
                 evt_filenames = evt_filenames(i);
                 evt_labels = evt_labels(i);
                 
-                fid = fopen(optional_filename,'w');
+                fid = fopen(evt_filename,'w');
                 if(fid>1)
                     
                     % print the header
                     fprintf(fid,'# Samplerate=%d\n',obj.defaults.parent_channel_samplerate);
                     fprintf(fid,'Start Sample,End Sample,Start Time,End Time,Event,File Name\n');
-                    
-                    
+
                     t0 = obj.stageStruct.startDateTime;
 
                     %Subtract 1 here to conform to conform with Somnologic/Embla's 0-based format
@@ -1963,7 +1962,7 @@ classdef CLASS_events_container < handle
                     
                     fclose(fid);
                 else
-                    fprintf('Could not open %s for writing.\n',optional_filename);
+                    fprintf('Could not open %s for writing.\n',evt_filename);
                 end
                 
                 
@@ -2121,13 +2120,13 @@ classdef CLASS_events_container < handle
         %> - Name of the event as a string label
         %> - Start time of the event in hh:mm:ss.fff 24 hour format
         % =================================================================
-        function save2sco(obj,optional_filename)
+        function save2sco(obj,sco_filename)
 
             %save2text(filename) - saves all events using the filename
             %given.  If filename is a cell, then it must be of the same
             %length as the number of events, and each cell element is used
             %as unique filename to save the corresponding events to. 
-            if(nargin>1 && ~isempty(optional_filename))
+            if(nargin>1 && ~isempty(sco_filename))
                 start_stop_matrix = [];
                 evt_indices = [];
                 evt_labels = cell(obj.num_events,1);
@@ -2141,7 +2140,7 @@ classdef CLASS_events_container < handle
                 event_start_stop_matrix = start_stop_matrix(i,:);
                 evt_indices = evt_indices(i);
                 
-                fid = fopen(optional_filename,'w');
+                fid = fopen(sco_filename,'w');
                 if(fid>1)
                     t0 = obj.stageStruct.startDateTime;
                     
@@ -2174,7 +2173,7 @@ classdef CLASS_events_container < handle
                     
                     fclose(fid);
                 else
-                    fprintf('Could not open %s for writing.\n',optional_filename);
+                    fprintf('Could not open %s for writing.\n', sco_filename);
                 end
                 
                 
@@ -2576,7 +2575,7 @@ classdef CLASS_events_container < handle
         %> @retval PatID The patient ID corresponding to patstudykey
         %> @retval StudyNum The study number corresponding to patstudykey
         function [PatID,StudyNum] = getDB_PatientIdentifiers(patstudykey)
-            [PatID,StudyNum] = CLASS_code.getDB_PatientIdentifiers(patstudykey);
+            [PatID,StudyNum] = CLASS_codec.getDB_PatientIdentifiers(patstudykey);
         end
         
         
