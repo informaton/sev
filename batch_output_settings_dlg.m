@@ -56,8 +56,8 @@ function batch_output_settings_dlg_OpeningFcn(hObject, eventdata, handles, varar
 % Choose default command line output for batch_output_settings_dlg
 handles.output = [];
 
-set(handles.check_save2DB,'value',0,'enable','off');
-set(handles.menu_database,'enable','off');
+set(handles.check_save2DB,'value',0,'enable','on');
+set(handles.menu_database,'enable','on');
 
 
 %data structure coming in should be

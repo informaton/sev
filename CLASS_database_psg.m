@@ -89,12 +89,12 @@ classdef CLASS_database_psg < CLASS_database
             end            
             sta_exp = '(?<PatID>[a-zA-Z0-9]+)_(?<StudyNum>\d+)[^\.]+\.STA';            
             if(isempty(STA_pathname))
-                stats = CLASS_database.stage2stats([],sta_exp);
+                stats = CLASS_database_psg.stage2stats([],sta_exp);
             else
-                stats = CLASS_database.stage2stats(STA_pathname,sta_exp);
+                stats = CLASS_database_psg.stage2stats(STA_pathname,sta_exp);
             end            
-            CLASS_database.static_create_StageStats_T(obj.dbStruct);            
-            CLASS_database.populate_StageStats_T(stats,obj.dbStruct);
+            CLASS_database_psg.static_create_StageStats_T(obj.dbStruct);            
+            CLASS_database_psg.populate_StageStats_T(stats,obj.dbStruct);
         end
         
         % ======================================================================
@@ -622,7 +622,7 @@ classdef CLASS_database_psg < CLASS_database
                 for f=1:numel(edf_files)
                     skip = false;
                     patstudy = strrep(edf_files{f},'.EDF','');
-                    [PatID,StudyNum] = CLASS_events_container.getDB_PatientIdentifiers(patstudy);
+                    [PatID,StudyNum] = CLASS_codec.getDB_PatientIdentifiers(patstudy);
                     
                     q=mym('select * from {S} where patid="{S}"',TableName,PatID);
                     if(isempty(q.StudyNum))
@@ -1059,7 +1059,7 @@ classdef CLASS_database_psg < CLASS_database
                             else
                                 detectStruct.detectorID = detectorID;
                             end
-                            CLASS_database.insertDatabaseDetectorInfoRecord(dbStruct,detectStruct);
+                            CLASS_database_psg.insertDatabaseDetectorInfoRecord(dbStruct,detectStruct);
                             cur_config = cur_config+1;
                         end
                     end
@@ -1159,8 +1159,8 @@ classdef CLASS_database_psg < CLASS_database
                                 
                                 detectStruct.configID = event_settings{k}.configID(config);
                                 detectStruct.params = event_settings{k}.params(config);
-                                %insert it into the database now
-                                CLASS_events_container.insertDatabaseDetectorInfoRecord(dbStruct,detectStruct);
+                                %insert it into the database now - 
+                                CLASS_database_psg.insertDatabaseDetectorInfoRecord(dbStruct,detectStruct);
                             end
                         end
                     end
@@ -1226,7 +1226,7 @@ classdef CLASS_database_psg < CLASS_database
                         else
                             %I need to add/insert the detector config to detectorinfo_t here...
                             %add it either way okay...
-                            CLASS_database.insertDatabaseDetectorInfoRecord(dbStruct,event_k)
+                            CLASS_database_psg.insertDatabaseDetectorInfoRecord(dbStruct,event_k)
                         end
                         
                         %now get the detectorID that I have for these...
@@ -1315,7 +1315,7 @@ classdef CLASS_database_psg < CLASS_database
         %> filenames.
         function makeSTA2file(STA_pathname,patID_studyNum_regexp)
             save2file = true;
-            CLASS_database.stage2stats(STA_pathname,patID_studyNum_regexp,save2file);
+            CLASS_database_psg.stage2stats(STA_pathname,patID_studyNum_regexp,save2file);
         end
             
         %> @brief Converts .STA files (ascii tab delimited files with first column epoch
@@ -1332,7 +1332,7 @@ classdef CLASS_database_psg < CLASS_database
         %> filenames.
         %> @param save2file Optional boolean value which, if true, results
         %> in creation of a .STA2 file that adds a third column for the the
-        %> stage cycle.  See CLASS_database method makeSTA2file.
+        %> stage cycle.  See CLASS_database_psg method makeSTA2file.
         %> @retval stats A cell of stage structures        
         function stats = stage2stats(STA_pathname,patID_studyNum_regexp,save2file) %,databasename, user, password)
             
@@ -1379,8 +1379,8 @@ classdef CLASS_database_psg < CLASS_database
                             sta_filename = fullfile(STA_pathname,filenames{k});
 
                             STAGES = loadSTAGES(sta_filename);
-                            cycle_vector = CLASS_database.stage2cycle(STAGES.line);
-                            stage_stats = CLASS_database.getStagingStats(STAGES.line,cycle_vector,STAGES.cycles,fCell{k}.PatID,fCell{k}.StudyNum);
+                            cycle_vector = CLASS_database_psg.stage2cycle(STAGES.line);
+                            stage_stats = CLASS_database_psg.getStagingStats(STAGES.line,cycle_vector,STAGES.cycles,fCell{k}.PatID,fCell{k}.StudyNum);
                             
                             stats{k} = stage_stats;
                             
@@ -1390,7 +1390,7 @@ classdef CLASS_database_psg < CLASS_database
                                 stage_vector(isnan(stage_vector))=7; %reset these to be number 7
 
                                 epoch_vector = 1:numel(stage_vector);
-                                cycle_vector = stage2cycle(stage_vector(:,2));
+                                cycle_vector = CLASS_database_psg.stage2cycle(stage_vector(:,2));
                                 
                                 staging_matrix = [epoch_vector(:),stage_vector(:),cycle_vector(:)]; %just make it a three column section
                                 save(fullfile(STA_pathname,[filenames{k},'2']),'staging_matrix','-ascii');
@@ -1416,7 +1416,7 @@ classdef CLASS_database_psg < CLASS_database
         %> @param stage_vector Numeric vector of consecutively scored sleep stages.
         %> @param sleepfragmentation_vector Vector of length(stage_vector) with
         %> elements containing the cycle of the stage at the corresponding
-        %> position in stage_vector.  See CLASS_database method <i>stage2cycle</i>
+        %> position in stage_vector.  See CLASS_database_psg method <i>stage2cycle</i>
         %> @param nrem_rem_cycle_vector
         %> @param PatID
         %> @param StudyNum
@@ -1432,7 +1432,7 @@ classdef CLASS_database_psg < CLASS_database
         %> @li Pct_sleep
         %> @li Fragmentation_count Number of times the sleep stage was switched from
         %> @li Latency The duration in seconds from first non-wake period
-        %> @note This method is a helper for CLASS_database method stage2stats
+        %> @note This method is a helper for CLASS_database_psg method stage2stats
         function staging_stats = getStagingStats(stage_vector,sleepfragmentation_vector,nrem_rem_cycle_vector,PatID,StudyNum)
             %stage_vector is a 1xN vector that contains staging data corresponding to
             %ordinal epochs.
@@ -1567,7 +1567,7 @@ classdef CLASS_database_psg < CLASS_database
             for k=1:numel(SCO_labels)
                 detectStruct.method_function = SCO_labels{k};
                 detectStruct.method_label = SCO_labels{k};
-                CLASS_database.insertDatabaseDetectorInfoRecord(dbStruct,detectStruct);
+                CLASS_database_psg.insertDatabaseDetectorInfoRecord(dbStruct,detectStruct);
             end
         end
         
