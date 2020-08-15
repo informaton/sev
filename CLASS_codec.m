@@ -230,7 +230,7 @@ classdef CLASS_codec < handle
         end
         
         function sleepl_minutes_elapsed = getSleepLatency(STAGES)
-            sleepl_minutes_elapsed = STAGES.firstNonWake*STAGES.standard_epoch_min;                   
+            sleepl_minutes_elapsed = (STAGES.firstNonWake-STAGES.tib_first_epoch)*STAGES.standard_epoch_min;                   
         end
         
         % The presence of a SOREMP upon first falling asleep was first reported by
@@ -1528,7 +1528,7 @@ classdef CLASS_codec < handle
         end
                 
         function [annotationsCell, header] = parseEDFPlusAnnotations(fileName)
-            [annotationsCell, header ] =  loadEDFPlusAnnotations(fileName);  % currently in ~/git/matlab/sleep            
+            [annotationsCell, header ] =  getEDFPlusAnnotations(fileName);  % currently in ~/git/matlab/sleep            
         end
 
         % =================================================================
@@ -1552,7 +1552,7 @@ classdef CLASS_codec < handle
         %> @brief Parses time annotated lists (TALs) as events from a 
         %> a single EDF annotation record.
         %> @param annRecord Struct containing one or more TALs as obtained
-        %> from cell of EDF Annotation data obtained from loadEDFPlusAnnotations.
+        %> from cell of EDF Annotation data obtained from getEDFPlusAnnotations.
         %> @param HDR Struct containing EDF Plus header data.  This is used
         %> to obtain sampling rate.
         %> @retval eventStructs Nx1 vector of structs.  See CLASS_codec.makeEventStruct
@@ -1572,7 +1572,7 @@ classdef CLASS_codec < handle
         
         % =================================================================
         %> @brief Translate one item of time annotated lists (TALs) to an event struct.
-        %> @param tal A TAL item in a struct.  See loadEDFPlusAnnotations.m
+        %> @param tal A TAL item in a struct.  See getEDFPlusAnnotations.m
         %> @param HDR Struct containing EDF Plus header data.  This is used
         %> to obtain sampling rate.
         %> @retval eventStruct A struct with tal information.  See CLASS_codec.makeEventStruct
@@ -1645,15 +1645,15 @@ classdef CLASS_codec < handle
         end
         
         function  stageStruct = getStageStructFromEDFPlusFile(edfPlusFile)
-            [annotationRecords, HDR] = loadEDFPlusAnnotations(edfPlusFile);
+            [annotationRecords, HDR] = getEDFPlusAnnotations(edfPlusFile);
             stageStruct = CLASS_codec.getStageStructFromEDFPlusAnnotations(annotationRecords,HDR);
         end
         
         % =================================================================
         %> @brief Parses the hypnogram from an annotations cell, as obtained
-        %> from call to loadEDFPlusAnnotations with an EDF Plus file, and returns
+        %> from call to getEDFPlusAnnotations with an EDF Plus file, and returns
         %> it in a struct.
-        %> @param annotations Cell of EDF Annotation data obtained from loadEDFPlusAnnotations.
+        %> @param annotations Cell of EDF Annotation data obtained from getEDFPlusAnnotations.
         %> @param HDR Struct containing EDF Plus header data.
         %> @retval stageStruct Struct containing the parsed hypnogram.
         %> @note See @makeStageEventStruct for stageStruct field names.

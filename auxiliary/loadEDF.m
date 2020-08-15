@@ -12,16 +12,21 @@ function [HDR, signal] = loadEDF(filename,channels)
 %index k.  
 % May 12, 2015: Modified so that channels argument included as empty 
 % (i.e. []) is treated the same as if it were not included.  
+% 1/19/2019: channels can now also contain a cell string of channel labels
+% to load. 
+% Feb 28, 2020: Modified so that 44 byte/character reserved field is
+% separate entry from 32 byte x Num channels reserved field.  Otherwise we
+% lose EDF+ identificaion information.
 if(nargin==0)
     disp 'No input filename given; aborting';
     return;
-end;
+end
 if(nargin==1 || isempty(channels))
     channels = 0;
-end;
+end
 if(nargin>2)
     disp('Too many input arguments in loadEDF.  Extra input arguments are ignored');
-end;
+end
 
 %handle filenames with unicode characters in them
 filename = char(unicode2native(filename,'utf-8'));
@@ -57,7 +62,7 @@ try
         yy = yy+1900;
     else
         yy = yy+2000;
-    end;
+    end
     HDR.T0(1) = yy;
 catch ME
     disp(['Failed to load the date/time in this EDF.  Filename: ', filename]);
@@ -75,7 +80,7 @@ HDR.digital_minimum = str2double(cellstr(char(fread(fid,[8,ns],precision)')));% 
 HDR.digital_maximum = str2double(cellstr(char(fread(fid,[8,ns],precision)')));% ns * 8 ascii : ns * digital maximum (e.g. 2047)')
 HDR.prefiltering = cellstr(char(fread(fid,[80,ns],precision)'));% ns * 80 ascii : ns * prefiltering (e.g. HP:0.1Hz LP:75Hz)')
 HDR.number_samples_in_each_data_record = str2double(cellstr(char(fread(fid,[8,ns],precision)')));% ns * 8 ascii : ns * nr of samples in each data record
-HDR.reserved = cellstr(char(fread(fid,[32,ns],precision)'));% ns * 32 ascii : ns * reserved
+HDR.reserved_for_signals = cellstr(char(fread(fid,[32,ns],precision)'));% ns * 32 ascii : ns * reserved
 
 HDR.fs = HDR.number_samples_in_each_data_record/HDR.duration_of_data_record_in_seconds; %sample rate
 HDR.samplerate = HDR.fs;
@@ -83,10 +88,16 @@ HDR.duration_sec = HDR.duration_of_data_record_in_seconds*HDR.number_of_data_rec
 HDR.duration_samples = HDR.duration_sec*HDR.fs;
 
 if(nargout>1)
-
+    if(ischar(channels))
+        channels = {channels};
+    end
+    
+    if(iscell(channels))
+        [~,~,channels] =  intersect(channels,HDR.label,'stable');  % keep the order the same with stable, so we don't cause issues with mixing up channels returned
+    end
     if(channels == 0) %requesting all channels then
         channels = 1:HDR.num_signals;
-    end;
+    end
 
     signal = cell(numel(channels),1);
     bytes_per_sample = 2;
@@ -113,9 +124,9 @@ if(nargout>1)
             signal{k} = scale*(HDR.physical_minimum(cur_channel)+(signal{k}(:)-HDR.digital_minimum(cur_channel))...
                 *(HDR.physical_maximum(cur_channel)-HDR.physical_minimum(cur_channel))...
                 /(HDR.digital_maximum(cur_channel)-HDR.digital_minimum(cur_channel)));
-        end;
-    end;
-end;
+        end
+    end
+end
 
 % The voltage (i.e. signal) in the file by definition equals
 % [(physical miniumum)

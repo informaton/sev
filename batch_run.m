@@ -702,7 +702,7 @@ function push_run_Callback(hObject, eventdata, handles)
     artifact_channel_values = [artifact_channel1_values(selected_artifacts),artifact_channel2_values(selected_artifacts)];
     
     num_selected_artifacts = sum(selected_artifacts);
-    artifact_settings = getArtifactStruct(num_selected_artifacts);
+    artifact_settings = batch.getArtifactStruct(num_selected_artifacts);
     
     for k = 1:num_selected_artifacts
         selected_method = artifact_method_values(k);

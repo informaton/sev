@@ -9,6 +9,6 @@
 	<key>lambda</key>
 	<real>0.995000</real>
 	<key>samples2delay</key>
-	<real>0.000000</real>
+	<real>10.000000</real>
 </dict>
 </plist>

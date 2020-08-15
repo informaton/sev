@@ -2205,8 +2205,11 @@ classdef CLASS_events_container < handle
         %> - 00:18:37.189,00:18:37.189,"Video Recording Started",biocals.evt
         %> - 00:18:37.689,00:18:37.689,"Impedence Check Passed",biocals.evt        
         % =================================================================
-        function didSaveSomething = save2wsc(obj,save_as_filename)
-            narginchk(2,2);
+        function didSaveSomething = save2wsc(obj,save_as_filename, verbose_mode)
+            narginchk(2,3);
+            if nargin<3
+                verbose_mode = false;
+            end
             didSaveSomething = false;
             if(obj.num_events<1 && isempty(obj.stageStruct))             
                 fprintf(1,'No event or stage information found to export available.\n');
@@ -2278,10 +2281,14 @@ classdef CLASS_events_container < handle
                     end
                     
                     fclose(fid);
-                    fprintf('Events saved to: %s\n', save_as_filename);
+                    if verbose_mode
+                        fprintf('Events saved to: %s\n', save_as_filename);
+                    end
                     didSaveSomething = true;
                 else
-                    fprintf('Could not open %s for writing.\n',save_as_filename);
+                    if verbose_mode
+                        fprintf('Could not open %s for writing.\n',save_as_filename);
+                    end
                 end
                 
             end
