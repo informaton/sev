@@ -2336,7 +2336,7 @@ classdef CLASS_UI_marking < handle
             tick(2) = []; %don't really want to show stage 6 as a label
             set(obj.axeshandle.timeline,...
                 'ytick',tick,...
-                'yticklabel','7|5|4|3|2|1|0','fontsize',fontsize);
+                'yticklabel',{'7','5','4','3','2','1','0'},'fontsize',fontsize);
             
             
             %reverse the ordering so that stage 0 is at the top
