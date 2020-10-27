@@ -26,7 +26,7 @@ global MARKING;
 % initialize default parameters
 defaultParams.win_length_sec = 5;
 defaultParams.win_interval_sec = 5;
-defaultParams.min_power = 0.1;
+defaultParams.min_power = 0.01;
 
 % return default parameters if no input arguments are provided.
 if(nargin==0)
@@ -52,10 +52,10 @@ else
     win_interval_sec = params.win_interval_sec;
     
     PSD_settings.removemean = MARKING.SETTINGS.PSD.removemean;
-    PSD_settings.interval = win_interval_sec;
+    PSD_settings.interval_sec = win_interval_sec;
     PSD_settings.FFT_window_sec=win_length_sec;
     PSD_settings.wintype = MARKING.SETTINGS.PSD.wintype;
-    
+    PSD_settings.spectrum_type = 'power'; % 'psd' or 'none' also valid
     psd_all = calcPSD(data,params.samplerate,PSD_settings);
     
     % [psd_all psd_x psd_nfft] = calcPSD(channel_obj.data,win_length_sec,win_interval_sec,channel_obj.sample_rate,PSD.wintype,PSD.removemean);
@@ -76,7 +76,7 @@ else
     event_indices = any(psd_all(:,2:end)'>params.min_power); %this vector contains good events
     detectStruct.new_events = find(~event_indices);
     
-    event_length = params.samplerate*win_interval_sec;
+    event_length = params.samplerate*win_length_sec;
     starts = (detectStruct.new_events(:)-1)*event_length+1;
     stops = starts-1+event_length;  %or ..detectStruct.new_events(:)*event_length;
     

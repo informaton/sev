@@ -52,7 +52,7 @@ function [psd, freq_vec, nfft, U_psd, U_power] = calcPSD(signal_x,Fs,PSD_setting
             PSD_settings = defaultSettings;
         end        
         
-    end;
+    end
     
     winlen = PSD_settings.FFT_window_sec;
     interval = PSD_settings.interval_sec;
