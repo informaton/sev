@@ -74,8 +74,6 @@ classdef CLASS_codec < handle
                         else
                             [~,stages] = CLASS_codec.parseSSCevtsFile(stages_filename,default_unknown_stage);                            
                         end
-                        
-                        
                         %                 elseif(strcmpi(ext,'.evts'))
                         %                     [~,stageVec] = CLASS_codec.parseSSCevtsFile(stages_filename,default_unknown_stage);
                         %                     STAGES.line = stageVec;
@@ -83,21 +81,17 @@ classdef CLASS_codec < handle
                         %                 end
                     end
                 else
-                    
                     mfile =  strcat(mfilename('fullpath'),'.m');
                     fprintf('failed in %s\n\tFilename argument for loadSTAGES could not be found.\n',mfile);
-                    %  throw(MException('SEV:ARGERR','Filename argument for loadSTAGES could not be found'));
-                    
+                    %  throw(MException('SEV:ARGERR','Filename argument for loadSTAGES could not be found'));  
                 end
             else
                 mfile =  strcat(mfilename('fullpath'),'.m');
                 fprintf('failed in %s\n\tMissing or empty filename argument for loadSTAGES\n',mfile);
                 % throw(MException('SEV:ARGERR','Missing or empty filename argument for loadSTAGES'));
-            end
-            
+            end            
             STAGES = CLASS_codec.stages2STAGES(stages,num_epochs, default_unknown_stage);
-            STAGES.filename = stages_filename;
-            
+            STAGES.filename = stages_filename;            
         end
         
         % stages is either an Mx1 vector or an Mx2 or Mx3 matrix
