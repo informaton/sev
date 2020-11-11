@@ -5,6 +5,7 @@ function sev_pathname = sev_pathsetup()
     import filter.*;
     
     sev_pathname = fileparts(mfilename('fullpath'));
+    addpath(sev_pathname);
     addpath(fullfile(sev_pathname,'auxiliary'));
     addpath(fullfile(sev_pathname,'widgets'));
     
