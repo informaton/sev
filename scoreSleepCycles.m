@@ -18,7 +18,7 @@ if(ischar(sleepfile) && exist(sleepfile,'file'))
 else
     FileData = [];
     stages = sleepfile;
-end;
+end
 
 sleepCycles = zeros(size(stages));
 

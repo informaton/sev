@@ -94,6 +94,63 @@ classdef CLASS_codec < handle
             STAGES.filename = stages_filename;            
         end
         
+        % Returns axes handle (ax)
+        function ax = plotSTAGES(STAGES, study_start_time)            
+            %
+            % W  (w)  0
+            % R  (r)  5 
+            % N1 (p)  1
+            % N2 (v)  2
+            % N3 (g)  3
+            %          Lights out - (next hour skipped) - then each hour (HH AM/PM)
+            if nargin<2 || isempty(study_start_time)
+                study_start_time = [0 0 0];
+            end
+            
+            hypno = STAGES.line(STAGES.tib_first_epoch:STAGES.tib_final_epoch);
+
+            % lights out
+            staging_start_time = datenum([0 0 0, study_start_time]+[0 0 0 0 STAGES.tib_first_epoch*0.5 0]);
+            epoch_time = datenum([0 0 0 0 0 30]);
+            % lights on
+            staging_end_time = datenum([0 0 0, study_start_time]+[0 0 0 0 STAGES.tib_final_epoch*0.5 0]);
+            % end_time = start_time+(numel(hypno)-1)*epoch_time;
+            x = staging_start_time:epoch_time:staging_end_time;
+            % go every hour after an hour, rounded up, from the start time.
+            x_ticks = [staging_start_time, ceil(mod(staging_start_time, 1)*24+1)/24:1/24:staging_end_time];
+            
+            hypno_offset = [0 10 'k'+0
+                            5  8 'r'+0
+                            1  6 'm'+0
+                            2  4 'b'+0
+                            3  2 'g'+0
+                            4  2 'g'+0
+                            7  0 'w'+0] ;
+            %hypno_line = nan(size(hypno));
+            % Place the lines at the specified offsets.
+            set(gcf,'position', [10 1000 750 128]);
+            ax = axes('box','on', 'nextplot','add','tickdir','out',...
+                'ylim',[0, 12], 'xlim',[staging_start_time, staging_end_time],...                
+                'xtickmode','manual','xtick',x_ticks,...
+                'plotboxaspectratiomode','manual','plotboxaspectratio',[30 12 1],...
+                'dataaspectratiomode','manual','dataaspectratio',[3 1200 1],...                
+                'yticklabelmode','manual','ytick', flipud(hypno_offset(1:end-2,2)),...
+                'yticklabel',fliplr({'W','R','N1','N2','N3'}));
+            width = 1;
+
+            for s=1:size(hypno_offset,1)
+                hypno_line = nan(size(hypno));
+                hypno_line(hypno==hypno_offset(s,1)) = hypno_offset(s,2);
+                bar(ax, x, hypno_line, width, char(hypno_offset(s,3))); 
+            end            
+            % datetick(ax,'x','HH PM','keeplimits');
+            datetick(ax,'x','HH PM','keepticks','keeplimits');
+            xticklabels = string(get(ax,'xticklabel'));
+            xticklabels{1} = datestr(staging_start_time,'HH:MM:SS PM');
+            set(ax,'xticklabel',xticklabels);
+            
+        end
+        
         % stages is either an Mx1 vector or an Mx2 or Mx3 matrix
         % If Mx1 then elements are stages in epoch order.
         % If Mx2 then column 1 comprises the scored epoch number and column 2
@@ -144,6 +201,7 @@ classdef CLASS_codec < handle
             STAGES.firstNonWake = [];
             STAGES.summary_field_names = CLASS_codec.getSTAGESSummaryFieldNames();
             STAGES.count = zeros(8,1);
+            STAGES.bouts = zeros(8,1);
             
             if(nargin<2)
                 num_epochs = numel(STAGES.line);
@@ -151,6 +209,8 @@ classdef CLASS_codec < handle
             %calculate number of epochs in each stage
             for k = 0:numel(STAGES.count)-1
                 STAGES.count(k+1) = sum(STAGES.line==k);
+                bout_diff = diff(STAGES.line==k);
+                STAGES.bouts(k+1) = max(sum(bout_diff==1), sum(bout_diff==-1));
             end
             
             firstNonWake = 1;
@@ -158,12 +218,31 @@ classdef CLASS_codec < handle
                 firstNonWake = firstNonWake+1;
             end
             
+            STAGES.firstN1_epoch = find(STAGES.line==1,1);
+            STAGES.firstN2_epoch = find(STAGES.line==2,1);
+            STAGES.firstSWS_epoch = find(STAGES.line==3|STAGES.line==4,1);
+            
             [STAGES.tib_first_epoch, STAGES.tib_final_epoch] = CLASS_codec.getTIBEpochs(STAGES.line, default_unknown_stage);
+            
+            lastNonWake = STAGES.tib_final_epoch;
+            while( lastNonWake>=1 && (STAGES.line(lastNonWake)==7||STAGES.line(lastNonWake)==0))
+                lastNonWake = lastNonWake-1;
+            end            
+
             STAGES.firstNonWake = firstNonWake;
+            STAGES.lastNonWake = lastNonWake;            
             if(num_epochs~=numel(STAGES.line))
                 fprintf(1,'%s contains %u stages, but shows it should have %u\n',stages_filename,numel(STAGES.line),num_epochs);
             end
             
+            % tib
+            wk_tib_bout_diff = diff(STAGES.line(STAGES.tib_first_epoch:STAGES.tib_final_epoch)==0);
+            STAGES.bouts_wake_during_tib = max(sum(wk_tib_bout_diff==1), sum(wk_tib_bout_diff==-1));
+            
+            % sleep period time
+            wk_spt_bout_diff = diff(STAGES.line(STAGES.firstNonWake:STAGES.lastNonWake)==0);
+            STAGES.bouts_wake_during_spt = max(sum(wk_spt_bout_diff==1), sum(wk_spt_bout_diff==-1));
+
             %this may be unnecessary when the user does not care about sleep cycles.
             % STAGES.cycles = scoreSleepCycles(STAGES.line);
             
@@ -173,6 +252,19 @@ classdef CLASS_codec < handle
             STAGES.total_wake_sleep_minutes = sum(STAGES.line~=7) * STAGES.standard_epoch_min;
             STAGES.sleep_latency_minutes = CLASS_codec.getSleepLatency(STAGES);
             STAGES.rem_latency_minutes = CLASS_codec.getREMLatency(STAGES);
+            STAGES.n1_latency_minutes = nan;
+            STAGES.n2_latency_minutes = nan;
+            STAGES.sws_latency_minutes = nan;
+            if ~isempty(STAGES.firstN1_epoch)
+                STAGES.n1_latency_minutes = (STAGES.firstN1_epoch-STAGES.tib_first_epoch)*STAGES.standard_epoch_min;
+            end
+            if ~isempty(STAGES.firstN2_epoch)
+                STAGES.n2_latency_minutes = (STAGES.firstN2_epoch-STAGES.tib_first_epoch)*STAGES.standard_epoch_min;
+            end
+            if ~isempty(STAGES.firstSWS_epoch)
+                STAGES.sws_latency_minutes = (STAGES.firstSWS_epoch-STAGES.tib_first_epoch)*STAGES.standard_epoch_min;
+            end            
+            
             STAGES.waso_minutes = sum(STAGES.line(STAGES.firstNonWake:end)==0) * STAGES.standard_epoch_min;
             STAGES.total_wake_min = sum(STAGES.line==0) * STAGES.standard_epoch_min;
             STAGES.total_sleep_min = sum(STAGES.line~=0 & STAGES.line~=7) * STAGES.standard_epoch_min;
@@ -181,6 +273,10 @@ classdef CLASS_codec < handle
             STAGES.total_sws_min = sum(STAGES.line==3|STAGES.line==4) * STAGES.standard_epoch_min;
             STAGES.total_rem_min = sum(STAGES.line==5) * STAGES.standard_epoch_min;
             
+            % spt - sleep period time
+            STAGES.total_sleep_period_min = (STAGES.lastNonWake-STAGES.firstNonWake+1) * STAGES.standard_epoch_min;            
+            STAGES.total_wake_during_tib_min = sum(STAGES.line(STAGES.tib_first_epoch: STAGES.tib_final_epoch)==0) * STAGES.standard_epoch_min;
+            STAGES.total_wake_during_sleep_period_min = sum(STAGES.line(STAGES.firstNonWake: STAGES.lastNonWake)==0) * STAGES.standard_epoch_min;
             num_epochs_in_bed = STAGES.tib_final_epoch-STAGES.tib_first_epoch+1;
             if isempty(num_epochs_in_bed)
                 num_epochs_in_bed = 0;
@@ -224,7 +320,7 @@ classdef CLASS_codec < handle
         end
         
         function sleepl_minutes_elapsed = getSleepLatency(STAGES)
-            sleepl_minutes_elapsed = (STAGES.firstNonWake-STAGES.tib_first_epoch)*STAGES.standard_epoch_min;                   
+            sleepl_minutes_elapsed = (STAGES.firstNonWake-STAGES.tib_first_epoch)*STAGES.standard_epoch_min;
         end
         
         % The presence of a SOREMP upon first falling asleep was first reported by
