@@ -225,7 +225,7 @@ classdef CLASS_codec < handle
             [STAGES.tib_first_epoch, STAGES.tib_final_epoch] = CLASS_codec.getTIBEpochs(STAGES.line, default_unknown_stage);
             
             lastNonWake = STAGES.tib_final_epoch;
-            while( lastNonWake>=1 && (STAGES.line(lastNonWake)==7||STAGES.line(lastNonWake)==0))
+            while( ~isempty(lastNonWake) && lastNonWake>=1 && (STAGES.line(lastNonWake)==7||STAGES.line(lastNonWake)==0))
                 lastNonWake = lastNonWake-1;
             end            
 
