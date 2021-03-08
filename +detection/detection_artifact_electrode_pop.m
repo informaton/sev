@@ -56,7 +56,7 @@ function detectStruct = detection_artifact_electrode_pop(data,params,stageStruct
         win_interval_sec = params.win_interval_sec;
         
         PSD_settings.removemean = true;
-        PSD_settings.interval = win_interval_sec;
+        PSD_settings.interval_sec = win_interval_sec;
         PSD_settings.FFT_window_sec=win_length_sec;
         PSD_settings.wintype = 'rectwin';
         PSD_settings.spectrum_type = 'power';

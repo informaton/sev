@@ -156,7 +156,7 @@ classdef CLASS_UI_marking < handle
             %check to see if a settings file exists
             if(nargin<3)
                 parameters_filename = '_sev.parameters.txt';
-            end;
+            end
             
             %create/intilize the settings object            
             obj.SETTINGS = CLASS_settings(rootpathname,parameters_filename);
@@ -322,6 +322,7 @@ classdef CLASS_UI_marking < handle
             set(handles.menu_file_import_evtsFile,'callback',@obj.menu_file_import_evtsFile_callback);
                         
             set(handles.menu_file_load_text_channel,'callback',@obj.menu_file_load_text_channel_callback);
+            set(handles.menu_file_import_mat_channels,'callback',@obj.menu_import_mat_channels_callback);
             set(handles.menu_file_load_events_container,'callback',@obj.menu_file_load_events_container_callback);
             set(handles.menu_file_import_Evt_database,'callback',@obj.menu_file_import_evt_database_callback);
                %export section
@@ -537,9 +538,75 @@ classdef CLASS_UI_marking < handle
                 EVENT_CONTAINER.loadEventsFromWSCscoFile(fullfile(pathname,filename));
                 EVENT_CONTAINER.draw_events(); %events_to_plot(event_index) = 1;                
                 obj.refreshAxes();
-            end;
+            end
             
         end
+        
+        % =================================================================
+        %> @brief Loads signal data from a matlab archive file (.mat)
+        %> @param obj instance of CLASS_UI_marking
+        % =================================================================        
+        function menu_import_mat_channels_callback(obj, varargin)
+            global CHANNELS_CONTAINER;
+            
+            candidateFilename = obj.SETTINGS.VIEW.mat_channels_filename;
+            
+            msg = 'Select a .mat file with channel data (struct format) to load';
+            fileFilter = {'*.mat;*.MAT','MATLAB archive files';'*.*','All files'};
+            
+            if(~exist(candidateFilename,'file'))
+                candidateFilename = pwd;
+            end
+            fullfile = uigetfullfile(fileFilter,msg, candidateFilename);
+           
+                
+            if(~isempty(fullfile))
+                
+                obj.SETTINGS.VIEW.mat_channels_filename = fullfile;
+                
+                channelData = load(fullfile);
+                if(isfield(channelData,'samplerate'))
+                    fs = channelData.samplerate;
+                    channelData = rmfield(channelData,'samplerate');
+                else
+                    try
+                        defaultAnswer = {num2str(obj.SETTINGS.VIEW.mat_channels_samplerate)};
+                    catch me
+                        showME(me);
+                        defaultAnswer = {'100'};
+                    end
+                    fs = getSamplerateDlg(defaultAnswer);
+                end
+                
+                if(isfield(channelData,'scale'))
+                    scale = channelData.scale;
+                    channelData = rmfield(channelData,'scale');
+                else
+                    scale = 1;
+                end
+                channelNames = fieldnames(channelData);
+
+                for ch=1:numel(channelNames)
+                    channelName = channelNames{ch};
+                    HDR = CHANNELS_CONTAINER.loadGenericChannel(channelData.(channelName)*scale,fs,channelName);
+                end
+                
+                obj.setDateTimeFromHDR(HDR);
+                stages_filename = [];                
+                obj.loadSTAGES(stages_filename,obj.num_epochs);
+                obj.display_samples = 1:obj.getSamplesPerEpoch();
+                obj.setAxesResolution(); %calls refreshAxes()  %calls set epoch;
+                
+                CHANNELS_CONTAINER.align_channels_on_axes();
+                CHANNELS_CONTAINER.setChannelSettings();
+                    
+                enableFigureHandles(obj.figurehandle.sev);
+                set(obj.texthandle.src_filename,'string',fullfile);
+                obj.STATE.single_study_running = true;
+            end
+            obj.sev_loading_file_flag = false;        
+        end
+        
         
         % =================================================================
         %> @brief Loads generic text file data as channel data.
@@ -639,7 +706,7 @@ classdef CLASS_UI_marking < handle
                 EVENT_CONTAINER.loadEvtFile(fullfile(pathname,filename));
                 EVENT_CONTAINER.draw_events(); %events_to_plot(event_index) = 1;
                 obj.refreshAxes();
-            end;
+            end
         end
         
         
@@ -696,7 +763,7 @@ classdef CLASS_UI_marking < handle
                 
                 
                 obj.refreshAxes();
-            end;
+            end
         end
         
         % =================================================================
@@ -718,7 +785,7 @@ classdef CLASS_UI_marking < handle
                 EVENT_CONTAINER.draw_events(); %events_to_plot(event_index) = 1;
                 obj.refreshAxes();
                 obj.refreshAxes();
-            end;
+            end
         end        
         
         % -----------------------------------------------------------------
@@ -781,7 +848,7 @@ classdef CLASS_UI_marking < handle
                 filename_out = [filename_out(1:end-3) BATCH_PROCESS.output_files.events_filename];
             else
                 filename_out = [filename_out(1:end-3) 'evt.mat'];
-            end;
+            end
             
             filename= fullfile(obj.SETTINGS.VIEW.src_event_pathname,obj.SETTINGS.VIEW.output_pathname,filename_out);
             
@@ -997,7 +1064,7 @@ classdef CLASS_UI_marking < handle
                     elseif(bounds==2) %compare the current view
                         range = get(handles.axes1,'xlim');
                         [score, events_space] =EVENT_CONTAINER.compareEvents(indices2compare,range);
-                    end;
+                    end
                     h = figure('name',[num2str(100*score,'%05.2f'),'% overlap'],...
                         'toolbar','none','menubar','none');
                     colormap([0 0 0; 1 1 1]);
@@ -1009,8 +1076,8 @@ classdef CLASS_UI_marking < handle
                     waitforbuttonpress();
                     if(ishandle(h))
                         delete(h);
-                    end;
-                end;
+                    end
+                end
             end
             
         end
@@ -1093,9 +1160,9 @@ classdef CLASS_UI_marking < handle
                         parent = pan_channels;
                     else
                         parent = pan_file;
-                    end;
+                    end
                     uicontrol('style','checkbox','units',units,'string',eventLabel,'parent',pan_channels,'userdata',k,'value',CHANNELS_CONTAINER.events_to_plot(k));
-                end;
+                end
                 
                 
                 
@@ -1173,10 +1240,10 @@ classdef CLASS_UI_marking < handle
                         end
                     else
                         file_events_to_plot = get(h_file(cell2mat(get(h_file,'value'))==1),'userdata');
-                    end;
+                    end
                     if(iscell(file_events_to_plot))
                         file_events_to_plot = cell2mat(file_events_to_plot);
-                    end;
+                    end
                     
                     if(numel(h_channels)==1)
                         if(get(h_channels,'value'))
@@ -1186,7 +1253,7 @@ classdef CLASS_UI_marking < handle
                         end
                     else
                         channel_events_to_plot = get(h_channels(cell2mat(get(h_channels,'value'))==1),'userdata');
-                    end;
+                    end
                     if(iscell(channel_events_to_plot))
                         channel_events_to_plot = cell2mat(channel_events_to_plot);
                     else
@@ -1196,8 +1263,8 @@ classdef CLASS_UI_marking < handle
                     EVENT_CONTAINER.events_to_plot = [file_events_to_plot,channel_events_to_plot];
                     delete(dlg);
                     obj.refreshAxes(handles);
-                end;
-            end;
+                end
+            end
         end
 
 
@@ -1317,7 +1384,7 @@ classdef CLASS_UI_marking < handle
                 obj.setEpoch(new_epoch);
             else
                 obj.updateMainAxes();
-            end;
+            end
         end
         
         function increaseStartSample(obj)
@@ -1335,7 +1402,7 @@ classdef CLASS_UI_marking < handle
             else
                 set(hObject,'Checked','on');
                 set(obj.axeshandle.main,'xgrid','on');%,'ygrid','off');
-            end;
+            end
         end
         function contextmenu_mainaxes_minorgrid_callback(obj,hObject, eventdata)
             if(strcmp(get(hObject,'Checked'),'on'))
@@ -1345,7 +1412,7 @@ classdef CLASS_UI_marking < handle
                 set(hObject,'Checked','on');
                 obj.draw_x_minorgrid();
                 set(obj.linehandle.x_minorgrid,'visible','on');
-            end;
+            end
         end
         
 
@@ -1388,7 +1455,7 @@ classdef CLASS_UI_marking < handle
                 channel_index = obj.class_channel_index;
             else
                 channel_index = 1;
-            end;
+            end
             
             event_toolbox = CLASS_events_toolbox_dialog(); %create an empty object...
             event_toolbox.num_sources = 1;
@@ -1403,7 +1470,7 @@ classdef CLASS_UI_marking < handle
                     
                     EVENT_CONTAINER.draw_events(obj.event_index); %events_to_plot(event_index) = 1;
                     obj.refreshAxes();
-                end;
+                end
             catch ME
                 showME(ME);
                 delete(event_toolbox.dialog_handle);
@@ -1456,11 +1523,11 @@ classdef CLASS_UI_marking < handle
                         checked = 'on';
                     else
                         checked = 'off';
-                    end;
+                    end
                     uimenu(event_selection_menu_h,'Label',label,'separator','off',...
                         'checked',checked,'userdata',{k,@obj.updateUtilityAxes},'callback',...
                         'global EVENT_CONTAINER;data= get(gcbo,''userdata'');EVENT_CONTAINER.cur_event_index=data{1}; EVENT_CONTAINER.summary_stats_axes_needs_update=true;func=data{2};feval(func);');
-                end;
+                end
             else
                 set(event_selection_menu_h,'enable','off');
             end
@@ -1479,7 +1546,7 @@ classdef CLASS_UI_marking < handle
                 set(hObject,'checked','on');  %show density
             else
                 set(hObject,'checked','off'); %show raw
-            end;
+            end
             EVENT_CONTAINER.summary_stats_settings.show_density = strcmpi(get(hObject,'Checked'),'on');
             EVENT_CONTAINER.summary_stats_axes_needs_update=true;
 
@@ -1506,11 +1573,11 @@ classdef CLASS_UI_marking < handle
                             checked = 'on';
                         else
                             checked = 'off';
-                        end;
+                        end
                         uimenu(channel_selection_h,'Label',tmp.title,'separator','off',...
                             'checked',checked,'callback',{@obj.contextmenu_axesutility_psd_selectchannel_callback,k});
-                    end;
-                end;
+                    end
+                end
             else
                 set(channel_selection_h,'enable','off');
             end
@@ -1533,7 +1600,7 @@ classdef CLASS_UI_marking < handle
             else
                 set(hObject,'checked','off');
                 set(obj.axeshandle.utility,'ylimmode','manual');%,'ylim',get(handles.axes3,'ylim'));
-            end;
+            end
         end
         
                 
@@ -1748,7 +1815,7 @@ classdef CLASS_UI_marking < handle
                     suggestion);
                 if(filename~=0)
                     obj.loadEDFintoSEV(filename,pathname);
-                end;
+                end
                 
             catch ME
                 fprintf(1,'Problem loading file in %s\n',mfilename('fullpath'));
@@ -1850,7 +1917,7 @@ classdef CLASS_UI_marking < handle
                         CHANNELS_CONTAINER.setCurrentSamples(obj.display_samples);
                         CHANNELS_CONTAINER.align_channels_on_axes();
                         CHANNELS_CONTAINER.setChannelSettings();
-                    end;
+                    end
                 end
             end 
             new_channels_loaded_flag =~isempty(montage)&&num_indicesToLoad>0;
@@ -1917,7 +1984,7 @@ classdef CLASS_UI_marking < handle
                 else
                     delete(cf(k)); %removes other children aside from this one
                 end
-            end;
+            end
             
             set(0,'showhiddenhandles','off');
             
@@ -2004,6 +2071,7 @@ classdef CLASS_UI_marking < handle
             set(handles.menu_file_export,'enable','on');
             set(handles.menu_file_import,'enable','on');
             set(handles.menu_file_load_text_channel,'enable','on');
+            set(handles.menu_file_import_mat_channels,'enable','on');
             
             set(handles.menu_tools,'enable','on');
             set(handles.menu_tools_roc,'enable','on');
@@ -2045,7 +2113,7 @@ classdef CLASS_UI_marking < handle
 %                 set(obj.annotationhandle.timeline,'x',[startX startX],'y',[pos(2) pos(2)+pos(4)]);
 %             else
 %                 obj.annotationhandle.timeline = annotation(obj.figurehandle.sev,'line',[startX, startX], [pos(2) pos(2)+pos(4)],'hittest','off');
-%             end;
+%             end
 %             
 %             %axes3
             
@@ -2085,7 +2153,7 @@ classdef CLASS_UI_marking < handle
                 set(hObject,'string',num2str(obj.current_epoch));
             else
                 obj.setEpoch(epoch);
-            end;
+            end
         end
         
         
@@ -2201,7 +2269,7 @@ classdef CLASS_UI_marking < handle
                 set(obj.texthandle.current_stage,'position',[obj.sev_mainaxes_xlim(1)+samples_per_epoch*9/20,-240,0],'string',num2str(current_stage),'parent',obj.axeshandle.main,'color',[1 1 1]*.7,'fontsize',42);
                 set(obj.texthandle.previous_stage,'position',[obj.sev_mainaxes_xlim(1)+samples_per_epoch/20,-240,0],'string',['< ', num2str(previous_stage)],'parent',obj.axeshandle.main,'color',[1 1 1]*.8,'fontsize',35);
                 set(obj.texthandle.next_stage,'position',[obj.sev_mainaxes_xlim(1)+samples_per_epoch*9/10,-240,0],'string',[num2str(next_stage) ' >'],'parent',obj.axeshandle.main,'color',[1 1 1]*.8,'fontsize',35);
-            end;
+            end
             
             x_ticks = obj.sev_mainaxes_xlim(1):samples_per_epoch/6:obj.sev_mainaxes_xlim(end);
             set(obj.axeshandle.main,'xlim',obj.sev_mainaxes_xlim,'ylim',obj.sev_mainaxes_ylim,...
@@ -2209,7 +2277,7 @@ classdef CLASS_UI_marking < handle
             
             if(strcmp(get(obj.linehandle.x_minorgrid,'visible'),'on'))
                 obj.draw_x_minorgrid();
-            end;
+            end
 
         end
         
@@ -2242,7 +2310,7 @@ classdef CLASS_UI_marking < handle
             else
                 upper_portion_height_percent = min(0.5+axes_buffer,0.2*num_events);
                 fontsize = 7;
-            end;
+            end
             
             lower_portion_height_percent = 1-upper_portion_height_percent;
             y_delta = abs(diff(ylim))/(num_events+1)*upper_portion_height_percent; %just want the top part - the +1 is to keep it in the range a little above and below the portion set aside for it
@@ -2250,7 +2318,7 @@ classdef CLASS_UI_marking < handle
             ylim(2) = ylim(2)-y_delta/2;
             for k = 1:num_events
                 EVENT_CONTAINER.cell_of_events{events_to_plot(k)}.draw_all(obj.axeshandle.timeline,ylim(2)-k*y_delta,y_delta,obj.sev_adjusted_STAGES);
-            end;
+            end
             
             y_max = 10*lower_portion_height_percent;
             adjustedStageLine = obj.sev_adjusted_STAGES.line;
@@ -2268,7 +2336,7 @@ classdef CLASS_UI_marking < handle
             tick(2) = []; %don't really want to show stage 6 as a label
             set(obj.axeshandle.timeline,...
                 'ytick',tick,...
-                'yticklabel','7|5|4|3|2|1|0','fontsize',fontsize);
+                'yticklabel',{'7','5','4','3','2','1','0'},'fontsize',fontsize);
             
             
             %reverse the ordering so that stage 0 is at the top
@@ -2302,7 +2370,7 @@ classdef CLASS_UI_marking < handle
                 set(obj.annotationhandle.timeline,'x',[startX startX],'y',[pos(2) pos(2)+pos(4)]);
             else
                 obj.annotationhandle.timeline = annotation(obj.figurehandle.sev,'line',[startX, startX], [pos(2) pos(2)+pos(4)],'hittest','off');
-            end;  
+            end  
         end
         
         function updateUtilityAxes(obj)
@@ -2408,7 +2476,7 @@ classdef CLASS_UI_marking < handle
             end
             if(nargin<3)
                 epoch_dur_sec = obj.SETTINGS.VIEW.standard_epoch_sec;
-            end;
+            end
             epoch = ceil(index/(epoch_dur_sec*sampleRate));
             
         end
@@ -2437,14 +2505,14 @@ classdef CLASS_UI_marking < handle
             else
                 %                     set(obj.axeshandle.main,'dataaspectratiomode','auto');
                 set(obj.axeshandle.main,'plotboxaspectratiomode','auto');
-            end;
+            end
 
 %             
 %             if(seconds_per_epoch == obj.SETTINGS.VIEW.standard_epoch_sec)
 %                 set(obj.axeshandle.main,'dataaspectratiomode','manual','dataaspectratio',[30 12 1]);
 %             else
 %                 set(obj.axeshandle.main,'dataaspectratiomode','auto');
-%             end;
+%             end
 
             if(seconds_per_epoch<0)
                 set(obj.edit_epoch_h,'enable','off');
@@ -2463,7 +2531,7 @@ classdef CLASS_UI_marking < handle
                         
                         for n=1:num_stage_epochs
                             obj.display_samples(n,:)=(stage_epoch_ind(n)-1)*epochs2samples+1:(stage_epoch_ind(n))*epochs2samples;
-                        end;
+                        end
                         obj.display_samples = reshape(obj.display_samples',1,[]);
                         new_epoch = stage2show;
                     end
@@ -2482,7 +2550,7 @@ classdef CLASS_UI_marking < handle
             obj.sev_adjusted_STAGES.line = obj.sev_STAGES.line(round(linspace(1,numel(obj.sev_STAGES.line),obj.num_epochs)));
             obj.sev_adjusted_STAGES.cycles = obj.sev_STAGES.cycles(round(linspace(1,numel(obj.sev_STAGES.cycles),obj.num_epochs)));
             obj.setEpoch(new_epoch);
-        end;        
+        end        
                 
         function obj = combo_selectEventLabel_callback(obj,hObject,eventdata)
             %             hObject is the jCombo box
@@ -2573,7 +2641,7 @@ classdef CLASS_UI_marking < handle
         function obj = clear_handles(obj)
             if(ishghandle(obj.hg_group))
                 delete(obj.hg_group);
-            end;
+            end
             if(ishandle(obj.drag_right_h))
                 delete(obj.drag_right_h);
             end
@@ -2588,9 +2656,9 @@ classdef CLASS_UI_marking < handle
             if(~isempty(obj.current_linehandle))                
                 if(ishandle(obj.current_linehandle))
                     set(obj.current_linehandle,'selected','off');
-                end;
+                end
                 obj.current_linehandle = [];
-            end;
+            end
             obj.showReady();
         end
 
@@ -2611,23 +2679,23 @@ classdef CLASS_UI_marking < handle
                         pos = round(get(obj.axeshandle.timeline,'currentpoint'));
                         clicked_epoch = pos(1);
                         obj.setEpoch(clicked_epoch);
-                    end;
-                end;
-            end;
+                    end
+                end
+            end
         end
         
         function obj = sev_button_down(obj)
             if(strcmpi(obj.marking_state,'off')) %don't want to reset the state if we are marking events
                 if(~isempty(obj.current_linehandle))
                     obj.restore_state();
-                end;
+                end
             else
                 if(ishghandle(obj.hg_group))
                     if(~any(gco==allchild(obj.hg_group))) %did not click on a member of the object being drawn...
                         obj.clear_handles();
-                    end;
-                end;
-            end;
+                    end
+                end
+            end
             if(~isempty(obj.current_linehandle)&&ishandle(obj.current_linehandle) && strcmpi(get(obj.current_linehandle,'selected'),'on'))
                 set(obj.current_linehandle,'selected','off');
             end
@@ -2696,7 +2764,7 @@ classdef CLASS_UI_marking < handle
                 end
             else
                 varargout{1}=[];
-            end;
+            end
         end
     
 
@@ -2736,7 +2804,7 @@ classdef CLASS_UI_marking < handle
                 x = mouse_pos(1,1);
                 w = 0.01;
                 xdata = [x,x+w;x,x+w];
-            end;
+            end
             
             ydata = [min_y, min_y;max_y, max_y];
             
@@ -2799,7 +2867,7 @@ classdef CLASS_UI_marking < handle
                     set(rightObj,'tag','left');
                 else
                     set(cur_obj,'xdata',mouse_pos(1));
-                end;
+                end
             elseif(strcmp(side,'right'))
                 w = mouse_pos(1)-rec_pos(1);
                 if(w<0)
@@ -2811,15 +2879,15 @@ classdef CLASS_UI_marking < handle
                     set(cur_obj,'tag','left');
                 else
                     set(cur_obj,'xdata',mouse_pos(1));
-                end;
+                end
                 
             else
                 disp 'oops.';
-            end;
+            end
             
             if(w==0)
                 w=0.001;
-            end;
+            end
             
             rec_pos(3) = w;
             set(rectangle_h,'position',rec_pos);
@@ -2853,7 +2921,7 @@ classdef CLASS_UI_marking < handle
             if(ishandle(cur_obj))
                 set(cur_obj,'selected','off');
                 %         set(fig,'currentobject',rectangle_h); %this disables the current object...
-            end;
+            end
             
             set(obj.figurehandle.sev,'WindowButtonUpFcn',@obj.sev_main_fig_WindowButtonUpFcn); %let the user move across again...            
             set(obj.figurehandle.sev,'WindowButtonMotionFcn','');
@@ -2882,7 +2950,7 @@ classdef CLASS_UI_marking < handle
                         EVENT_CONTAINER.updateYOffset(obj.event_index,channel_obj.line_offset);
                         obj.refreshAxes();
                         
-                    end;
+                    end
                 end
             end
         end
@@ -2917,7 +2985,7 @@ classdef CLASS_UI_marking < handle
 %                     waitforbuttonpress();
 %                 catch ME
 %                     showME(ME);
-%                 end;
+%                 end
 %                 if(ishandle(f))
 %                     close(f);
 %                 end
@@ -2936,12 +3004,12 @@ classdef CLASS_UI_marking < handle
 %                     waitforbuttonpress();
 %                 catch ME
 %                     showME(ME);
-%                 end;
+%                 end
 %                 if(ishandle(f))
 %                     close(f);
 %                 end
             end
-        end;
+        end
         
         function plotSelection_callback(obj,varargin)
             y=obj.getSelectedChannelData();
@@ -2954,7 +3022,7 @@ classdef CLASS_UI_marking < handle
 %                     close(f);
 %                 end
                 
-            end;
+            end
             
         end
         
@@ -2991,7 +3059,7 @@ classdef CLASS_UI_marking < handle
             
             if(nargout==1)
                 grid_handle = gh;
-            end;
+            end
         end
         
        

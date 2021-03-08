@@ -228,7 +228,7 @@ sym = (minData-meanData)./(maxData-meanData);
 function pkInd = findLocalMaximum(data,thresh)
 %determine local maximum across data that first exceed threshold thresh and
 %returns these indices as the vector pkInd
-peak_runs = thresholdcrossings(data>thresh);
+peak_runs = detection.thresholdcrossings(data>thresh);
 pkInd = zeros(size(peak_runs,1),1);
 for k=1:size(peak_runs,1)
    [~,maxInd] = max( data(peak_runs(k,1):peak_runs(k,2)) );

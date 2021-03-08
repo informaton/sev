@@ -24,7 +24,7 @@ if(ischar(sleepStageInput) && exist(sleepStageInput,'file'))
 else
     FileData = [];
     stages = sleepStageInput;
-end;
+end
 
 sleepCycles = zeros(size(stages));
 

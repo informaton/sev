@@ -271,6 +271,13 @@ classdef CLASS_events_container < handle
             obj.stageStruct = stageStruct;
         end
         
+        function loadStageFile(obj, stageFile, startDateTime)
+            obj.stageStruct = CLASS_codec.loadSTAGES(stageFile);
+            if ~isempty(obj.stageStruct) && nargin>2
+                obj.stageStruct.startDateTime = startDateTime;
+            end            
+        end
+        
         % =================================================================
         %> @brief Sets SEV's default sample rate
         %> @param obj instance of CLASS_events_container class.
@@ -531,8 +538,8 @@ classdef CLASS_events_container < handle
                 event_index = events2hide(k);
                 if(event_index <=obj.num_events)
                     obj.cell_of_events{event_index}.hide;
-                end;
-            end;
+                end
+            end
         end
         
         % =================================================================
@@ -545,8 +552,8 @@ classdef CLASS_events_container < handle
                 event_index = event_indices(k);
                 if(event_index <=obj.num_events && event_index>0)
                     obj.cell_of_events{event_index}.show;
-                end;
-            end;
+                end
+            end
         end
         
         % =================================================================
@@ -594,7 +601,7 @@ classdef CLASS_events_container < handle
                 num_events_in_channel = sum(class_channel_index(1)==obj.channel_vector);
             else
                 num_events_in_channel = 0;
-            end;
+            end
         end
         
         
@@ -615,7 +622,7 @@ classdef CLASS_events_container < handle
              else
                  count =  0;
                  time_in_sec = 0;
-             end;   
+             end   
         end
         
         % =================================================================
@@ -659,7 +666,7 @@ classdef CLASS_events_container < handle
                     obj.cell_of_events{event_index}.appendEvent(single_event);
                     start_stop_matrix_index = obj.getEventCount(event_index);
                 end
-            end;
+            end
             %make sure the parent channel knows to redraw this...
             obj.draw_events(event_index);
         end
@@ -774,7 +781,7 @@ classdef CLASS_events_container < handle
                EDF_index = zeros(1,numel(parent_index));
                for k=1:numel(parent_index)
                    EDF_index(k) = obj.CHANNELS_CONTAINER.cell_of_channels{parent_index(k)}.EDF_index;
-               end;
+               end
                
                parent_index = parent_index(1); %avoid problems wiht multiple parents, as the case with ocular movements.
                
@@ -789,7 +796,7 @@ classdef CLASS_events_container < handle
                parent_EDF_label = obj.defaults.parent_channel_title;
                parent_channel_samplerate = obj.defaults.parent_channel_samplerate;
                EDF_index = 0;
-           end;
+           end
            obj.channel_vector(obj.num_events) = parent_index;
            obj.cell_of_events{obj.num_events} = ...
                CLASS_events([],...
@@ -841,7 +848,7 @@ classdef CLASS_events_container < handle
                         EDF_index = zeros(1,numel(parent_index));
                         for k=1:numel(parent_index)
                             EDF_index(k) = obj.CHANNELS_CONTAINER.cell_of_channels{parent_index(k)}.EDF_index(1);  %sometimes there are two EDF indices here when more than one channel is used in synthesizing the event - and will go back to the original one then.
-                        end;
+                        end
                         
                         parent_index = parent_index(1); %avoid problems wiht multiple parents, as the case with ocular movements.
                         
@@ -856,7 +863,7 @@ classdef CLASS_events_container < handle
                         parent_EDF_label = obj.defaults.parent_channel_title;
                         parent_channel_samplerate = obj.defaults.parent_channel_samplerate;
                         EDF_index = 0;
-                    end;
+                    end
                     class_channel_index = parent_index;
                     
                     obj.channel_vector(obj.num_events) = parent_index;
@@ -892,7 +899,7 @@ classdef CLASS_events_container < handle
                 end
             else
                 disp 'empty event_data';
-            end;
+            end
         end
         
         % =================================================================
@@ -966,7 +973,7 @@ classdef CLASS_events_container < handle
             c = uisetcolor(eventObj.cur_color);
             if(numel(c)~=1)
                 eventObj.updateColor(c);
-            end;        
+            end        
             MARKING.refreshAxes();
         end
         
@@ -1049,7 +1056,7 @@ classdef CLASS_events_container < handle
                 event_obj.paramStruct = event_paramStruct;
                 event_obj.summary_stats_needs_updating_Bool = true;
                 event_obj.source.pStruct = source_pStruct; %update any changes to the detectors parameters;
-            end;
+            end
             
             obj.set_Channel_drawEvents(event_index);
         end
@@ -1139,8 +1146,8 @@ classdef CLASS_events_container < handle
                         event_index = event_indices(k);
                         break; %stop at the first match...
                     end
-                end;
-            end;
+                end
+            end
         end
 
         % =================================================================
@@ -1207,7 +1214,7 @@ classdef CLASS_events_container < handle
                     
                 obj.addEvent(event_data, event_label,class_channel_index,sourceStruct, paramStruct);
                 event_index = obj.num_events;
-            end;
+            end
             
             if((~isempty(obj.roc_truth_ind)&&any(event_index == obj.roc_truth_ind)) ||...
                     (~isempty(obj.roc_estimate_ind)&&any(event_index == obj.roc_estimate_ind)) ||...
@@ -1411,7 +1418,7 @@ classdef CLASS_events_container < handle
                 end
                 mym('CLOSE');
             end
-        end;
+        end
         
         % =================================================================
         %> @brief Save events container to a .mat file.
@@ -1426,7 +1433,7 @@ classdef CLASS_events_container < handle
             %channel
             save(filename,'obj','-mat');
             
-        end;
+        end
         
         % =================================================================
         %> @brief Load events container from a .mat file.
@@ -1443,14 +1450,14 @@ classdef CLASS_events_container < handle
                    if(strcmp(obj.CHANNELS_CONTAINER.cell_of_channels{c}.EDF_label, cur_event.channel_name))
                        class_channel_index = c;
                        break;
-                   end;
-                end;
+                   end
+                end
                 
                 if(isfield(cur_event,'paramStruct'))
                     paramStruct = cur_event.paramStruct;
                 else
                     paramStruct = [];
-                end;
+                end
                 
                 sourceStruct.algorithm = 'external file (.SCO)';
                 sourceStruct.channel_indices = class_channel_index;
@@ -1523,7 +1530,7 @@ classdef CLASS_events_container < handle
                 end
             end
             
-        end;
+        end
 
         % =================================================================
         %> @brief Loads Embla formatted event file (.evt or .nvt) into obj
@@ -1731,7 +1738,7 @@ classdef CLASS_events_container < handle
                     expression = regexp(filename,'([^\.]+\.+)+(?<channel>[^\.]+)\.(?<event>[^\.]+)','names');
                     if(numel(expression)>0)
                         channel_label = expression.channel;
-                    end;
+                    end
                 end
                 if(~isempty(obj.CHANNELS_CONTAINER))
                     if(~isempty(channel_label))
@@ -1739,8 +1746,8 @@ classdef CLASS_events_container < handle
                             if(strcmp(obj.CHANNELS_CONTAINER.cell_of_channels{c}.EDF_label, channel_label))
                                 class_channel_index = c;
                                 break;
-                            end;
-                        end;
+                            end
+                        end
                     end
                     if(class_channel_index == 0)
                         if(~optional_batch_process_running_flag)
@@ -1756,7 +1763,7 @@ classdef CLASS_events_container < handle
                         paramStruct = cur_event.paramStruct;
                     else
                         paramStruct = [];
-                    end;
+                    end
                     
                     sourceStruct.algorithm = 'external file';
                     sourceStruct.channel_indices = class_channel_index;
@@ -1817,7 +1824,7 @@ classdef CLASS_events_container < handle
                     fprintf(fid,'\t%s',keys{k});
                 end
                 fclose(fid);
-            end;
+            end
 
             fid = fopen(filename,'a');
             configID = 1;
@@ -1903,8 +1910,8 @@ classdef CLASS_events_container < handle
         %> - 572001,572001,00:18:37.189,00:18:37.189,"Video Recording Started",biocals.evt
         %> - 572257,572257,00:18:37.689,00:18:37.689,"Impedence Check Passed",biocals.evt        
         % =================================================================
-        function save2evts(obj,optional_filename)
-            if(nargin>1 && ~isempty(optional_filename))
+        function save2evts(obj,evt_filename)
+            if(nargin>1 && ~isempty(evt_filename))
                 start_stop_matrix = [];
                 evt_labels = {};
                 evt_filenames = {};
@@ -1927,14 +1934,13 @@ classdef CLASS_events_container < handle
                 evt_filenames = evt_filenames(i);
                 evt_labels = evt_labels(i);
                 
-                fid = fopen(optional_filename,'w');
+                fid = fopen(evt_filename,'w');
                 if(fid>1)
                     
                     % print the header
                     fprintf(fid,'# Samplerate=%d\n',obj.defaults.parent_channel_samplerate);
                     fprintf(fid,'Start Sample,End Sample,Start Time,End Time,Event,File Name\n');
-                    
-                    
+
                     t0 = obj.stageStruct.startDateTime;
 
                     %Subtract 1 here to conform to conform with Somnologic/Embla's 0-based format
@@ -1950,13 +1956,13 @@ classdef CLASS_events_container < handle
                     stop_times = datestr(datenum([zeros(numel(stop_offset_sec),numel(t0)-1),stop_offset_sec(:)])+datenum(t0),'HH:MM:SS.FFF');
                     
                     
-                    for e=1:numel(starts);
+                    for e=1:numel(starts)
                         fprintf(fid,'%u,%u,%s,%s,"%s",%s\n',starts(e),stops(e),start_times(e,:),stop_times(e,:),evt_labels{e},evt_filenames{e});
                     end
                     
                     fclose(fid);
                 else
-                    fprintf('Could not open %s for writing.\n',optional_filename);
+                    fprintf('Could not open %s for writing.\n',evt_filename);
                 end
                 
                 
@@ -1965,7 +1971,7 @@ classdef CLASS_events_container < handle
                     warndlg('No events currently available');
                 else
                     
-                end;
+                end
             end
         end  %end save2evts(obj,varargin) 
         
@@ -2002,13 +2008,13 @@ classdef CLASS_events_container < handle
                     
                     pan_channels = uipanel('title','SEV Events','parent',dlg,'units',units);
                     
-                    for k=1:obj.num_events;
+                    for k=1:obj.num_events
                         eventLabel = [obj.getName(k)];
                         if(obj.channel_vector>0)
                             eventLabel = strcat(eventLabel,' (',obj.CHANNELS_CONTAINER.getChannelName(obj.channel_vector(k)),')');
                         end
                         uicontrol('style','checkbox','units',units,'string',eventLabel,'parent',pan_channels,'userdata',k,'value',1);
-                    end;
+                    end
                     
                     % left and bottom are the distance from the lower-left corner of the parent object to the lower-left corner of the uicontrol object. width and height are the dimensions of the uicontrol rectangle. All measurements are in units specified by the Units property.
                     
@@ -2069,7 +2075,7 @@ classdef CLASS_events_container < handle
                             end
                         else
                             event2save = get(h_channels(cell2mat(get(h_channels,'value'))==1),'userdata');
-                        end;
+                        end
                         if(iscell(event2save))
                             event2save = cell2mat(event2save);
                         end
@@ -2093,8 +2099,8 @@ classdef CLASS_events_container < handle
                             end
                         end
                         delete(dlg);
-                    end;
-                end;
+                    end
+                end
             end
         end 
         
@@ -2114,13 +2120,13 @@ classdef CLASS_events_container < handle
         %> - Name of the event as a string label
         %> - Start time of the event in hh:mm:ss.fff 24 hour format
         % =================================================================
-        function save2sco(obj,optional_filename)
+        function save2sco(obj,sco_filename)
 
             %save2text(filename) - saves all events using the filename
             %given.  If filename is a cell, then it must be of the same
             %length as the number of events, and each cell element is used
             %as unique filename to save the corresponding events to. 
-            if(nargin>1 && ~isempty(optional_filename))
+            if(nargin>1 && ~isempty(sco_filename))
                 start_stop_matrix = [];
                 evt_indices = [];
                 evt_labels = cell(obj.num_events,1);
@@ -2134,7 +2140,7 @@ classdef CLASS_events_container < handle
                 event_start_stop_matrix = start_stop_matrix(i,:);
                 evt_indices = evt_indices(i);
                 
-                fid = fopen(optional_filename,'w');
+                fid = fopen(sco_filename,'w');
                 if(fid>1)
                     t0 = obj.stageStruct.startDateTime;
                     
@@ -2159,7 +2165,7 @@ classdef CLASS_events_container < handle
                     duration_sco_samples = (event_start_stop_matrix(:,2)-event_start_stop_matrix(:,1))*conversion_factor;
                     duration_seconds = duration_sco_samples/obj.defaults.parent_channel_samplerate;
                     %                 fid = 1;
-                    for r=1:numel(evt_indices);
+                    for r=1:numel(evt_indices)
                         e=evt_indices(r);
                         fprintf(fid,'%u\t%u\t%u\t%f\t%s\t%u\t%s\n',start_epochs(r),starts_sco_samples(r),duration_sco_samples(r),...
                             duration_seconds(r),evt_labels{e},e,start_times(r,:));
@@ -2167,7 +2173,7 @@ classdef CLASS_events_container < handle
                     
                     fclose(fid);
                 else
-                    fprintf('Could not open %s for writing.\n',optional_filename);
+                    fprintf('Could not open %s for writing.\n', sco_filename);
                 end
                 
                 
@@ -2176,9 +2182,117 @@ classdef CLASS_events_container < handle
                     warndlg('No events currently available');
                 else
                     
-                end;
+                end
             end
         end  %end save2sco(obj,varargin)
+        
+        
+        % =================================================================
+        %> @brief Saves events to .wsc format - which is created for
+        %> Wisconsin and based on save2evts method.  
+        %> @param obj instance of CLASS_events_container class.
+        %> @param optional_filename Filename (string) Name of file to save events to.           
+        %> @note .wsc file format contains the following columns/fields for
+        %> describing events on a per row basis:
+        %> - Start time of the event in hh:mm:ss.fff 24 hour format
+        %> - End time of the event in hh:mm:ss.fff 24 hour format
+        %> - Event name or category - Name or category of the event.
+        %>   (e.g. biocals, stage)
+        %> - Event Value - optional value associated with the named event.
+        %> - Start Time,End Time,Event name, Event value
+        %> - 00:01:04.060,00:01:04.060,"CPAP TRIAL STARTED WITH PATIENT'S OWN MASK;  RESMED MIRAGE QUATTRO MEDIUM FULL FACE @ 9 CM; LK @ 32",user.evt
+        %> - 00:18:37.189,00:18:37.189,"Video Recording Started",biocals.evt
+        %> - 00:18:37.689,00:18:37.689,"Impedence Check Passed",biocals.evt        
+        % =================================================================
+        function didSaveSomething = save2wsc(obj,save_as_filename, verbose_mode)
+            narginchk(2,3);
+            if nargin<3
+                verbose_mode = false;
+            end
+            didSaveSomething = false;
+            if(obj.num_events<1 && isempty(obj.stageStruct))             
+                fprintf(1,'No event or stage information found to export available.\n');
+            elseif(isempty(save_as_filename))
+                fprintf(1,'Save as filename cannot be empty.  Export cancelled.\n');
+            else
+                % Now need to go through the stages struct as well!  
+                % had 'evt_label and evt_values' ?
+                % Use elapsed start times and stop times and sort those,
+                % not the start stop matrix.  
+                
+                elapsed_start_sec = [];
+                duration_sec = [];
+                evt_labels = {};
+                evt_values = [];
+                
+                if ~isempty(obj.stageStruct)
+                    sta_vec = obj.stageStruct.line;
+                    epoch_vec = 0:numel(sta_vec)-1;                    
+                    elapsed_start_sec = epoch_vec*obj.stageStruct.standard_epoch_sec;  %i.e. 30 s
+                    duration_sec = repmat(obj.stageStruct.standard_epoch_sec, numel(sta_vec), 1);
+                    evt_labels = cellstr(repmat('Stage', numel(sta_vec), 1));
+                    evt_values = sta_vec;
+                end
+               
+                if obj.num_events>0
+                    fprintf(1,'[WARNING] obj.num_events event export is not implemented yet\n');
+                end
+                %                 for k =1:obj.num_events
+                %                     evtObj = obj.getEventObj(k);
+                %                     numRows = size(evtObj.start_stop_matrix,1);
+                %                     evtFilename = cellstr(repmat(evtObj.source.algorithm,numRows,1));
+                %                     if(any(strcmpi('description',evtObj.paramFieldNames))&&~isempty(evtObj.paramStruct.description))
+                %                         labels = evtObj.paramStruct.description;
+                %                     else
+                %                         labels = cellstr(repmat(evtObj.label,numRows,1));
+                %                     end
+                %                     start_stop_datenum = [start_stop_datenum; evtObj.start_stop_matrix];
+                %                     evt_filenames = [evt_filenames; evtFilename];
+                %                     evt_labels = [evt_labels; labels];
+                %                 end
+                
+                [elapsed_start_sec, sort_index] = sort(elapsed_start_sec);
+                duration_sec = duration_sec(sort_index);
+                evt_values = evt_values(sort_index);
+                evt_labels = evt_labels(sort_index);
+                
+                % Study's start date num.
+                t0 = obj.stageStruct.startDateTime;
+                t0_datenum = datenum(t0);
+                study_start_time = datestr(t0_datenum,'HH:MM:SS.FFF');
+                
+                % Create a start_datenum matrix using ony the seconds value
+                % and then adding that to the study's start datenum
+                start_datenum = datenum([zeros(numel(elapsed_start_sec),numel(t0)-1),elapsed_start_sec(:)])+t0_datenum;
+                start_datestr = datestr(start_datenum,'HH:MM:SS.FFF');
+                
+                fid = fopen(save_as_filename,'w');
+                if(fid>1)
+                    % print the header                    
+                    fprintf(fid,'# Study start time (HH:MM:SS.FFF)=%s\n',study_start_time);
+                    fprintf(fid,'# Study duration (sec)=%d\n', obj.stageStruct.study_duration_in_seconds);
+                    fprintf(fid,'# Study duration (min)=%0.2f\n', obj.stageStruct.study_duration_minutes);                    
+                    fprintf(fid,'Start Time, Duration (sec), Category, Value(s)\n');
+                    
+                    % Export each row
+                    for e=1:size(start_datestr,1)
+                        fprintf(fid,'%s,%s,"%s",%s\n',start_datestr(e,:),num2str(duration_sec(e)),evt_labels{e},num2str(evt_values(e)));
+                    end
+                    
+                    fclose(fid);
+                    if verbose_mode
+                        fprintf('Events saved to: %s\n', save_as_filename);
+                    end
+                    didSaveSomething = true;
+                else
+                    if verbose_mode
+                        fprintf('Could not open %s for writing.\n',save_as_filename);
+                    end
+                end
+                
+            end
+        end  %end save2wsc(obj,varargin) 
+                
         
         % =================================================================
         %> @brief Contextmenu callback for deleting an event in the sev
@@ -2468,7 +2582,7 @@ classdef CLASS_events_container < handle
         %> @retval PatID The patient ID corresponding to patstudykey
         %> @retval StudyNum The study number corresponding to patstudykey
         function [PatID,StudyNum] = getDB_PatientIdentifiers(patstudykey)
-            [PatID,StudyNum] = CLASS_code.getDB_PatientIdentifiers(patstudykey);
+            [PatID,StudyNum] = CLASS_codec.getDB_PatientIdentifiers(patstudykey);
         end
         
         
