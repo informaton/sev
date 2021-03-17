@@ -110,7 +110,7 @@ function initializeSettings(hObject)
     set(handles.push_export_directory,'enable','on');
     
     % Start
-    set(handles.push_start,'enable','off');
+    set(handles.push_start,'enable','off');    
     
 end
 
@@ -170,7 +170,7 @@ end
 function push_export_directory_Callback(hObject, eventdata, handles)
 
     exportPathname = get(handles.edit_export_directory,'string');    
-    exportPathname = uigetfulldir(exportPathname,'Select the directory containing EDF files to process');
+    exportPathname = uigetfulldir(exportPathname,'Select the export destination directory');
     
     if(~isempty(exportPathname))
         set(handles.edit_export_directory,'string',exportPathname);        
@@ -374,11 +374,8 @@ function process_export(exportSettings)
                         save(studyInfoStruct.saveFilename,'exportData');                         
                         exportData = []; %#ok<NASGU>    
                         files_completed(i) = true;
-                        
-                    else
-                        
-                        files_failed(i) = true;
-                        
+                    else                        
+                        files_failed(i) = true;                        
                     end   
                     
                     fileStopTime = toc(fileStartTime);
