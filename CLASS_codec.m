@@ -511,7 +511,7 @@ classdef CLASS_codec < handle
         %------------------------------------------------------------------%
         function exportMethodsStruct = parseExportInfFile(exportInfFullFilename)
             exportMethodsStruct = [];
-        
+            
             if(exist(exportInfFullFilename,'file'))
                 fid = fopen(exportInfFullFilename,'r');
                 scanCell = textscan(fid,'%s %s %s','headerlines',1,'delimiter',',');
@@ -519,8 +519,9 @@ classdef CLASS_codec < handle
                 exportMethodsStruct.mfilename = scanCell{1};
                 exportMethodsStruct.description = scanCell{2};
                 exportMethodsStruct.settingsEditor = scanCell{3};
-            end            
+            end
         end
+        
         
         function hdr = loadHDR(edfFilename)
             hdr = loadHDR(edfFilename);
@@ -719,6 +720,65 @@ classdef CLASS_codec < handle
             StudyNum = x{2};
         end
         
+        %> @brief stages here refers to Stanford's STAGES cohort, a multisite 
+        %> collection of PSGs.
+        function [evt_Struct,samplerate_out] = parseSTAGESEventFile(eventsFile, edfFile, desired_samplerate)
+            samplerate_out = desired_samplerate;
+            if(~exist(eventsFile,'file'))                
+                error('File does not exist or was not given: %s', eventsFile);
+            end
+            
+            if nargin<3 || isempty(desired_samplerate)
+                desired_samplerate = 100;
+            end
+            if nargin<2
+                edfFile = [];
+            end
+            
+            fid = fopen(eventsFile, 'r');
+            if fid < 1
+                error('Unable to open file: %s', eventsFile);
+            else
+                % Start Time,Duration (seconds),Event
+                % 19:52:36, 0.000, MChg
+                % 19:52:36, 0.000, MChg
+                % 19:52:36, 0.000, MChg
+                a = textscan(fid, '%{hh:mm:ss}T %f %s', 'headerlines', 1, 'delimiter',',');
+                fclose(fid);
+                start_time = a{1};
+                duration_sec = a{2};
+                event_label = a{3};
+                
+                custom_idx = startsWith(event_label, 'custom','IgnoreCase', true);
+                start_time(custom_idx) = [];
+                duration_sec(custom_idx) = [];
+                event_label(custom_idx) = [];
+                
+                if ~isempty(edfFile) && exist(edfFile, 'file')
+                    HDR = loadHDR(edfFile);
+                else
+                    HDR = [];
+                end
+                
+                evt_Struct = CLASS_codec.makeEventStruct();
+                evt_Struct.HDR = HDR;
+                evt_Struct.type = eventType;
+                evt_Struct.start_stop_matrix = start_stop_matrix;
+                evt_Struct.start_sec = start_sec;
+                evt_Struct.stop_sec = stop_sec;
+                evt_Struct.dur_sec = dur_sec;
+                evt_Struct.epoch = epoch;
+                evt_Struct.stage = stage;
+                evt_Struct.evtID = evtID;
+                if(~isempty(description))
+                    evt_Struct.description = description;
+                end
+                if(~isempty(remainder))
+                    evt_Struct.unknown = remainder;
+                end
+            end                
+        end
+        
         % =================================================================
         %> @brief Parse events from an Embla formatted events file (.evt/.nvt)
         %> The function parses Embla files 
@@ -739,11 +799,10 @@ classdef CLASS_codec < handle
         %> @retval embla_evt_Struct
         %> @retval embla_samplerate_out
         % =================================================================
-        function [embla_evt_Struct,embla_samplerate_out] = parseEmblaEvent(evtFilename,embla_samplerate,desired_samplerate)
+        function [embla_evt_Struct, embla_samplerate_out] = parseEmblaEvent(evtFilename, embla_samplerate, desired_samplerate)
             %embla_samplerate_out may change if there is a difference found in
             %the stage .evt file processing as determined by adjusting for
             %a 30 second epoch.
-            
             
             if(nargin<2)
                 embla_samplerate = [];
@@ -753,8 +812,7 @@ classdef CLASS_codec < handle
             if(~exist(evtFilename,'file'))
                 embla_evt_Struct = [];
                 disp([evtFilename,' not handled']);
-            else
-                
+            else                
                 if(nargin < 3 || isempty(desired_samplerate))
                     desired_samplerate = 0;
                 end
@@ -785,8 +843,6 @@ classdef CLASS_codec < handle
                     start_sample = zeros(HDR.num_records,1);
                     stop_sample = start_sample;
                     evtID = zeros(HDR.num_records,2);
-                    
-                    
                     if strcmpi(eventType,'arousal')
                         
                         arousType = stop_sample;
@@ -841,7 +897,6 @@ classdef CLASS_codec < handle
                             evtID(r,:) = fread(fid,2,'uint8'); % [5,1]                            
                             remainder(r,:) = fread(fid,bytes_per_record-intro_size,'uint8');
                         end
-                        
                         
                     elseif(strcmpi(eventType,'biocals'))
                         if(false)
@@ -1526,7 +1581,7 @@ classdef CLASS_codec < handle
         %> - @c unknown (empty)
         %> - @c channel (empty)       
         % =================================================================        
-        function evt_Struct = makeStageEventStruct(stage, sampleRate,HDR)
+        function evt_Struct = makeStageEventStruct(stage, sampleRate, HDR)
             if(nargin<3)
                 HDR = [];
             end            
