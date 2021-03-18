@@ -29,8 +29,16 @@ if(nargin>2)
 end
 
 %handle filenames with unicode characters in them
-filename = char(unicode2native(filename,'utf-8'));
-fid = fopen(filename,'r');
+filename_unicode = char(unicode2native(filename,'utf-8'));
+fid = fopen(filename_unicode,'r');
+if fid < 1
+    % Some files don't translate well though (e.g. 'Argirï.edf' becomes 'ArgirÃ¯')
+    % So go back and try again
+    fid = fopen(filename,'r');
+    if fid < 1
+        error('Unable to open file: %s', filename);
+    end
+end
 precision = 'uint8';
 
 HDR.ver = str2double(char(fread(fid,8,precision)'));% 8 ascii : version of this data format (0) 
