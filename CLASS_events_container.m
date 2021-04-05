@@ -1657,7 +1657,10 @@ classdef CLASS_events_container < handle
         
         end
         
-        
+        function loadEventsFromHuneoEvtFile(obj, filename)
+            huneo_evts = CLASS_codec.parseHuneoEvtFile(filename);
+            
+        end
         % =================================================================
         %> @brief loadEventsFromWSCscoFile loads events contained in a WSC
         %> formatted .SCO file        

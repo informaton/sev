@@ -39,109 +39,118 @@ if fid < 1
         error('Unable to open file: %s', filename);
     end
 end
-precision = 'uint8';
 
-HDR.ver = str2double(char(fread(fid,8,precision)'));% 8 ascii : version of this data format (0) 
-HDR.patient = char(fread(fid,80,precision)');% 80 ascii : local patient identification (mind item 3 of the additional EDF+ specs)')
-HDR.local = char(fread(fid,80,precision)');% 80 ascii : local recording identification (mind item 4 of the additional EDF+ specs)')
-HDR.startdate = char(fread(fid,8,precision)');% 8 ascii : startdate of recording (dd.mm.yy)') (mind item 2 of the additional EDF+ specs)')
-HDR.starttime = char(fread(fid,8,precision)');% 8 ascii : starttime of recording (hh.mm.ss)') 
-HDR.HDR_size_in_bytes = str2double(char(fread(fid,8,precision)'));% 8 ascii : number of bytes in header record 
-HDR.reserved = char(fread(fid,44,precision)');% 44 ascii : reserved 
-HDR.number_of_data_records = str2double(char(fread(fid,8,precision)'));% 8 ascii : number of data records (-1 if unknown, obey item 10 of the additional EDF+ specs)')  %236
+% Add a try/catch to ensure any open file handle is closed when done.
+try    
+    precision = 'uint8';    
+    HDR.ver = str2double(char(fread(fid,8,precision)'));% 8 ascii : version of this data format (0)
+    HDR.patient = char(fread(fid,80,precision)');% 80 ascii : local patient identification (mind item 3 of the additional EDF+ specs)')
+    HDR.local = char(fread(fid,80,precision)');% 80 ascii : local recording identification (mind item 4 of the additional EDF+ specs)')
+    HDR.startdate = char(fread(fid,8,precision)');% 8 ascii : startdate of recording (dd.mm.yy)') (mind item 2 of the additional EDF+ specs)')
+    HDR.starttime = char(fread(fid,8,precision)');% 8 ascii : starttime of recording (hh.mm.ss)')
+    HDR.HDR_size_in_bytes = str2double(char(fread(fid,8,precision)'));% 8 ascii : number of bytes in header record
+    HDR.reserved = char(fread(fid,44,precision)');% 44 ascii : reserved
+    HDR.number_of_data_records = str2double(char(fread(fid,8,precision)'));% 8 ascii : number of data records (-1 if unknown, obey item 10 of the additional EDF+ specs)')  %236
     % 'EDF+C' means continuous recording
     % 'EDF+D' means interrupted recording
     % See EDF+ spec at http://www.edfplus.info/specs/edfplus.html
-HDR.duration_of_data_record_in_seconds = str2double(char(fread(fid,8,precision)'));% 8 ascii : duration of a data record, in seconds 
-HDR.num_signals = str2double(char(fread(fid,4,precision)'));% 4 ascii : number of signals (ns)') in data record 
-ns = HDR.num_signals;
-
-datetime = [HDR.startdate, '.' , HDR.starttime];
-HDR.T0 = zeros(1,6); %[year(4) month(2) day(2) hour(2) minute(2) second(2)]
-try
-    for k=1:6
-        [str, datetime] = strtok(datetime,'.');
-        HDR.T0(k) = str2num(str);
-    end
-    yy = HDR.T0(3);
-    dd = HDR.T0(1);
-    HDR.T0(3) = dd;
-    if(yy>=85)
-        yy = yy+1900;
-    else
-        yy = yy+2000;
-    end
-    HDR.T0(1) = yy;
-catch ME
-    disp(['Failed to load the date/time in this EDF.  Filename: ', filename]);
-end
-
-%ns = number of channels/signals in the EDF
-%duration_of_signal_in_samples = 
-
-HDR.label = cellstr(char(fread(fid,[16,ns],precision)'));% ns * 16 ascii : ns * label (e.g. EEG Fpz-Cz or Body temp)') (mind item 9 of the additional EDF+ specs)')
-HDR.transducer = cellstr(char(fread(fid,[80,ns],precision)'));% ns * 80 ascii : ns * transducer type (e.g. AgAgCl electrode)')
-HDR.physical_dimension = cellstr(char(fread(fid,[8,ns],precision)'));% ns * 8 ascii : ns * physical dimension (e.g. uV or degreeC)')
-HDR.physical_minimum = str2double(cellstr(char(fread(fid,[8,ns],precision)')));% ns * 8 ascii : ns * physical minimum (e.g. -500 or 34)')
-HDR.physical_maximum = str2double(cellstr(char(fread(fid,[8,ns],precision)')));% ns * 8 ascii : ns * physical maximum (e.g. 500 or 40)')
-HDR.digital_minimum = str2double(cellstr(char(fread(fid,[8,ns],precision)')));% ns * 8 ascii : ns * digital minimum (e.g. -2048)')
-HDR.digital_maximum = str2double(cellstr(char(fread(fid,[8,ns],precision)')));% ns * 8 ascii : ns * digital maximum (e.g. 2047)')
-HDR.prefiltering = cellstr(char(fread(fid,[80,ns],precision)'));% ns * 80 ascii : ns * prefiltering (e.g. HP:0.1Hz LP:75Hz)')
-HDR.number_samples_in_each_data_record = str2double(cellstr(char(fread(fid,[8,ns],precision)')));% ns * 8 ascii : ns * nr of samples in each data record
-HDR.reserved_for_signals = cellstr(char(fread(fid,[32,ns],precision)'));% ns * 32 ascii : ns * reserved
-
-HDR.fs = HDR.number_samples_in_each_data_record/HDR.duration_of_data_record_in_seconds; %sample rate
-HDR.samplerate = HDR.fs;
-HDR.duration_sec = HDR.duration_of_data_record_in_seconds*HDR.number_of_data_records;
-HDR.duration_samples = HDR.duration_sec*HDR.fs;
-
-if(nargout>1)
-    if(ischar(channels))
-        channels = {channels};
+    HDR.duration_of_data_record_in_seconds = str2double(char(fread(fid,8,precision)'));% 8 ascii : duration of a data record, in seconds
+    HDR.num_signals = str2double(char(fread(fid,4,precision)'));% 4 ascii : number of signals (ns)') in data record
+    ns = HDR.num_signals;
+    
+    datetime = [HDR.startdate, '.' , HDR.starttime];
+    HDR.T0 = zeros(1,6); %[year(4) month(2) day(2) hour(2) minute(2) second(2)]
+    try
+        for k=1:6
+            [str, datetime] = strtok(datetime,'.');
+            HDR.T0(k) = str2num(str);
+        end
+        yy = HDR.T0(3);
+        dd = HDR.T0(1);
+        HDR.T0(3) = dd;
+        if(yy>=85)
+            yy = yy+1900;
+        else
+            yy = yy+2000;
+        end
+        HDR.T0(1) = yy;
+    catch ME
+        disp(['Failed to load the date/time in this EDF.  Filename: ', filename]);
     end
     
-    if(iscell(channels))
-        [~,~,channels] =  intersect(channels,HDR.label,'stable');  % keep the order the same with stable, so we don't cause issues with mixing up channels returned
-    end
-    if(channels == 0) %requesting all channels then
-        channels = 1:HDR.num_signals;
-    end
-
-    signal = cell(numel(channels),1);
-    bytes_per_sample = 2;
-    for k = 1:numel(channels)        
-        cur_channel = channels(k);
-        if(cur_channel>0 && cur_channel<=HDR.num_signals)
-            physical_dimension = HDR.physical_dimension{cur_channel};% ns * 8 ascii : ns * physical dimension (e.g. uV or degreeC)')
-            if(strcmpi(physical_dimension,'mv'))
-                scale = 1e3;
-            elseif(strcmpi(physical_dimension,'v'))
-                scale = 1e6;
-            else
-                scale = 1;
+    %ns = number of channels/signals in the EDF
+    %duration_of_signal_in_samples =
+    
+    HDR.label = cellstr(char(fread(fid,[16,ns],precision)'));% ns * 16 ascii : ns * label (e.g. EEG Fpz-Cz or Body temp)') (mind item 9 of the additional EDF+ specs)')
+    HDR.transducer = cellstr(char(fread(fid,[80,ns],precision)'));% ns * 80 ascii : ns * transducer type (e.g. AgAgCl electrode)')
+    HDR.physical_dimension = cellstr(char(fread(fid,[8,ns],precision)'));% ns * 8 ascii : ns * physical dimension (e.g. uV or degreeC)')
+    HDR.physical_minimum = str2double(cellstr(char(fread(fid,[8,ns],precision)')));% ns * 8 ascii : ns * physical minimum (e.g. -500 or 34)')
+    HDR.physical_maximum = str2double(cellstr(char(fread(fid,[8,ns],precision)')));% ns * 8 ascii : ns * physical maximum (e.g. 500 or 40)')
+    HDR.digital_minimum = str2double(cellstr(char(fread(fid,[8,ns],precision)')));% ns * 8 ascii : ns * digital minimum (e.g. -2048)')
+    HDR.digital_maximum = str2double(cellstr(char(fread(fid,[8,ns],precision)')));% ns * 8 ascii : ns * digital maximum (e.g. 2047)')
+    HDR.prefiltering = cellstr(char(fread(fid,[80,ns],precision)'));% ns * 80 ascii : ns * prefiltering (e.g. HP:0.1Hz LP:75Hz)')
+    HDR.number_samples_in_each_data_record = str2double(cellstr(char(fread(fid,[8,ns],precision)')));% ns * 8 ascii : ns * nr of samples in each data record
+    HDR.reserved_for_signals = cellstr(char(fread(fid,[32,ns],precision)'));% ns * 32 ascii : ns * reserved
+    
+    HDR.fs = HDR.number_samples_in_each_data_record/HDR.duration_of_data_record_in_seconds; %sample rate
+    HDR.samplerate = HDR.fs;
+    HDR.duration_sec = HDR.duration_of_data_record_in_seconds*HDR.number_of_data_records;
+    HDR.duration_samples = HDR.duration_sec*HDR.fs;
+    
+    if(nargout>1)
+        if(ischar(channels))
+            channels = {channels};
+        end
+        
+        if(iscell(channels))
+            [~,~,channels] =  intersect(channels,HDR.label,'stable');  % keep the order the same with stable, so we don't cause issues with mixing up channels returned
+        end
+        if(channels == 0) %requesting all channels then
+            channels = 1:HDR.num_signals;
+        end
+        
+        signal = cell(numel(channels),1);
+        bytes_per_sample = 2;
+        for k = 1:numel(channels)
+            cur_channel = channels(k);
+            if(cur_channel>0 && cur_channel<=HDR.num_signals)
+                physical_dimension = HDR.physical_dimension{cur_channel};% ns * 8 ascii : ns * physical dimension (e.g. uV or degreeC)')
+                if(strcmpi(physical_dimension,'mv'))
+                    scale = 1e3;
+                elseif(strcmpi(physical_dimension,'v'))
+                    scale = 1e6;
+                else
+                    scale = 1;
+                end
+                
+                num_samples_in_cur_data_record = HDR.number_samples_in_each_data_record(cur_channel);
+                precision = [num2str(num_samples_in_cur_data_record),'*int16'];
+                skip = (sum(HDR.number_samples_in_each_data_record)-num_samples_in_cur_data_record)*bytes_per_sample; %*2 because there are two bytes used for each integer
+                
+                cur_channel_offset = sum(HDR.number_samples_in_each_data_record(1:cur_channel-1))*bytes_per_sample; %*2 because there are two bytes used for each integer
+                offset = HDR.HDR_size_in_bytes+cur_channel_offset;
+                fseek(fid,offset,'bof');
+                signal{k} = fread(fid,HDR.duration_samples(cur_channel),precision,skip);
+                signal{k} = scale*(HDR.physical_minimum(cur_channel)+(signal{k}(:)-HDR.digital_minimum(cur_channel))...
+                    *(HDR.physical_maximum(cur_channel)-HDR.physical_minimum(cur_channel))...
+                    /(HDR.digital_maximum(cur_channel)-HDR.digital_minimum(cur_channel)));
             end
-
-            num_samples_in_cur_data_record = HDR.number_samples_in_each_data_record(cur_channel);
-            precision = [num2str(num_samples_in_cur_data_record),'*int16'];
-            skip = (sum(HDR.number_samples_in_each_data_record)-num_samples_in_cur_data_record)*bytes_per_sample; %*2 because there are two bytes used for each integer
-
-            cur_channel_offset = sum(HDR.number_samples_in_each_data_record(1:cur_channel-1))*bytes_per_sample; %*2 because there are two bytes used for each integer
-            offset = HDR.HDR_size_in_bytes+cur_channel_offset;
-            fseek(fid,offset,'bof');
-            signal{k} = fread(fid,HDR.duration_samples(cur_channel),precision,skip);
-            signal{k} = scale*(HDR.physical_minimum(cur_channel)+(signal{k}(:)-HDR.digital_minimum(cur_channel))...
-                *(HDR.physical_maximum(cur_channel)-HDR.physical_minimum(cur_channel))...
-                /(HDR.digital_maximum(cur_channel)-HDR.digital_minimum(cur_channel)));
         end
     end
+    
+    % The voltage (i.e. signal) in the file by definition equals
+    % [(physical miniumum)
+    % + (digital value in the data record - digital minimum)
+    % x (physical maximum - physical minimum)
+    % / (digital maximum - digital minimum)].
+    fclose(fid);
+    
+catch me
+    if fid>1
+        fclose(fid);
+    end
+    rethrow(me);
 end
-
-% The voltage (i.e. signal) in the file by definition equals
-% [(physical miniumum)
-% + (digital value in the data record - digital minimum) 
-% x (physical maximum - physical minimum) 
-% / (digital maximum - digital minimum)].
-fclose(fid);
 
 % HEADER Specs...
 % 8 ascii : version of this data format (0)') 

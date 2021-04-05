@@ -9,4 +9,10 @@ function sev_pathname = sev_pathsetup()
     addpath(fullfile(sev_pathname,'auxiliary'));
     addpath(fullfile(sev_pathname,'widgets'));
     
+    if ispc
+        % To get the uigetfulldir.m
+        widgets_pathname = fullfile(sev_pathname, '\padaco\views\widgets\');
+        addpath(widgets_pathname);
+    end
+    
 end
