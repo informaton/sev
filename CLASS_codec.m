@@ -696,8 +696,13 @@ classdef CLASS_codec < handle
                 staFilename = [];
             end
 
-            %double check that we have .STA extension
-            save(staFilename,'y','-ascii');
+            fid = fopen(staFilename, 'w');
+            if fid>2
+                fprintf(fid, '%d\t%d\n', y');
+            else
+                %double check that we have .STA extension
+                save(staFilename,'y','-ascii');
+            end
 
         end
 
@@ -1648,6 +1653,7 @@ classdef CLASS_codec < handle
                 end
 
                 if(~isempty(evt_Struct.HDR) && isfield(evt_Struct.HDR,'T0'))
+                    evt_Struct.startDateTime = evt_Struct.HDR.T0;  
                     numEvents = numel(evt_Struct.dur_sec);
                     t0_notSec = evt_Struct.HDR.T0(1:end-1);
                     t0_sec = evt_Struct.HDR.T0(end);
@@ -1856,6 +1862,153 @@ classdef CLASS_codec < handle
 
         end
 
+        % See also parseSTAGESEventFile
+        function [SCOStruct, stageVec] = parseSTAGEScsvFile(filenameIn, edfHDR, desiredSamplerate)
+            SCOStruct = struct();
+            stageVec = [];
+            if nargin<3
+                desiredSamplerate = 100;
+            end
+            if(~exist(filenameIn,'file'))
+                fprintf(2, 'Warning!  The file "%s" does not exist.  An empty struct will be returned.\n', filenameIn);
+            else
+                fid = fopen(filenameIn,'r');
+                %-------/ .csv example contents \-------------------/
+                % Start Time,Duration (seconds),Event
+                % 20:16:00, 30.000, Wake
+                % 20:16:13, 0.000, Custom User Event 4
+                % 20:16:30, 30.000, Stage2
+                % 20:16:51, 0.000, Calibration Start
+                % 20:16:57, 0.000, Custom User Event 32
+                % 20:17:00, 30.000, Stage2
+                % 20:17:30, 30.000, Wake
+                % 20:18:00, 30.000, Wake
+                % 20:18:30, 30.000, Wake
+                % 20:19:00, 30.000, Wake
+                % 20:19:12, 0.000, Calibration End
+                %---------------------------------------------------/
+                % Debugging
+                % str = '20:16:00, 30.000, Wake';
+                % scanCell = textscan(str, '%{HH:mm:ss}D %f %s', 'delimiter',',');
+                % evtStart = scanCell{1};
+                % evtDuration = scanCell{2};
+                % evtComment = strip(scanCell{3});
+                %
+                
+                headerLine = fgetl(fid);
+                headerLineStripped = strrep(headerLine,' ','');
+                expectedHeaderLine = strrep('Start Time,Duration (seconds),Event',' ','');
+                
+                if ~strcmpi(headerLineStripped, expectedHeaderLine)
+                    fclose(fid);
+                    error('Unexpected header line "%s", found in %s', headerLine, filenameIn);
+                else
+                    % scanCell = textscan(fid, '%{HH:mm:ss}D %f %s', 'delimiter',',');
+                    scanCell = textscan(fid, '%{hh:mm:ss}T %f %s', 'delimiter',',');  % T is for duration
+                    fclose(fid);
+                    if(isempty(scanCell{1}))
+                        fprintf('Warning!  The file ''%s'' could not be parsed!\nAn empty struct will be returned.',filenameIn);
+                    else
+                        % STAGES = CLASS_codec.stages2STAGES(stages,num_epochs, default_unknown_stage);
+                        evtStart = datenum(scanCell{1});
+                        firstEvtStart = evtStart(1);
+                        evtDurationSec = scanCell{2};
+                        evtComment = strip(scanCell{3});
+                        
+                        custom_idx = startsWith(evtComment, 'custom', 'IgnoreCase', true);
+                        evtStart(custom_idx) = [];
+                        evtDurationSec(custom_idx) = [];
+                        evtComment(custom_idx) = [];
+                        
+                        studyStart = datenum(edfHDR.T0);
+                        studyStartDay = floor(studyStart);
+                        studyStartTime = mod(studyStart, 1);
+                        
+                        [~, min_start_idx] = min(evtStart);
+                        
+                        evtStart = evtStart + studyStartDay;
+                        
+                        if firstEvtStart < studyStartTime
+                            evtStart = evtStart+1; %  we are actually starting on the following day then in this case. Or we have events that occur before the study started :( that is an issue if possible.
+                        elseif ~isempty(min_start_idx) && min_start_idx > 1
+                            % This is where we conceivably went past midnight.
+                            evtStart(min_start_idx:end) = evtStart(min_start_idx:end)+1;
+                        end
+                        
+                        datenumPerSec = datenum([0, 0, 0, 0, 0, 1]);
+                        evtStartSec = (evtStart - studyStart)/datenumPerSec;
+                        
+                        eventStruct = CLASS_codec.makeEventStruct('HDR', edfHDR, 'samplerate', desiredSamplerate, 'start_sec', evtStartSec, 'dur_sec', evtDurationSec, 'description', evtComment);
+                        eventStruct.startDateTime = edfHDR.T0;
+                        standard_epoch_sec = CLASS_codec.SECONDS_PER_EPOCH;
+                        num_epochs = ceil(edfHDR.duration_sec/standard_epoch_sec);
+                        
+                        % parse the stages first
+                        stageInd = contains(evtComment,'Stage','ignorecase', true) | strcmpi(evtComment, 'REM') | strcmpi(evtComment, 'Wake');
+                        stageVec = repmat(7, num_epochs, 1);
+                        
+                        if ~isempty(stageInd) && any(stageInd)
+                            
+                            % Create a numeric stage score vector
+                            stageStr = {'Wake'          % 0
+                                'Stage1'        % 1
+                                'Stage2'        % 2
+                                'Stage3'        % 3
+                                'Stage4'        % 4
+                                'REM'           % 5
+                                % 'UnknownStage'  % 7
+                                };
+                            
+                            evtStageLabels = evtComment(stageInd);
+                            evtStageVec = repmat(7, size(evtStageLabels));
+                            
+                            for s=1:numel(stageStr)
+                                score = s-1;
+                                evtStageVec(strcmpi(evtStageLabels, stageStr(s))) = score;
+                            end
+                            
+                            evtStageStartSec = evtStartSec(stageInd);
+                            evtStageStartEpoch = floor(evtStageStartSec/standard_epoch_sec)+1;  % make sure 30 second is epoch 2, and 0 seconds is epoch 1.  
+                            
+                            evtStageDurationSec = evtDurationSec(stageInd);
+                            
+                            badEpochs = evtStageDurationSec == 0;
+                            if any(badEpochs)
+                                evtStageStartEpoch(badEpochs) = [];
+                                evtStageDurationSec(badEpochs) = [];
+                                evtStageVec(badEpochs) = [];
+                            end
+                            
+                            evtStageDurationEpoch = ceil(evtStageDurationSec/standard_epoch_sec);                            
+                            evtStageStopEpoch = evtStageStartEpoch+evtStageDurationEpoch-1;
+                            
+                            maxEpoch = max(evtStageStopEpoch);
+                            if maxEpoch>num_epochs
+                                fprintf(2, 'Warning: The number of epochs scored (%d) exceeds the number of epochs found in the EDF (%d): %s\n', maxEpoch, num_epochs, filenameIn);
+                                % Place a ceiling on the stop epoch so we don't crash our for loop below.
+                                evtStageStopEpoch(evtStageStopEpoch>num_epochs) = num_epochs;
+                            end
+                            
+                            stageVec = repmat(7,num_epochs,1);
+                            epochVec = (1:num_epochs)';
+                            
+                            for e=1:numel(evtStageVec)
+                                start_epoch = evtStageStartEpoch(e);
+                                if start_epoch <= num_epochs
+                                    stop_epoch = evtStageStopEpoch(e);
+                                    score_epoch = evtStageVec(e);
+                                    stageVec(start_epoch:stop_epoch) = score_epoch;
+                                end
+                            end
+                            
+                            eventStruct.epoch = epochVec;
+                            eventStruct.stage = stageVec;
+                        end
+                    end
+                end
+            end
+        end
+        
         % =================================================================
         %> @brief This function takes an event file of Stanford Sleep Cohort's .evts
         %> format and returns a SEV event struct and a SEV hynpgram.

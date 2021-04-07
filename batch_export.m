@@ -51,7 +51,7 @@ else
 
     if(~exist(edfPath,'file'))
         edfPath = pwd;        
-    end;
+    end
 
     updateGUI(CLASS_batch.checkPathForEDFs(edfPath),handles); 
  
@@ -104,7 +104,7 @@ function initializeSettings(hObject)
     exportPath = MARKING.SETTINGS.BATCH_PROCESS.export.output_folder;                        
     if(~exist(exportPath,'file'))
         exportPath = pwd;        
-    end;
+    end
     
     set(handles.edit_export_directory,'string',exportPath,'enable','inactive');    
     set(handles.push_export_directory,'enable','on');
@@ -150,7 +150,7 @@ function push_edf_directory_Callback(hObject, eventdata, handles)
     
     if(~exist(edfPath,'file'))
         edfPath = MARKING.SETTINGS.BATCH_PROCESS.export.edf_folder; %the edf folder to do a batch job on.
-    end;
+    end
     
     pathname = uigetfulldir(edfPath,'Select the directory containing EDF files to process');
     
@@ -162,7 +162,7 @@ function push_edf_directory_Callback(hObject, eventdata, handles)
     else
         % The user pressed cancel and does not want tchange the pathname.
         
-    end;
+    end
 end
 
 
@@ -177,7 +177,7 @@ function push_export_directory_Callback(hObject, eventdata, handles)
     else
         % The user pressed cancel and does not want tchange the pathname.
         
-    end;
+    end
 end
 
 
@@ -229,7 +229,7 @@ function push_start_Callback(hObject, eventdata, handles)
         process_export(exportSettings);
     else
         warndlg(sprintf('Output path (%s) does not exist',outputPath));
-    end;
+    end
 end
 
 %==========================================================================
@@ -392,7 +392,7 @@ function process_export(exportSettings)
                     fprintf('%s\n',timeMessage);
 
                     
-                end; 
+                end 
                 
             catch me
                 showME(me);
