@@ -87,24 +87,21 @@ classdef CLASS_batch < handle
                 else
                     edfPathStruct.statusString = [num2str(num_edfs),' EDF files (',num2str(total_bytes,'%0.1f'),' ',byte_suffix,') found in the current directory. '];
                 end
-            end;            
+            end            
             
             if(num_edfs==0)
                 
                 if(num_edfs_all==0)
                     edfPathStruct.statusString = [statusString, 'Please choose a different directory'];
-                    set(get(handles.bg_panel_playlist,'children'),'enable','off');
-                    
+                    set(get(handles.bg_panel_playlist,'children'),'enable','off');                    
                 else
                     edfPathStruct.statusString = [statusString, 'Please select a different play list or use ''All'''];
                 end
             else               
                 first_edf_fullfilename = edfPathStruct.edf_fullfilename_list{1};
-                edfPathStruct.firstHDR = loadEDF(first_edf_fullfilename);
-                
-            end;            
+                edfPathStruct.firstHDR = loadEDF(first_edf_fullfilename);                
+            end
         end
-
         
         %------------------------------------------------------------------%
         %> @brief Returns a playlist of .EDF files to process as a subset from a directory
@@ -353,7 +350,7 @@ classdef CLASS_batch < handle
                     
                     clipboard('copy',skipped_files(:)'); %make it a 1 row vector
                     disp([num2str(numel(selections)),' filenames copied to the clipboard.']);
-                end;
+                end
             else
                 dialogH = msgbox(summaryText,'Completed');
             end

@@ -1,1 +1,4 @@
-/Users/unknown/git/padaco/figures/uigetfulldir.m
+/Users/unknown/git/padaco/views/dialogs/uigetfulldir.m
+
+% go2padaco
+% pathsetup
