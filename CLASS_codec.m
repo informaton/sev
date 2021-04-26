@@ -1879,7 +1879,7 @@ classdef CLASS_codec < handle
                 % 20:16:13, 0.000, Custom User Event 4
                 % 20:16:30, 30.000, Stage2
                 % 20:16:51, 0.000, Calibration Start
-                % 20:16:57, 0.000, Custom User Event 32
+                % 20:16:57, 0.000, Custom User Event 32, some extra comment
                 % 20:17:00, 30.000, Stage2
                 % 20:17:30, 30.000, Wake
                 % 20:18:00, 30.000, Wake
@@ -1904,7 +1904,7 @@ classdef CLASS_codec < handle
                     error('Unexpected header line "%s", found in %s', headerLine, filenameIn);
                 else
                     % scanCell = textscan(fid, '%{HH:mm:ss}D %f %s', 'delimiter',',');
-                    scanCell = textscan(fid, '%{hh:mm:ss}T %f %s', 'delimiter',',');  % T is for duration
+                    scanCell = textscan(fid, '%{hh:mm:ss}T %f %[^\n]', 'delimiter',',');  % T is for duration
                     fclose(fid);
                     if(isempty(scanCell{1}))
                         fprintf('Warning!  The file ''%s'' could not be parsed!\nAn empty struct will be returned.',filenameIn);
@@ -1928,8 +1928,9 @@ classdef CLASS_codec < handle
                         
                         evtStart = evtStart + studyStartDay;
                         
-                        if firstEvtStart < studyStartTime
-                            evtStart = evtStart+1; %  we are actually starting on the following day then in this case. Or we have events that occur before the study started :( that is an issue if possible.
+                        % In cases where the events occur before the study 
+                        if studyStartTime > 22/24 && firstEvtStart < 2/24 % firstEvtStart < studyStartTime &&  firstEventStart < 1/24
+                            evtStart = evtStart+1; %  we are actually starting on the following day then in this case. Or we have events that occur before the study started :( that is an issue if possible.  See STNF00423.edf for problematic study which has events starting at 20.55.00 and the edf starting at 20.55.15
                         elseif ~isempty(min_start_idx) && min_start_idx > 1
                             % This is where we conceivably went past midnight.
                             evtStart(min_start_idx:end) = evtStart(min_start_idx:end)+1;
@@ -1938,7 +1939,12 @@ classdef CLASS_codec < handle
                         datenumPerSec = datenum([0, 0, 0, 0, 0, 1]);
                         evtStartSec = (evtStart - studyStart)/datenumPerSec;
                         
-                        eventStruct = CLASS_codec.makeEventStruct('HDR', edfHDR, 'samplerate', desiredSamplerate, 'start_sec', evtStartSec, 'dur_sec', evtDurationSec, 'description', evtComment);
+                        try
+                            eventStruct = CLASS_codec.makeEventStruct('HDR', edfHDR, 'samplerate', desiredSamplerate, 'start_sec', evtStartSec, 'dur_sec', evtDurationSec, 'description', evtComment);
+                        catch me
+                            showME(me);
+                        end
+                        
                         eventStruct.startDateTime = edfHDR.T0;
                         standard_epoch_sec = CLASS_codec.SECONDS_PER_EPOCH;
                         num_epochs = ceil(edfHDR.duration_sec/standard_epoch_sec);
@@ -1972,7 +1978,7 @@ classdef CLASS_codec < handle
                             
                             evtStageDurationSec = evtDurationSec(stageInd);
                             
-                            badEpochs = evtStageDurationSec == 0;
+                            badEpochs = evtStageDurationSec == 0 | evtStageStartSec < 0; % check any that start before the edf as well (problem with STNF studies for example)
                             if any(badEpochs)
                                 evtStageStartEpoch(badEpochs) = [];
                                 evtStageDurationSec(badEpochs) = [];
