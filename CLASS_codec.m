@@ -1863,8 +1863,8 @@ classdef CLASS_codec < handle
         end
 
         % See also parseSTAGESEventFile
-        function [SCOStruct, stageVec] = parseSTAGEScsvFile(filenameIn, edfHDR, desiredSamplerate)
-            SCOStruct = struct();
+        function [evtStruct, stageVec] = parseSTAGEScsvFile(filenameIn, edfHDR, desiredSamplerate)
+            evtStruct = struct();
             stageVec = [];
             if nargin<3
                 desiredSamplerate = 100;
@@ -1924,8 +1924,7 @@ classdef CLASS_codec < handle
                         studyStartDay = floor(studyStart);
                         studyStartTime = mod(studyStart, 1);
                         
-                        [~, min_start_idx] = min(evtStart);
-                        
+                        [~, min_start_idx] = min(evtStart);                        
                         evtStart = evtStart + studyStartDay;
                         
                         % In cases where the events occur before the study 
@@ -1938,21 +1937,22 @@ classdef CLASS_codec < handle
                         
                         datenumPerSec = datenum([0, 0, 0, 0, 0, 1]);
                         evtStartSec = (evtStart - studyStart)/datenumPerSec;
+                                               
+                        stageInd = contains(evtComment,'Stage','ignorecase', true) | strcmpi(evtComment, 'REM') | strcmpi(evtComment, 'Wake');
+                        evtInd = ~stageInd;
                         
                         try
-                            eventStruct = CLASS_codec.makeEventStruct('HDR', edfHDR, 'samplerate', desiredSamplerate, 'start_sec', evtStartSec, 'dur_sec', evtDurationSec, 'description', evtComment);
+                            evtStruct = CLASS_codec.makeEventStruct('HDR', edfHDR, 'samplerate', desiredSamplerate, 'start_sec', evtStartSec(evtInd), 'dur_sec', evtDurationSec(evtInd), 'description', evtComment(evtInd));
                         catch me
                             showME(me);
                         end
                         
-                        eventStruct.startDateTime = edfHDR.T0;
+                        evtStruct.startDateTime = edfHDR.T0;
                         standard_epoch_sec = CLASS_codec.SECONDS_PER_EPOCH;
                         num_epochs = ceil(edfHDR.duration_sec/standard_epoch_sec);
                         
-                        % parse the stages first
-                        stageInd = contains(evtComment,'Stage','ignorecase', true) | strcmpi(evtComment, 'REM') | strcmpi(evtComment, 'Wake');
+                        % parse the stages
                         stageVec = repmat(7, num_epochs, 1);
-                        
                         if ~isempty(stageInd) && any(stageInd)
                             
                             % Create a numeric stage score vector
@@ -2005,10 +2005,29 @@ classdef CLASS_codec < handle
                                     score_epoch = evtStageVec(e);
                                     stageVec(start_epoch:stop_epoch) = score_epoch;
                                 end
+                            end  
+                            
+                            lightsOn_idx = startsWith(evtComment, 'LightsOn', 'IgnoreCase', true);
+                            lightsOff_idx = startsWith(evtComment, 'LightsOff', 'IgnoreCase', true);                            
+                            
+                            lightsOffStartSec = evtStartSec(lightsOff_idx);
+                            lightsOffEpoch = floor(lightsOffStartSec/standard_epoch_sec)+1;                            
+
+                            lightsOnStartSec = evtStartSec(lightsOn_idx);
+                            lightsOnEpoch = floor(lightsOnStartSec/standard_epoch_sec)+1;
+                            
+                            cur_epoch = 0;
+                            for e=1:min([numel(lightsOffEpoch), numel(lightsOnEpoch)])                                
+                                stageVec(cur_epoch+1:lightsOffEpoch(e)-1)=7;
+                                cur_epoch = lightsOnEpoch(e)-1;
                             end
                             
-                            eventStruct.epoch = epochVec;
-                            eventStruct.stage = stageVec;
+                            if cur_epoch>0 && cur_epoch<numel(stageVec)
+                               stageVec(cur_epoch+1:end)=7; 
+                            end
+                            
+                            evtStruct.epoch = epochVec;
+                            evtStruct.stage = stageVec;
                         end
                     end
                 end
