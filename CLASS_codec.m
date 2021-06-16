@@ -240,7 +240,7 @@ classdef CLASS_codec < handle
             STAGES.firstNonWake = firstNonWake;
             STAGES.lastNonWake = lastNonWake;
             if(num_epochs~=numel(STAGES.line))
-                fprintf(1,'%s contains %u stages, but shows it should have %u\n',stages_filename,numel(STAGES.line),num_epochs);
+                fprintf(1,'Hypnogram contains %u stages, but shows it should have %u\n', numel(STAGES.line),num_epochs);
             end
 
             % tib
