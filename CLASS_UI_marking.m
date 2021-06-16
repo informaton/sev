@@ -1319,7 +1319,7 @@ classdef CLASS_UI_marking < handle
         function configureMainAxesContextmenu(obj)
             %%% reference line contextmenu
             
-            contextmenu_mainaxes_h = uicontextmenu('callback',@obj.contextmenu_mainaxes_callback);
+            contextmenu_mainaxes_h = uicontextmenu('callback',@obj.contextmenu_mainaxes_callback, 'parent', obj.axeshandle.main.Parent);
             obj.contextmenuhandle.axesmain.alignchannels = uimenu(contextmenu_mainaxes_h,'Label','Align Channels');
             obj.contextmenuhandle.axesmain.centerepoch = uimenu(contextmenu_mainaxes_h,'Label','Center Here','callback',@obj.contextmenu_mainaxes_center_callback);
             obj.contextmenuhandle.axesmain.unhide = uimenu(contextmenu_mainaxes_h,'Label','Unhide');

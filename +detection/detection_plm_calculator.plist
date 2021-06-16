@@ -13,6 +13,6 @@
 	<key>use_summer</key>
 	<real>1.000000</real>
 	<key>median_removal</key>
-	<real>0.000000</real>
+	<real>1.000000</real>
 </dict>
 </plist>

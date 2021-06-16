@@ -699,6 +699,7 @@ classdef CLASS_codec < handle
             fid = fopen(staFilename, 'w');
             if fid>2
                 fprintf(fid, '%d\t%d\n', y');
+                fclose(fid);
             else
                 %double check that we have .STA extension
                 save(staFilename,'y','-ascii');
@@ -1863,8 +1864,8 @@ classdef CLASS_codec < handle
         end
 
         % See also parseSTAGESEventFile
-        function [SCOStruct, stageVec] = parseSTAGEScsvFile(filenameIn, edfHDR, desiredSamplerate)
-            SCOStruct = struct();
+        function [evtStruct, stageVec] = parseSTAGEScsvFile(filenameIn, edfHDR, desiredSamplerate)
+            evtStruct = struct();
             stageVec = [];
             if nargin<3
                 desiredSamplerate = 100;
@@ -1879,7 +1880,7 @@ classdef CLASS_codec < handle
                 % 20:16:13, 0.000, Custom User Event 4
                 % 20:16:30, 30.000, Stage2
                 % 20:16:51, 0.000, Calibration Start
-                % 20:16:57, 0.000, Custom User Event 32
+                % 20:16:57, 0.000, Custom User Event 32, some extra comment
                 % 20:17:00, 30.000, Stage2
                 % 20:17:30, 30.000, Wake
                 % 20:18:00, 30.000, Wake
@@ -1904,7 +1905,7 @@ classdef CLASS_codec < handle
                     error('Unexpected header line "%s", found in %s', headerLine, filenameIn);
                 else
                     % scanCell = textscan(fid, '%{HH:mm:ss}D %f %s', 'delimiter',',');
-                    scanCell = textscan(fid, '%{hh:mm:ss}T %f %s', 'delimiter',',');  % T is for duration
+                    scanCell = textscan(fid, '%{hh:mm:ss}T %f %[^\n]', 'delimiter',',');  % T is for duration
                     fclose(fid);
                     if(isempty(scanCell{1}))
                         fprintf('Warning!  The file ''%s'' could not be parsed!\nAn empty struct will be returned.',filenameIn);
@@ -1924,12 +1925,12 @@ classdef CLASS_codec < handle
                         studyStartDay = floor(studyStart);
                         studyStartTime = mod(studyStart, 1);
                         
-                        [~, min_start_idx] = min(evtStart);
-                        
+                        [~, min_start_idx] = min(evtStart);                        
                         evtStart = evtStart + studyStartDay;
                         
-                        if firstEvtStart < studyStartTime
-                            evtStart = evtStart+1; %  we are actually starting on the following day then in this case. Or we have events that occur before the study started :( that is an issue if possible.
+                        % In cases where the events occur before the study 
+                        if studyStartTime > 22/24 && firstEvtStart < 2/24 % firstEvtStart < studyStartTime &&  firstEventStart < 1/24
+                            evtStart = evtStart+1; %  we are actually starting on the following day then in this case. Or we have events that occur before the study started :( that is an issue if possible.  See STNF00423.edf for problematic study which has events starting at 20.55.00 and the edf starting at 20.55.15
                         elseif ~isempty(min_start_idx) && min_start_idx > 1
                             % This is where we conceivably went past midnight.
                             evtStart(min_start_idx:end) = evtStart(min_start_idx:end)+1;
@@ -1937,16 +1938,22 @@ classdef CLASS_codec < handle
                         
                         datenumPerSec = datenum([0, 0, 0, 0, 0, 1]);
                         evtStartSec = (evtStart - studyStart)/datenumPerSec;
+                                               
+                        stageInd = contains(evtComment,'Stage','ignorecase', true) | strcmpi(evtComment, 'REM') | strcmpi(evtComment, 'Wake');
+                        evtInd = ~stageInd;
                         
-                        eventStruct = CLASS_codec.makeEventStruct('HDR', edfHDR, 'samplerate', desiredSamplerate, 'start_sec', evtStartSec, 'dur_sec', evtDurationSec, 'description', evtComment);
-                        eventStruct.startDateTime = edfHDR.T0;
+                        try
+                            evtStruct = CLASS_codec.makeEventStruct('HDR', edfHDR, 'samplerate', desiredSamplerate, 'start_sec', evtStartSec(evtInd), 'dur_sec', evtDurationSec(evtInd), 'description', evtComment(evtInd));
+                        catch me
+                            showME(me);
+                        end
+                        
+                        evtStruct.startDateTime = edfHDR.T0;
                         standard_epoch_sec = CLASS_codec.SECONDS_PER_EPOCH;
                         num_epochs = ceil(edfHDR.duration_sec/standard_epoch_sec);
                         
-                        % parse the stages first
-                        stageInd = contains(evtComment,'Stage','ignorecase', true) | strcmpi(evtComment, 'REM') | strcmpi(evtComment, 'Wake');
+                        % parse the stages
                         stageVec = repmat(7, num_epochs, 1);
-                        
                         if ~isempty(stageInd) && any(stageInd)
                             
                             % Create a numeric stage score vector
@@ -1972,7 +1979,12 @@ classdef CLASS_codec < handle
                             
                             evtStageDurationSec = evtDurationSec(stageInd);
                             
-                            badEpochs = evtStageDurationSec == 0;
+                            if sum(evtStageDurationSec)==0
+                                evtStageDurationSec(:) = standard_epoch_sec;
+                                fprintf('Setting stage durations to % d\n', standard_epoch_sec);
+                            end
+                            badEpochs = evtStageDurationSec == 0 | evtStageStartSec < 0; % check any that start before the edf as well (problem with STNF studies for example)
+                            
                             if any(badEpochs)
                                 evtStageStartEpoch(badEpochs) = [];
                                 evtStageDurationSec(badEpochs) = [];
@@ -1999,10 +2011,29 @@ classdef CLASS_codec < handle
                                     score_epoch = evtStageVec(e);
                                     stageVec(start_epoch:stop_epoch) = score_epoch;
                                 end
+                            end  
+                            
+                            lightsOn_idx = startsWith(evtComment, 'LightsOn', 'IgnoreCase', true);
+                            lightsOff_idx = startsWith(evtComment, 'LightsOff', 'IgnoreCase', true);                            
+                            
+                            lightsOffStartSec = evtStartSec(lightsOff_idx);
+                            lightsOffEpoch = floor(lightsOffStartSec/standard_epoch_sec)+1;                            
+
+                            lightsOnStartSec = evtStartSec(lightsOn_idx);
+                            lightsOnEpoch = floor(lightsOnStartSec/standard_epoch_sec)+1;
+                            
+                            cur_epoch = 0;
+                            for e=1:min([numel(lightsOffEpoch), numel(lightsOnEpoch)])                                
+                                stageVec(cur_epoch+1:lightsOffEpoch(e)-1)=7;
+                                cur_epoch = lightsOnEpoch(e)-1;
                             end
                             
-                            eventStruct.epoch = epochVec;
-                            eventStruct.stage = stageVec;
+                            if cur_epoch>0 && cur_epoch<numel(stageVec)
+                               stageVec(cur_epoch+1:end)=7; 
+                            end
+                            
+                            evtStruct.epoch = epochVec;
+                            evtStruct.stage = stageVec;
                         end
                     end
                 end
