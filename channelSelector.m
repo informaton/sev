@@ -43,6 +43,7 @@ else
 end
 % End initialization code - DO NOT EDIT
 
+% See montage_dlg.fig and montage_dlg.m instead
 
 % --- Executes just before channelSelector is made visible.
 function channelSelector_OpeningFcn(hObject, eventdata, handles, varargin)
@@ -63,9 +64,7 @@ end
 if(numel(varargin)<2)
     disp('channelSelector requires at least 2 inputs: 1. number source required; 2. Cell of Channel labels; 3. Selected Indices (can be empty)');
     handles.user.selectedIndices = [];
-
     guidata(hObject, handles);
-
 else
     nReqdIndices = varargin{1};
     channelLabels = varargin{2};
@@ -80,11 +79,8 @@ else
     
     % Update handles structure
     guidata(hObject, handles);
-
     uiwait(handles.figure1);
-
 end
-    
 
 function populateLabels(handles,channelLabels)
 
@@ -107,8 +103,6 @@ for n=1:handles.user.nReqdIndices
     menuH = sprintf('menuSrc%u',n);
     selectedIndices(n) = get(handles.(menuH),'value');
 end
-
-
 
 % --- Outputs from this function are returned to the command line.
 function varargout = channelSelector_OutputFcn(hObject, eventdata, handles) 
