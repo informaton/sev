@@ -223,7 +223,7 @@ function push_directory_Callback(hObject, eventdata, handles)
     path = get(handles.edit_edf_directory,'string');
     if(~exist(path,'file'))
         path = handles.user.BATCH_PROCESS.edf_folder;
-    end;
+    end
     pathname = uigetdir(path,'Select the directory containing EDF files to process');
     
     if(isempty(pathname)||(isnumeric(pathname)&&pathname==0))
@@ -255,8 +255,7 @@ function playlist = getPlaylist(handles,ply_filename)
                 ply_filename = fullfile(pathname,ply_filename);
             end
         end
-    else
-        
+    else        
         if(strcmpi('on',get(handles.radio_processList,'enable')) && get(handles.radio_processList,'value'))
             ply_filename = get(handles.edit_selectPlaylist,'string');
         else

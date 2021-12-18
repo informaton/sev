@@ -1799,8 +1799,7 @@ classdef CLASS_UI_marking < handle
         
         %% menubar callbacks from SEV
         function load_EDF_callback(obj,hObject,eventdata)
-            %SEV figure callback for choosing a source EDF file for loading
-            
+            %SEV figure callback for choosing a source EDF file for loading            
             try
                 suggested_pathname = obj.SETTINGS.VIEW.src_edf_pathname;
                 

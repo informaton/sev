@@ -240,7 +240,7 @@ classdef CLASS_codec < handle
             STAGES.firstNonWake = firstNonWake;
             STAGES.lastNonWake = lastNonWake;
             if(num_epochs~=numel(STAGES.line))
-                fprintf(1,'%s contains %u stages, but shows it should have %u\n',stages_filename,numel(STAGES.line),num_epochs);
+                fprintf(1,'Hypnogram contains %u stages, but shows it should have %u\n', numel(STAGES.line),num_epochs);
             end
 
             % tib
@@ -699,6 +699,7 @@ classdef CLASS_codec < handle
             fid = fopen(staFilename, 'w');
             if fid>2
                 fprintf(fid, '%d\t%d\n', y');
+                fclose(fid);
             else
                 %double check that we have .STA extension
                 save(staFilename,'y','-ascii');
@@ -1978,7 +1979,12 @@ classdef CLASS_codec < handle
                             
                             evtStageDurationSec = evtDurationSec(stageInd);
                             
+                            if sum(evtStageDurationSec)==0
+                                evtStageDurationSec(:) = standard_epoch_sec;
+                                fprintf('Setting stage durations to % d\n', standard_epoch_sec);
+                            end
                             badEpochs = evtStageDurationSec == 0 | evtStageStartSec < 0; % check any that start before the edf as well (problem with STNF studies for example)
+                            
                             if any(badEpochs)
                                 evtStageStartEpoch(badEpochs) = [];
                                 evtStageDurationSec(badEpochs) = [];

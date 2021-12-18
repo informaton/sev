@@ -81,14 +81,14 @@ selected_handles = [];
 if(~isempty(varargin))
     if(numel(varargin)>0)
         selected_handles = varargin{1};
-    end;
-    
-end;
+    end    
+end
 
 
 fig = handles.figure1;
-set(fig,'visible','on','units',units,'CloseRequestFcn',@closeFigureCallback);
-
+set(fig,'visible','on','units',units,'name','Channels',...
+    'CloseRequestFcn',@closeFigureCallback,...
+    'windowkeypressfcn', @keypressCb);
 
 checkbox_handles = zeros(1,numel(channel_labels));
 % radio_handles = zeros(1,numel(channel_labels));
@@ -124,7 +124,7 @@ pb_extent = max([pb_extent;get(handles.pushbutton_cancel,'extent')]);
 
 
 %adjust the checkbox extend according to account for necessary spacing
-spacing = max([20,cb_extent(4)]); %height of the text in pixels
+spacing = max([20 ,cb_extent(4)]); %height of the text in pixels
 cb_extent(4) = spacing;
 cb_extent(3) = cb_extent(3)+spacing*2; %add the checkbox part in
 pb_extent(3:4) = [pb_extent(3)+spacing, pb_extent(4)+spacing*3/5]; %add the button part in
@@ -134,7 +134,8 @@ rad_extent = [0 0 20 spacing];
 % fig_width = max([2*pb_extent(3)+spacing*3,cb_extent(3)+spacing*3+rad_extent(3)]);
 % fig_height = pb_extent(4)+spacing*3+cb_extent(4)*numel(channel_labels);
 
-fig_width = max([2*pb_extent(3)+spacing*3,(cb_extent(3)+spacing)*num_cols+spacing+rad_extent(3)]);
+fudge_factor = 1.15;
+fig_width = max([(2*pb_extent(3)+spacing*3)*fudge_factor,(cb_extent(3)+spacing)*num_cols+spacing+rad_extent(3)]);
 fig_height = pb_extent(4)+spacing*3+cb_extent(4)*num_rows;
 
 fig_pos = get(fig,'position');
@@ -155,7 +156,8 @@ cb_width = cb_extent(3);
 if(num_cols>1)
     x_offset = spacing+rad_extent(3);
 else
-    x_offset = spacing;
+    % x_offset = spacing;
+    x_offset = fig_width/2-spacing/2-pb_extent(3); % this is where the okay button is left aligned to.
 end
 for k=1:numel(channel_labels) %align them to the left and drop them down the middle.  
     
@@ -167,7 +169,7 @@ for k=1:numel(channel_labels) %align them to the left and drop them down the mid
         cur_col = cur_col+1;
         cur_row = 1;
     end
-end;
+end
 
 pos = [fig_width/2-spacing/2-pb_extent(3), spacing, pb_extent(3:4)];
 
@@ -190,28 +192,28 @@ handles.user.checkbox_handles = checkbox_handles;
 %     handles.user.primary.handle = checkbox_handles(pri_index);
 %     handles.user.primary.channel_index = pri_index;
 %     set(handles.user.primary.panel_h,'visible','on','position',get(handles.user.primary.handle,'position'));
-% end;
+% end
 % 
 % if(~isempty(art_index))
 %     set(checkbox_handles(art_index),'value',1);
 %     handles.user.artifact.handle = checkbox_handles(art_index);
 %     handles.user.artifact.channel_index = art_index;
 %     set(handles.user.artifact.panel_h,'visible','on','position',get(handles.user.artifact.handle,'position'));
-% end;
+% end
 % 
 % if(~isempty(eye1_index))
 %     set(checkbox_handles(eye1_index),'value',1);
 %     handles.user.eye1.handle = checkbox_handles(eye1_index);
 %     handles.user.eye1.channel_index = eye1_index;
 %     set(handles.user.eye1.panel_h,'visible','on','position',get(handles.user.eye1.handle,'position'));
-% end;
+% end
 % 
 % if(~isempty(eye2_index))
 %     set(checkbox_handles(eye2_index),'value',1);
 %     handles.user.eye2.handle = checkbox_handles(eye2_index);
 %     handles.user.eye2.channel_index = eye2_index;
 %     set(handles.user.eye2.panel_h,'visible','on','position',get(handles.user.eye2.handle,'position'));
-% end;
+% end
 
 uicontrol(handles.pushbutton_ok); %give OK the focus
 % handles.text1 = uicontrol('style','text','string','hello world');
@@ -223,6 +225,16 @@ guidata(hObject, handles);
 % UIWAIT makes montage_dlg wait for user response (see UIRESUME)
 uiwait(handles.figure1);
 
+function keypressCb(hObject, evtData)
+    if strcmpi(evtData.Key, 'a') && numel(evtData.Modifier)==1 && strcmpi(evtData.Modifier, 'control')
+        handles = guidata(hObject);        
+        selected_values = cell2mat(get(handles.user.checkbox_handles,'value'));
+        if all(selected_values)
+            set(handles.user.checkbox_handles,'value', 0);
+        else
+            set(handles.user.checkbox_handles,'value', 1);
+        end
+    end
 
 function pushbutton_ok_callback(hObject, eventdata)
 handles = guidata(hObject);
@@ -238,7 +250,7 @@ if(any(output.channels_selected))
     handles.output = output;
 else
     handles.output = [];
-end;
+end
 
 guidata(hObject, handles);
 uiresume(handles.figure1);

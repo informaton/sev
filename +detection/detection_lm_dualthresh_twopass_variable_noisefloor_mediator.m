@@ -258,9 +258,9 @@ end
 end
 
 function [variable_threshold_low_uv, variable_threshold_high_uv, clean_data] = getNoisefloor(data, params, samplerate)
-%     high_uv(x,nf(x)) = 0.5*x.*log(x) + high_threshold
-    %apply noise floor rules now
-    %1. turn off variable noise floor when below engagement threshold
+    % high_uv(x,nf(x)) = 0.5*x.*log(x) + high_threshold
+    % apply noise floor rules now
+    % 1. turn off variable noise floor when below engagement threshold
 
     ma_params.order=samplerate*params.average_power_window_sec;
     ma_params.abs = 1;
@@ -302,73 +302,72 @@ function cross_mat =  variable_triplethresholdcrossings(data, thresh_high, thres
 % thresh_high and thresh_low are vectors of length(data).
 % Written: Hyatt Moore IV
 % February 6, 2013
-% modificatoin from variable dualthresholdcrossings - after seeing the
+% modification from variable dualthresholdcrossings - after seeing the
 % length that some lm's go on for.
 
-cross_vec = false(size(data));
-active_flag = false;
-drop_count = 0;
-last_above_middle_index = 1;
-for k=1:numel(data)  
-%     if(k>1179420)
-%         disp(k);
-%     end
-    if(data(k)>thresh_high(k))
-        active_flag = true;
-        drop_count = 0;
-    end
-    if(active_flag)
-        if(data(k)>(thresh_high(k)+thresh_low(k))/2)           
-           last_above_middle_index = k;
+    cross_vec = false(size(data));
+    active_flag = false;
+    drop_count = 0;
+    last_above_middle_index = 1;
+    for k=1:numel(data)
+        %     if(k>1179420)
+        %         disp(k);
+        %     end
+        if(data(k)>thresh_high(k))
+            active_flag = true;
+            drop_count = 0;
         end
-        if(data(k)<thresh_low(k))
-            drop_count = drop_count+1;
-            if(drop_count>dur_below_samplecount)
-                active_flag = false;
-                
-                cross_vec(last_above_middle_index+1:k) = active_flag;  %remove the spots up until now that are not active
+        if(active_flag)
+            if(data(k)>(thresh_high(k)+thresh_low(k))/2)
+                last_above_middle_index = k;
+            end
+            if(data(k)<thresh_low(k))
+                drop_count = drop_count+1;
+                if(drop_count>dur_below_samplecount)
+                    active_flag = false;
+                    
+                    cross_vec(last_above_middle_index+1:k) = active_flag;  %remove the spots up until now that are not active
+                end
             end
         end
+        cross_vec(k) = active_flag;
     end
-    cross_vec(k) = active_flag;
+    
+    cross_mat = detection.thresholdcrossings(cross_vec);
 end
 
-cross_mat = thresholdcrossings(cross_vec);
-end
+function [merged_events, merged_indices] = merge_nearby_events(events_in,min_samples)
 
-    function [merged_events, merged_indices] = merge_nearby_events(events_in,min_samples)
-        
-        %merge events that are within min_samples of each other, into a
-        %single event that stretches from the start of the first event
-        %and spans until the last event
-        %events_in is a two column matrix
-        %min_samples is a scalar value
-        %merged_indices is a logical vector of the row indices that
-        %were merged from events_in. - these are the indices of the
-        %in events_in that are removed/replaced
-        if(nargin==1)
-            min_samples = 100;
+%merge events that are within min_samples of each other, into a
+%single event that stretches from the start of the first event
+%and spans until the last event
+%events_in is a two column matrix
+%min_samples is a scalar value
+%merged_indices is a logical vector of the row indices that
+%were merged from events_in. - these are the indices of the
+%in events_in that are removed/replaced
+    if(nargin==1)
+        min_samples = 100;
+    end
+    merged_indices = false(size(events_in,1),1);
+    
+    if(~isempty(events_in))
+        merged_events = zeros(size(events_in));
+        num_events_out = 1;
+        num_events_in = size(events_in,1);
+        merged_events(num_events_out,:) = events_in(1,:);
+        for k = 2:num_events_in
+            if(events_in(k,1)-merged_events(num_events_out,2)<min_samples)
+                merged_events(num_events_out,2) = events_in(k,2);
+                merged_indices(k) = true;
+            else
+                num_events_out = num_events_out + 1;
+                merged_events(num_events_out,:) = events_in(k,:);
+            end
         end
-        merged_indices = false(size(events_in,1),1);
-        
-        if(~isempty(events_in))
-            merged_events = zeros(size(events_in));
-            num_events_out = 1;
-            num_events_in = size(events_in,1);
-            merged_events(num_events_out,:) = events_in(1,:);
-            for k = 2:num_events_in
-                if(events_in(k,1)-merged_events(num_events_out,2)<min_samples)
-                    merged_events(num_events_out,2) = events_in(k,2);
-                    merged_indices(k) = true;
-                else
-                    num_events_out = num_events_out + 1;
-                    merged_events(num_events_out,:) = events_in(k,:);
-                end
-            end;
-            merged_events = merged_events(1:num_events_out,:);
-        else
-            merged_events = events_in;
-        end;
+        merged_events = merged_events(1:num_events_out,:);
+    else
+        merged_events = events_in;
     end
+end
 
-        
