@@ -11,8 +11,11 @@ function sev_pathname = sev_pathsetup()
     
     if ispc
         % To get the uigetfulldir.m
-        widgets_pathname = fullfile(sev_pathname, '\padaco\views\widgets\');
+        widgets_pathname = fullfile(sev_pathname, '..\padaco\views\widgets\');
         addpath(widgets_pathname);
+        
+        sig_pathname = fullfile(sev_pathname, '..\matlab\signal');        
+        addpath(sig_pathname);        
     end
     
 end
