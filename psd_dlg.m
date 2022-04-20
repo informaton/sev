@@ -97,7 +97,8 @@ set(handles.list_psg_channels,'string',channel_labels,'value',handles.user.chann
 
 handles.user.wintype = 'hanning';
 handles.user.FFT_window_sec = 2.0;  % updated to FFT_window_sec from 'winlen'
-handles.user.interval = 2.0;  % updated to 'interval' from 'fftint'
+handles.user.interval_sec = 2.0;  % updated to 'interval' from 'fftint' %updated to interval_sec from interval 11/29/2021 @hyatt
+
 handles.user.freq_min = 0;
 handles.user.sampling_rate = 100;
 handles.user.freq_max = 50;
@@ -144,7 +145,7 @@ set(handles.windowtype_popupmenu,'value',p_ind);
 set(handles.windowtype_popupmenu,'string',p_str);
 
 set(handles.windowlength_edit,'string',num2str(handles.user.FFT_window_sec));
-set(handles.fft_interval_edit,'string',num2str(handles.user.interval));
+set(handles.fft_interval_edit,'string',num2str(handles.user.interval_sec));
 set(handles.edit_min_hz,'string',num2str(handles.user.freq_min));
 set(handles.edit_max_hz,'string',num2str(handles.user.freq_max));
 
@@ -257,10 +258,10 @@ fftint = str2double(get(hObject,'String'));
 fftintmin = 0;
 fftintmax = 30;
 
-if(fftint<=fftintmin || fftint>fftintmax || isequal(fftint,handles.user.interval))
-    set(hObject,'string',num2str(handles.user.interval));
+if(fftint<=fftintmin || fftint>fftintmax || isequal(fftint,handles.user.interval_sec))
+    set(hObject,'string',num2str(handles.user.interval_sec));
 else
-    handles.user.interval = fftint;
+    handles.user.interval_sec = fftint;
     handles.user.modified = true;
 end;
 
