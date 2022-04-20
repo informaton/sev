@@ -6,8 +6,6 @@ function sev_pathname = sev_pathsetup()
     
     sev_pathname = fileparts(mfilename('fullpath'));
     addpath(sev_pathname);
-    addpath(fullfile(sev_pathname,'auxiliary'));
-    addpath(fullfile(sev_pathname,'widgets'));
     
     if ispc
         % To get the uigetfulldir.m
@@ -17,5 +15,9 @@ function sev_pathname = sev_pathsetup()
         sig_pathname = fullfile(sev_pathname, '..\matlab\signal');        
         addpath(sig_pathname);        
     end
+    
+    addpath(fullfile(sev_pathname,'auxiliary'));
+    addpath(fullfile(sev_pathname,'widgets'));
+
     
 end

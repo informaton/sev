@@ -1087,10 +1087,13 @@ classdef CLASS_channels_container < handle
            if(iscell(container_index))
                container_index  = container_index{1};
            end
+           channel_obj = [];
            if(container_index>0 && container_index<=obj.num_channels)
-               channel_obj = obj.cell_of_channels{container_index};
-           else
-               channel_obj = [];
+               if isempty(obj.cell_of_channels)
+                   fprintf('Warning - empty cell of channels - check log file and installation of matlab toolboxes\n');
+               else
+                   channel_obj = obj.cell_of_channels{container_index};               
+               end
            end
        end
        
