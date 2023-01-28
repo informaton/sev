@@ -29,5 +29,6 @@ detection_artifact_flat_line_with_sao2 artifact_flat_line_with_sao2 2 plist_edit
 detection_artifact_noisefloor artifact_noisefloor 1 plist_editor_dlg noisefloor_artifact
 detection_artifact_brunner ArtifactBrunner 1 plist_editor_dlg A
 detection_psd Power_spectral_density 1 plist_editor_dlg PSD
+detection_spindles_bp Spindles_(Bandpass) 1 plist_editor_dlg eeg_spindle_bp
 detection_dummy  dummy 10 plist_editor_dlg dummy
 detection_nasalpres_amplitude_HK nasalpres_amplitude_HK 5 plist_editor_dlg nasalpres_amplitude_HK
