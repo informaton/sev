@@ -7,7 +7,7 @@
 	<key>sigma</key>
 	<real>0.010000</real>
 	<key>lambda</key>
-	<real>0.995000</real>
+	<real>0.900000</real>
 	<key>samples2delay</key>
 	<real>10.000000</real>
 </dict>

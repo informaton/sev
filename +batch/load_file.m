@@ -59,12 +59,12 @@ HDR.label = [HDR.label;localBATCH_PROCESS.synth_CHANNEL.names];
 if(isempty(EDF_indices2load))
     event_with_no_channels = false;
     for e=1:numel(localBATCH_PROCESS.event_settings)
-       if(isempty(localBATCH_PROCESS.event_settings{e}.channel_labels));
+       if(isempty(localBATCH_PROCESS.event_settings{e}.channel_labels))
            event_with_no_channels = true;
        end
     end
     for a=1:numel(localBATCH_PROCESS.artifact_settings)
-       if(isempty(localBATCH_PROCESS.artifact_settings{a}.channel_labels));
+       if(isempty(localBATCH_PROCESS.artifact_settings{a}.channel_labels))
            event_with_no_channels = true;
        end
     end
@@ -80,7 +80,7 @@ if(isempty(EDF_indices2load))
         %continues on here anyway since the non-channel detection method
         %exists
     end
-end;
+end
 
 EDF_indices2load = cell2mat(EDF_indices2load);
 all_indices = EDF_indices2load;  %keep track of all indices

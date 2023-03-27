@@ -14,6 +14,11 @@ function sev_pathname = sev_pathsetup()
         
         sig_pathname = fullfile(sev_pathname, '..\matlab\signal');        
         addpath(sig_pathname);        
+
+        % To get getFilenames.m
+        file_pathname = fullfile(sev_pathname, '..\matlab\file');        
+        addpath(file_pathname);        
+
     end
     
     addpath(fullfile(sev_pathname,'auxiliary'));

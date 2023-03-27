@@ -318,7 +318,7 @@ classdef CLASS_UI_marking < handle
             
                %import section
             set(handles.menu_file_load_sco,'callback',@obj.menu_file_load_sco_callback);
-            %             set(handles.menu_file_import_txt_eventsFile,'callback',@obj.menu_file_import_txt_eventsFile_callback);
+            set(handles.menu_file_import_txt_eventsFile,'callback',@obj.menu_file_import_txt_eventsFile_callback);
             set(handles.menu_file_import_evtsFile,'callback',@obj.menu_file_import_evtsFile_callback);
                         
             set(handles.menu_file_load_text_channel,'callback',@obj.menu_file_load_text_channel_callback);
