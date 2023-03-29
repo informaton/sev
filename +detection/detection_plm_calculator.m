@@ -64,6 +64,7 @@ function detectStruct = detection_plm_calculator(data_cell, params, stageStruct)
 % initialize default parameters
 defaultParams.filter_with_anc = 1; %adaptively filter ECG (0 = no; 1 = yes)
 defaultParams.min_duration_sec = 0.75;
+defaultParams.max_duration_sec = 10.0; % 10s for 2007;  make inf for AASM 2014 
 defaultParams.average_power_window_sec = 20;  %calculate average power over consecutive windows of this duration in seconds
 defaultParams.merge_within_sec = 2.0;
 defaultParams.use_summer = 1;
@@ -87,8 +88,6 @@ else
             plist.saveXMLPlist(pfile,params);
         end
     end
-    
-    
     
     samplerate = params.samplerate;
     
