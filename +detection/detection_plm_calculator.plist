@@ -6,12 +6,14 @@
 	<real>1.000000</real>
 	<key>min_duration_sec</key>
 	<real>0.750000</real>
+	<key>max_duration_sec</key>
+	<real>10</real>
 	<key>average_power_window_sec</key>
 	<real>20.000000</real>
 	<key>merge_within_sec</key>
 	<real>2.000000</real>
 	<key>use_summer</key>
-	<real>1.000000</real>
+	<real>0.000000</real>
 	<key>median_removal</key>
 	<real>1.000000</real>
 </dict>
