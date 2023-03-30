@@ -1,5 +1,6 @@
-function MARKING = batch_process(pathname, BATCH_PROCESS,playlist, MARKING)
+function MARKING = parfor_batch_process(pathname, BATCH_PROCESS,playlist, MARKING)
     %this function executes the batch job with the specified parameters
+    %using MATLAB parallel processing toolbox (parfor)
     
     %default to all - i.e. process all .edf's found in pathname
     if(nargin<4)

@@ -4,6 +4,8 @@
 <dict>
 	<key>order</key>
 	<real>10.000000</real>
+	<key>samplerate</key>
+	<real>100.000000</real>
 	<key>freq_hz</key>
 	<real>10.000000</real>
 </dict>

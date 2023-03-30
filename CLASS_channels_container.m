@@ -1555,7 +1555,7 @@ classdef CLASS_channels_container < handle
                    obj.cell_of_channels{chan_index}.filter(filterS);
                    %if not in batch mode then update the events for adjusted
                    %channels....
-                   if(~isfield(MARKING.STATE,'batch_process_running') || isfield(MARKING.STATE,'batch_process_running')&&~MARKING.STATE.batch_process_running)
+                   if ~isempty(MARKING) && (~isfield(MARKING.STATE,'batch_process_running') || isfield(MARKING.STATE,'batch_process_running')&&~MARKING.STATE.batch_process_running)
                        event_indices = obj.cell_of_channels{chan_index}.event_indices_vector;
                        for k = 1:numel(event_indices)
                            %run the update event callback
