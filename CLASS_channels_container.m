@@ -966,11 +966,12 @@ classdef CLASS_channels_container < handle
                        obj.addChannel(signals{k},...
                            src_label,EDF_index,HDR.samplerate(EDF_index),HDR.samplerate(EDF_index));
                    end
-               end;
+               end
            catch ME
-               ME.message
-               ME.stack(1).line
-               ME.stack(1).file
+               showME(ME);
+               %ME.message
+               %ME.stack(1).line
+               %ME.stack(1).file
                EDF_HDR = [];
            end           
        end       
