@@ -969,9 +969,9 @@ classdef CLASS_channels_container < handle
                end
            catch ME
                showME(ME);
-               %ME.message
-               %ME.stack(1).line
-               %ME.stack(1).file
+               % ME.message
+               % ME.stack(1).line
+               % ME.stack(1).file
                EDF_HDR = [];
            end           
        end       

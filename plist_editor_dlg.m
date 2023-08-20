@@ -116,7 +116,7 @@ if(numel(varargin)>0 && ~isempty(varargin{1}))
     else
         set(handles.menu_methods,'enable','inactive');
 %         set(handles.menu_methods,'style','text','string',selected_method_label,'fontWeight','bold')
-    end;
+    end
 else
     selected_method_ind = 1;
 end
@@ -168,7 +168,6 @@ pfilename=fullfile(handles.user.parametersInfPathname,...
     [handles.user.methods.mfile{handles.user.selected_method_ind},'.plist']);
 pStruct = get_params(handles);
 plist.saveXMLPlist(pfilename,pStruct);
-
 
 function pStruct = get_params(handles)
 for k=1:handles.user.cur_num_properties
