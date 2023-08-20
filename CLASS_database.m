@@ -115,10 +115,18 @@ classdef CLASS_database < handle
             %
             % Last Modified 2/5/19
             % Last Modified 1/5/12                        
-            mym('open','localhost','root','<add password here>')
+            mym('open','localhost','root','<Root Password Here>')
             
             %setup a user for this person
-            mym(['GRANT ALL ON ',obj.dbStruct.name,'.* TO ''',obj.dbStruct.user,'''@''localhost'' IDENTIFIED BY ''',obj.dbStruct.password,'''']);
+            % OKAY FOR MYSQL version 5.7+
+            create_user_sql = ['CREATE USER IF NOT EXISTS ''',obj.dbStruct.user,'''@''localhost'' IDENTIFIED with ''mysql_native_password'' BY ''',obj.dbStruct.password,''''];
+            mym(create_user_sql);
+
+            % deperated in mysql 8.0
+            % mym(['GRANT ALL ON ',obj.dbStruct.name,'.* TO ''',obj.dbStruct.user,'''@''localhost'' IDENTIFIED BY ''',obj.dbStruct.password,'''']);
+
+            grant_sql = ['GRANT ALL ON ',obj.dbStruct.name,'.* TO ''',obj.dbStruct.user,'''@''localhost'''];
+            mym(grant_sql);
             mym('close');
             
             %login as the new user ...
