@@ -11,6 +11,7 @@ classdef CLASS_codec < handle
        SECONDS_PER_EPOCH = 30;
        EDF_ANNOTATIONS_CHANNEL = 1;
     end
+    
     methods(Static)
 
         % ======================================================================
@@ -291,6 +292,25 @@ classdef CLASS_codec < handle
             end
 
             STAGES.tib_min = max(num_epochs_in_bed *STAGES.standard_epoch_min,0); % ensure sure we don't get negative values with max(...,0)
+
+            if STAGES.tib_min > 0
+                STAGES.sleep_efficiency = STAGES.total_sleep_min/STAGES.tib_min*100;
+            else
+                STAGES.sleep_efficiency = 0;
+            end
+
+            if STAGES.total_sleep_min == 0
+                STAGES.percent_s1 = 0;
+                STAGES.percent_s2 = 0;
+                STAGES.percent_sws = 0;
+                STAGES.percent_rem = 0;
+            else
+                STAGES.percent_s1 = STAGES.total_s1_min / STAGES.total_sleep_min*100;
+                STAGES.percent_s2 = STAGES.total_s2_min / STAGES.total_sleep_min*100;
+                STAGES.percent_sws = STAGES.total_sws_min / STAGES.total_sleep_min*100;
+                STAGES.percent_rem = STAGES.total_rem_min / STAGES.total_sleep_min*100;
+
+            end
 
             % Duration in minutes of epochs scored as 7 ('unknown')
             STAGES.unscored_tib_min = STAGES.tib_min - STAGES.total_wake_sleep_minutes;
