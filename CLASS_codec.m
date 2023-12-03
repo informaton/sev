@@ -849,6 +849,13 @@ classdef CLASS_codec < handle
                 end
                 [~,name,~] = fileparts(evtFilename);
 
+                % Get the last part then.
+                if contains(name, '.')
+                    %name = extractAfter(name,'.');
+                    name = strsplit(name,'.');
+                    name = name{end};
+                end
+
                 fid = fopen(evtFilename,'r','l'); % little endian format
                 HDR = CLASS_codec.parseEmblaHDR(fid);
 
