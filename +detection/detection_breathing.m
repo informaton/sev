@@ -148,7 +148,8 @@ else
         % Calculate duration of one breath (sec.).
         if Freq(2) > 1 || Freq(2) < 0.2 % if rib frequency is more than 1 Hz or less than 0.2 Hz (60 breaths/min and less than 12 breaths/min)
             ribphase = avg_breath_duration_sec; % average/long duration of breath (in sec.)
-        else ribphase = ceil(1/Freq(2));
+        else
+            ribphase = ceil(1/Freq(2));
         end
         
         % Save rib phase for evaluation
