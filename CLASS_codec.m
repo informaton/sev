@@ -1675,13 +1675,16 @@ classdef CLASS_codec < handle
             if( ~isempty(evt_Struct.start_sec) && (~isempty(evt_Struct.stop_sec)||~isempty(evt_Struct.dur_sec)) )
                 if(isempty(evt_Struct.dur_sec))
                     evt_Struct.dur_sec = evt_Struct.stop_sec-evt_Struct.start_sec;
-                end
+                 end
                 if(isempty(evt_Struct.stop_sec))
                     evt_Struct.stop_sec = evt_Struct.start_sec+evt_Struct.dur_sec;
                 end
 
                 if(~isempty(evt_Struct.HDR) && isfield(evt_Struct.HDR,'T0'))
-                    evt_Struct.startDateTime = evt_Struct.HDR.T0;  
+                    % Causes trouble if you leave this one in because it is
+                    % not one of the defaults above, so you can get struct
+                    % field mismatches in practice: 5/7/2024
+                    % evt_Struct.startDateTime = evt_Struct.HDR.T0;  
                     numEvents = numel(evt_Struct.dur_sec);
                     t0_notSec = evt_Struct.HDR.T0(1:end-1);
                     t0_sec = evt_Struct.HDR.T0(end);
@@ -1748,7 +1751,11 @@ classdef CLASS_codec < handle
                 numTals = numel(annRecord);
                 eventStructs = repmat(CLASS_codec.makeEventStruct(),numTals,1);
                 for t=1:numTals
-                    eventStructs(t) = CLASS_codec.tal2evt(annRecord(t),HDR);
+                    try
+                        eventStructs(t) = CLASS_codec.tal2evt(annRecord(t), HDR);
+                    catch me
+                        showME(me);
+                    end
                 end
             end
         end
