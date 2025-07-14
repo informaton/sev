@@ -44,7 +44,7 @@ classdef CLASS_codec < handle
         %> modified 2/2/2013 - added .standard_epoch_sec = 30
         %>                           .study_duration_in_seconds
         %> modified 5.1.2013 - added .filename = stages_filename;
-        %> midified 12.17.2019 - adding stage summary metrics (e.g. sleep
+        %> modified 12.17.2019 - adding stage summary metrics (e.g. sleep
         %>                       latency metric)
         function STAGES = loadSTAGES(stages_filename,num_epochs,unknown_stage_label)
 
