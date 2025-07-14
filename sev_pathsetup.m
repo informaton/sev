@@ -24,7 +24,11 @@ function sev_pathname = sev_pathsetup()
         addpath(widgets_pathname);
         
         sig_pathname = fullfile(sev_pathname, '../matlab/signal');        
-        addpath(sig_pathname);        
+        if isfolder(sig_pathname)
+            addpath(sig_pathname);        
+        else
+            fprintf('Could not find %s', sig_pathname);
+        end
 
         % To get getFilenames.m
         file_pathname = fullfile(sev_pathname, '../matlab/file');        
